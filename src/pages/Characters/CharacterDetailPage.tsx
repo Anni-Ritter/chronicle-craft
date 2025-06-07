@@ -12,9 +12,9 @@ import { CharacterRelationCreator } from "../../features/relations/CharacterRela
 
 export function CharacterDetailPage() {
     const { id } = useParams();
-    const character = useCharacterStore((s) =>
-        s.characters.find((c) => c.id === id)
-    );
+    const allCharacters = useCharacterStore((s) => s.characters);
+    const relationships = useRelationshipStore((s) => s.relationships);
+    const character = allCharacters.find((c) => c.id === id);
     const [activeTab, setActiveTab] = useState<'info' | 'graph'>('info');
 
     if (!character) {
@@ -36,8 +36,6 @@ export function CharacterDetailPage() {
         { attribute: 'Выносливость', value: character.attributes.endurance },
     ] : [];
 
-    const allCharacters = useCharacterStore((s) => s.characters);
-    const relationships = useRelationshipStore((s) => s.relationships);
 
     const relatedCharacters = useMemo(() => {
         return allCharacters.filter((c) =>
