@@ -16,7 +16,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
     const [avatarMode, setAvatarMode] = useState<'url' | 'upload'>(
         initialCharacter?.avatar?.startsWith('http') ? 'url' : 'upload'
     );
-    const normalizeExtra = (input: any): ExtraField[] => {
+    const normalizeExtra = (input: unknown): ExtraField[] => {
         if (Array.isArray(input)) return input;
         if (input && typeof input === 'object') {
             return Object.entries(input).map(([key, value]) => ({

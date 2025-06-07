@@ -46,7 +46,14 @@ export const ChronicleDetailPage: React.FC = () => {
         );
     }
 
-    if (!chronicle) return null;
+    if (!chronicle) {
+        return (
+            <div className="text-center mt-10 text-gray-500">
+                Загрузка...
+            </div>
+        );
+    }
+
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-6">

@@ -4,10 +4,11 @@ import type { Chronicle } from '../../types/chronicle';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useChronicleStore } from '../../store/useChronicleStore';
 import { RichTextEditor } from '../../components/RichTextEditor';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface Props {
     onFinish: () => void;
-    supabase: any;
+    supabase: SupabaseClient;
     initial?: Chronicle;
 }
 
