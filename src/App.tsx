@@ -14,7 +14,7 @@ function App() {
       <div className="min-h-screen flex flex-col">
         <Header onLoginClick={() => setAuthOpen(true)} />
         <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
-        <main className="flex-grow p-4">
+        <main className="flex-grow md:p-4">
           <AppRouter />
         </main>
       </div>

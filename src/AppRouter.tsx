@@ -10,6 +10,8 @@ import { ChroniclesPage } from './pages/Chronicle/ChroniclesPage';
 import { CharacterDetailPage } from './pages/Characters/CharacterDetailPage';
 import { CharacterEditPage } from './pages/Characters/CharacterEditPage';
 import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
+import { MapListPage } from './pages/Map/MapListPage';
+import { WorldMapPage } from './pages/Map/WorldMapPage';
 
 export const AppRouter = () => {
     const session = useSession();
@@ -49,6 +51,8 @@ export const AppRouter = () => {
             />
             <Route path="/chronicles" element={<ChroniclesPage />} />
             <Route path="/chronicles/:id" element={<ChronicleDetailPage />} />
+            <Route path="/maps" element={<MapListPage />} />
+            <Route path="/maps/:mapId" element={<WorldMapPage />} />
         </Routes>
     );
 };

@@ -51,6 +51,14 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                             Связи
                         </a>
                     </li>
+                    <li>
+                        <a
+                            onClick={() => navigate('/maps')}
+                            className="text-indigo-600 hover:underline"
+                        >
+                            Карта
+                        </a>
+                    </li>
                 </ul>
             </nav>
             {session ? (
