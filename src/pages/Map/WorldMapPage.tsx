@@ -214,8 +214,6 @@ export const WorldMapPage: React.FC = () => {
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!containerRef.current || !imageSize || !containerSize) return;
 
-        const rect = containerRef.current.getBoundingClientRect();
-
         if (e.touches.length === 1 && dragging && startDrag) {
             const dx = e.touches[0].clientX - startDrag.x;
             const dy = e.touches[0].clientY - startDrag.y;
@@ -224,23 +222,21 @@ export const WorldMapPage: React.FC = () => {
             setOffset((prev) => clampOffset({ x: prev.x + dx, y: prev.y + dy }));
         }
 
-        if (e.touches.length === 2) {
+        if (e.touches.length === 2 && pinchStartRef.current && pinchScaleStartRef.current && containerRef.current) {
             const pinchCurrent = getPinchDistance(e);
-            if (pinchStartRef.current && pinchScaleStartRef.current) {
-                const newScale = Math.min(Math.max(pinchScaleStartRef.current * (pinchCurrent / pinchStartRef.current), minScale), 4);
-                const scaleFactor = newScale / pinchScaleStartRef.current;
+            const newScale = Math.min(Math.max(pinchScaleStartRef.current * (pinchCurrent / pinchStartRef.current), minScale), 4);
+            const rect = containerRef.current.getBoundingClientRect();
+            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
 
-                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+            const imageX = (centerX - offset.x) / scale;
+            const imageY = (centerY - offset.y) / scale;
 
-                const newOffset = {
-                    x: (offset.x - centerX) * scaleFactor + centerX,
-                    y: (offset.y - centerY) * scaleFactor + centerY,
-                };
+            const newOffsetX = centerX - imageX * newScale;
+            const newOffsetY = centerY - imageY * newScale;
 
-                setScale(newScale);
-                setOffset(clampOffset(newOffset));
-            }
+            setScale(newScale);
+            setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
         }
     };
 
