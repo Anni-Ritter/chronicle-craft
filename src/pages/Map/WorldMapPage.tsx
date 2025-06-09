@@ -43,16 +43,8 @@ export const WorldMapPage: React.FC = () => {
         if (!imageSize || !containerSize) return 0.5;
         const scaleX = containerSize.width / imageSize.width;
         const scaleY = containerSize.height / imageSize.height;
-        return Math.max(scaleX, scaleY);
+        return Math.min(scaleX, scaleY);
     }, [imageSize, containerSize]);
-
-    const autoScale = useMemo(() => {
-        if (!imageSize || !containerSize) return 1;
-        const scaleX = containerSize.width / imageSize.width;
-        const scaleY = containerSize.height / imageSize.height;
-        return Math.max(scaleX, scaleY);
-    }, [imageSize, containerSize]);
-
 
     useEffect(() => {
         if (mapId && session?.user?.id) {
@@ -87,8 +79,8 @@ export const WorldMapPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        setScale(autoScale);
-    }, [autoScale]);
+        setScale(minScale);
+    }, [minScale]);
 
     useEffect(() => {
         setOffset((prev) => clampOffset(prev));
@@ -277,6 +269,7 @@ export const WorldMapPage: React.FC = () => {
                         height: '80vh',
                         backgroundColor: backgroundColor,
                         filter: transitioningBg ? 'blur(2px)' : 'none',
+                        touchAction: 'none',
                     }}
                     onWheel={handleWheel}
                     onMouseDown={handleMouseDown}
@@ -291,7 +284,7 @@ export const WorldMapPage: React.FC = () => {
                     <div
                         style={{
                             transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                            transformOrigin: 'center center',
+                            transformOrigin: 'top left',
                             position: 'relative',
                             display: 'inline-block',
                             width: imageSize?.width ?? 'auto',
