@@ -225,7 +225,22 @@ export const WorldMapPage: React.FC = () => {
             if (pinchStartRef.current && pinchScaleStartRef.current) {
                 const delta = pinchCurrent / pinchStartRef.current;
                 const newScale = Math.min(Math.max(pinchScaleStartRef.current * delta, minScale), 4);
-                setScale(newScale);
+                const scaleFactor = newScale / pinchScaleStartRef.current;
+
+                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                const rect = containerRef.current?.getBoundingClientRect();
+                if (rect) {
+                    const offsetX = centerX - rect.left;
+                    const offsetY = centerY - rect.top;
+
+                    const newOffsetX = (offset.x - offsetX) * scaleFactor + offsetX;
+                    const newOffsetY = (offset.y - offsetY) * scaleFactor + offsetY;
+
+                    setScale(newScale);
+                    setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
+                }
             }
         }
     };
