@@ -12,7 +12,8 @@ interface CharacterRelationCreatorProps {
 export const CharacterRelationCreator: React.FC<CharacterRelationCreatorProps> = ({ allCharacters, currentCharacter }) => {
     const [search, setSearch] = useState("");
     const [targetId, setTargetId] = useState<string | null>(null);
-    const [type, setType] = useState<Relationship["type"]>("друг");
+    const [label, setLabel] = useState('');
+    const [color, setColor] = useState('#4ade80');
 
     const { addRelationship } = useRelationshipStore();
     const session = useSession();
@@ -28,7 +29,8 @@ export const CharacterRelationCreator: React.FC<CharacterRelationCreatorProps> =
             id: crypto.randomUUID(),
             source_id: currentCharacter.id,
             target_id: targetId,
-            type,
+            type: label.trim(),
+            color,
             created_at: new Date().toISOString(),
         };
         await addRelationship(relationship, supabase);
@@ -37,8 +39,7 @@ export const CharacterRelationCreator: React.FC<CharacterRelationCreatorProps> =
     };
 
     return (
-        <div className="mt-6 border-t pt-4">
-            <h2 className="text-lg font-semibold mb-2">➕ Добавить связь</h2>
+        <div className="mt-6 border-t pt-20">
             <input
                 type="text"
                 placeholder="Поиск персонажа..."
@@ -61,20 +62,23 @@ export const CharacterRelationCreator: React.FC<CharacterRelationCreatorProps> =
                     <div className="px-3 py-2 text-zinc-400 italic">Ничего не найдено</div>
                 )}
             </div>
-            <select
-                value={type}
-                onChange={(e) => setType(e.target.value as Relationship["type"])}
-                className="border px-3 py-1 rounded w-full mb-2"
-            >
-                <option value="друг">🤝 Друг</option>
-                <option value="возлюбленные">❤️ Возлюбленные</option>
-                <option value="враг">⚔️ Враг</option>
-                <option value="родство">👪 Родство</option>
-                <option value="союз">🛡️ Союз</option>
-                <option value="бывший">💔 Бывший</option>
-                <option value="ученик">🎓 Ученик</option>
-                <option value="загадка">❓ Загадка</option>
-            </select>
+            <input
+                type="text"
+                placeholder="Название связи"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className="border px-3 py-1 rounded w-full"
+            />
+
+            <div className="flex items-center gap-2 my-5">
+                <label className="text-sm text-gray-600">Цвет:</label>
+                <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className="w-10 h-10 p-0 border cursor-pointer"
+                />
+            </div>
             <button
                 onClick={handleAdd}
                 disabled={!targetId}

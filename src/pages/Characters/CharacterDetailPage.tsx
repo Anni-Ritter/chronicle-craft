@@ -178,7 +178,7 @@ export function CharacterDetailPage() {
             </div>
             )}
             {activeTab === 'graph' && character && (
-                <div className="h-[500px]">
+                <div>
                     <CharacterGraph
                         characters={relatedCharacters}
                         relationships={relatedRelationships}
