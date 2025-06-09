@@ -36,13 +36,24 @@ export const useMapStore = create<MapDataStore>()(
             },
 
             deleteMap: async (mapId, supabase) => {
-                const { error } = await supabase.from('maps').delete().eq('id', mapId);
-                if (!error) {
+                const map = get().maps.find((m) => m.id === mapId);
+                if (!map) return;
+                const { error: storageError } = await supabase
+                    .storage
+                    .from('map')
+                    .remove([map.image_path]);
+
+                const { error: dbError } = await supabase
+                    .from('maps')
+                    .delete()
+                    .eq('id', mapId);
+
+                if (!storageError && !dbError) {
                     set({ maps: get().maps.filter((m) => m.id !== mapId) });
                 } else {
-                    console.error('Ошибка удаления карты:', error);
+                    console.error('Ошибка удаления карты:', { storageError, dbError });
                 }
-            },
+            }
         }),
         { name: 'maps-store' }
     )

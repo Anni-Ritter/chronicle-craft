@@ -16,7 +16,6 @@ export const WorldMapPage: React.FC = () => {
     const { mapId } = useParams();
     const containerRef = useRef<HTMLDivElement>(null);
     const ignoreNextClickRef = useRef(false);
-    const pinchCenterRef = useRef<{ x: number; y: number } | null>(null);
 
     const { mapPoints, fetchMapPoints, addMapPoint } = useMapStorePoint();
     const [map, setMap] = useState<DBMap | null>(null);
@@ -78,14 +77,6 @@ export const WorldMapPage: React.FC = () => {
         window.addEventListener('mouseup', handleGlobalMouseUp);
         return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
     }, []);
-
-    useEffect(() => {
-        setScale(minScale);
-    }, [minScale]);
-
-    useEffect(() => {
-        setOffset((prev) => clampOffset(prev));
-    }, [scale, containerSize, imageSize]);
 
     useEffect(() => {
         if (!mapUrl) return;
@@ -217,13 +208,6 @@ export const WorldMapPage: React.FC = () => {
             setDragging(false);
             pinchStartRef.current = getPinchDistance(e);
             pinchScaleStartRef.current = scale;
-
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (rect) {
-                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-                pinchCenterRef.current = { x: centerX, y: centerY };
-            }
         }
     };
 
@@ -238,23 +222,10 @@ export const WorldMapPage: React.FC = () => {
 
         if (e.touches.length === 2) {
             const pinchCurrent = getPinchDistance(e);
-            if (
-                pinchStartRef.current &&
-                pinchScaleStartRef.current &&
-                pinchCenterRef.current
-            ) {
+            if (pinchStartRef.current && pinchScaleStartRef.current) {
                 const delta = pinchCurrent / pinchStartRef.current;
                 const newScale = Math.min(Math.max(pinchScaleStartRef.current * delta, minScale), 4);
-
-                const scaleFactor = newScale / pinchScaleStartRef.current;
-
-                const center = pinchCenterRef.current;
-
-                const newOffsetX = (offset.x - center.x) * scaleFactor + center.x;
-                const newOffsetY = (offset.y - center.y) * scaleFactor + center.y;
-
                 setScale(newScale);
-                setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
             }
         }
     };
@@ -264,7 +235,6 @@ export const WorldMapPage: React.FC = () => {
         setStartDrag(null);
         pinchStartRef.current = null;
         pinchScaleStartRef.current = null;
-        pinchCenterRef.current = null;
     };
 
     const clampOffset = (newOffset: { x: number; y: number }) => {
@@ -292,7 +262,7 @@ export const WorldMapPage: React.FC = () => {
     }
     return (
         <div className="md:p-6">
-            <h1 className="text-3xl font-bold mb-4">Карта мира</h1>
+            <h1 className="text-3xl font-bold mb-4">{map.name}</h1>
 
             {mapUrl ? (
                 <div
@@ -331,7 +301,23 @@ export const WorldMapPage: React.FC = () => {
                             alt="Map"
                             onLoad={(e) => {
                                 const img = e.currentTarget;
-                                setImageSize({ width: img.naturalWidth, height: img.naturalHeight });
+                                const width = img.naturalWidth;
+                                const height = img.naturalHeight;
+                                setImageSize({ width, height });
+
+                                if (containerRef.current) {
+                                    const containerWidth = containerRef.current.offsetWidth;
+                                    const containerHeight = containerRef.current.offsetHeight;
+
+                                    const scaleX = containerWidth / width;
+                                    const scaleY = containerHeight / height;
+                                    const bestFitScale = Math.min(scaleX, scaleY);
+                                    setScale(bestFitScale);
+
+                                    const offsetX = (containerWidth - width * bestFitScale) / 2;
+                                    const offsetY = (containerHeight - height * bestFitScale) / 2;
+                                    setOffset({ x: offsetX, y: offsetY });
+                                }
                             }}
                             style={{
                                 display: 'block',
