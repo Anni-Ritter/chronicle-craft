@@ -16,6 +16,7 @@ export const WorldMapPage: React.FC = () => {
     const { mapId } = useParams();
     const containerRef = useRef<HTMLDivElement>(null);
     const ignoreNextClickRef = useRef(false);
+    const pinchCenterRef = useRef<{ x: number; y: number } | null>(null);
 
     const { mapPoints, fetchMapPoints, addMapPoint } = useMapStorePoint();
     const [map, setMap] = useState<DBMap | null>(null);
@@ -136,11 +137,24 @@ export const WorldMapPage: React.FC = () => {
 
     const handleWheel = (e: React.WheelEvent) => {
         e.preventDefault();
+
+        if (!containerRef.current || !imageSize) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const prevScale = scale;
         const delta = -e.deltaY / 500;
-        setScale((prev) => {
-            const newScale = Math.min(Math.max(prev + delta, minScale), 4);
-            return newScale;
-        });
+        const newScale = Math.min(Math.max(prevScale + delta, minScale), 4);
+
+        const scaleFactor = newScale / prevScale;
+
+        const newOffsetX = (offset.x - mouseX) * scaleFactor + mouseX;
+        const newOffsetY = (offset.y - mouseY) * scaleFactor + mouseY;
+
+        setScale(newScale);
+        setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -203,6 +217,13 @@ export const WorldMapPage: React.FC = () => {
             setDragging(false);
             pinchStartRef.current = getPinchDistance(e);
             pinchScaleStartRef.current = scale;
+
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (rect) {
+                const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+                const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+                pinchCenterRef.current = { x: centerX, y: centerY };
+            }
         }
     };
 
@@ -217,10 +238,23 @@ export const WorldMapPage: React.FC = () => {
 
         if (e.touches.length === 2) {
             const pinchCurrent = getPinchDistance(e);
-            if (pinchStartRef.current && pinchScaleStartRef.current) {
+            if (
+                pinchStartRef.current &&
+                pinchScaleStartRef.current &&
+                pinchCenterRef.current
+            ) {
                 const delta = pinchCurrent / pinchStartRef.current;
                 const newScale = Math.min(Math.max(pinchScaleStartRef.current * delta, minScale), 4);
+
+                const scaleFactor = newScale / pinchScaleStartRef.current;
+
+                const center = pinchCenterRef.current;
+
+                const newOffsetX = (offset.x - center.x) * scaleFactor + center.x;
+                const newOffsetY = (offset.y - center.y) * scaleFactor + center.y;
+
                 setScale(newScale);
+                setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
             }
         }
     };
@@ -230,6 +264,7 @@ export const WorldMapPage: React.FC = () => {
         setStartDrag(null);
         pinchStartRef.current = null;
         pinchScaleStartRef.current = null;
+        pinchCenterRef.current = null;
     };
 
     const clampOffset = (newOffset: { x: number; y: number }) => {
