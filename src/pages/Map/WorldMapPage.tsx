@@ -212,6 +212,10 @@ export const WorldMapPage: React.FC = () => {
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
+        if (!containerRef.current || !imageSize || !containerSize) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+
         if (e.touches.length === 1 && dragging && startDrag) {
             const dx = e.touches[0].clientX - startDrag.x;
             const dy = e.touches[0].clientY - startDrag.y;
@@ -222,18 +226,20 @@ export const WorldMapPage: React.FC = () => {
 
         if (e.touches.length === 2) {
             const pinchCurrent = getPinchDistance(e);
-            const rect = containerRef.current?.getBoundingClientRect();
-            if (pinchStartRef.current && pinchScaleStartRef.current && rect) {
-                const delta = pinchCurrent / pinchStartRef.current;
-                const newScale = Math.min(Math.max(pinchScaleStartRef.current * delta, minScale), 4);
+            if (pinchStartRef.current && pinchScaleStartRef.current) {
+                const newScale = Math.min(Math.max(pinchScaleStartRef.current * (pinchCurrent / pinchStartRef.current), minScale), 4);
                 const scaleFactor = newScale / pinchScaleStartRef.current;
+
                 const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
                 const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
-                const newOffsetX = (offset.x - centerX) * scaleFactor + centerX;
-                const newOffsetY = (offset.y - centerY) * scaleFactor + centerY;
+
+                const newOffset = {
+                    x: (offset.x - centerX) * scaleFactor + centerX,
+                    y: (offset.y - centerY) * scaleFactor + centerY,
+                };
 
                 setScale(newScale);
-                setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
+                setOffset(clampOffset(newOffset));
             }
         }
     };
