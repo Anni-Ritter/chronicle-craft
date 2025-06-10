@@ -22,7 +22,7 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                 {...props}
                 placeholder=" "
                 className={clsx(
-                    'peer w-full border rounded px-3 pt-5 pb-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+                    'peer w-full border rounded px-3 pt-4 pb-3 bg-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500',
                     error ? 'border-red-500' : 'border-gray-300',
                     className
                 )}
@@ -31,9 +31,9 @@ export const FloatingInput: React.FC<FloatingInputProps> = ({
                 htmlFor={id}
                 className={clsx(
                     'absolute left-3 text-gray-500 text-sm transition-all pointer-events-none',
-                    'peer-placeholder-shown:top-2.5 peer-placeholder-shown:text-sm',
+                    'peer-placeholder-shown:top-[15px] peer-placeholder-shown:bg-white peer-placeholder-shown:px-1 peer-placeholder-shown:text-sm',
                     'peer-focus:top-[-8px] peer-focus:text-xs peer-focus:text-indigo-500',
-                    hasValue ? 'top-[-8px] bg-white rounded-full px-2 py-[2px] text-xs' : 'top-2.5'
+                    hasValue ? 'top-[-8px] bg-white rounded-full px-1 py-[2px] text-xs' : 'top-2.5'
                 )}
             >
                 {label}

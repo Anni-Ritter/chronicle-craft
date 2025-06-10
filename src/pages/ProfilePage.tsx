@@ -33,6 +33,7 @@ export const ProfilePage = () => {
         } else {
             setUsername(data.username || '');
             setAvatarUrl(data.avatar_url || '');
+            setNewEmail(user?.email || '');
         }
     };
 
@@ -115,7 +116,7 @@ export const ProfilePage = () => {
                             if (error) toast.error('Ошибка при смене email: ' + error.message);
                             else toast.success('Письмо с подтверждением отправлено на новый email');
                         }}
-                        className="bg-gray-700 text-white px-4 py-2 w-[250px] whitespace-nowrap rounded"
+                        className="bg-gray-700 text-white px-4 py-2 w-[250px] h-[50px] whitespace-nowrap rounded"
                     >
                         Сменить email
                     </button>
@@ -130,7 +131,7 @@ export const ProfilePage = () => {
                     />
                     <button
                         onClick={handlePasswordChange}
-                        className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 w-[250px] whitespace-nowrap rounded"
+                        className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 w-[250px] p-[50px] whitespace-nowrap rounded"
                     >
                         Сменить пароль
                     </button>
