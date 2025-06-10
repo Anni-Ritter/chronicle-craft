@@ -1,6 +1,6 @@
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
 import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
 interface HeaderProps {
@@ -12,6 +12,8 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
     const supabase = useSupabaseClient()
     const navigate = useNavigate()
     const [isOpen, setIsOpen] = useState(false)
+    const [username, setUsername] = useState<string | null>(null)
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
@@ -24,6 +26,26 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
         navigate(path)
         setIsOpen(false)
     }
+
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            if (!session?.user) return;
+
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('username, avatar_url')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!error && data) {
+                setUsername(data.username);
+                setAvatarUrl(data.avatar_url);
+            }
+        };
+
+        fetchProfile();
+    }, [session]);
 
     return (
         <header className="p-4 flex justify-between items-center bg-white relative z-50">
@@ -54,7 +76,9 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                         </button>
                         {session ? (
                             <>
-                                <span className="text-sm text-gray-700 mt-2">{session.user?.email}</span>
+                                <a onClick={() => navigate('/profile')} className="text-sm text-gray-700 mt-2">
+                                    {username || 'Профиль'}
+                                </a>
                                 <button
                                     onClick={handleLogout}
                                     className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition mt-2"
@@ -77,7 +101,6 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                 )}
             </div>
 
-            {/* Меню для десктопа */}
             <nav className="hidden md:flex items-center gap-4">
                 <a onClick={() => navigate('/')} className="text-indigo-600 hover:underline cursor-pointer">
                     Персонажи
@@ -93,7 +116,14 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                 </a>
                 {session ? (
                     <div className="flex items-center gap-4">
-                        <span className="text-sm">{session.user?.email}</span>
+                        <a className="text-sm cursor-pointer flex items-center gap-2" onClick={() => navigate('/profile')}>
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
+                            ) : (
+                                <div className="w-6 h-6 rounded-full bg-gray-300" />
+                            )}
+                            {username || 'Профиль'}
+                        </a>
                         <button
                             onClick={handleLogout}
                             className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition"

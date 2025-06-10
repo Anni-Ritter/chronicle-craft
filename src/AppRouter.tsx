@@ -12,6 +12,7 @@ import { CharacterEditPage } from './pages/Characters/CharacterEditPage';
 import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
 import { MapListPage } from './pages/Map/MapListPage';
 import { WorldMapPage } from './pages/Map/WorldMapPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export const AppRouter = () => {
     const session = useSession();
@@ -53,6 +54,7 @@ export const AppRouter = () => {
             <Route path="/chronicles/:id" element={<ChronicleDetailPage />} />
             <Route path="/maps" element={<MapListPage />} />
             <Route path="/maps/:mapId" element={<WorldMapPage />} />
+            <Route path='/profile' element={<ProfilePage />} />
         </Routes>
     );
 };

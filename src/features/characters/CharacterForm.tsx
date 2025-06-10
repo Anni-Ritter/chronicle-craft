@@ -210,7 +210,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                         />
                     </div>
                 ) : (
-                    <AvatarUploader onUpload={(url) => setAvatar(url)} initialUrl={avatar} />
+                    <AvatarUploader onUpload={(url) => setAvatar(url)} initialUrl={avatar} bucket="avatars"/>
                 )}
             </div>
             <div className="mb-4">
