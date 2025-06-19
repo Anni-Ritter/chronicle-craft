@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuidv4 } from 'uuid';
+import { IncomingMessage } from 'http';
 
 const clientId = process.env.GIGACHAT_CLIENT_ID!;
 const authKey = process.env.GIGACHAT_AUTH_KEY!;
@@ -8,6 +9,12 @@ const withCORS = (req: VercelRequest, res: VercelResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+};
+
+export const config = {
+    api: {
+        bodyParser: false,
+    },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -21,13 +28,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).end('Method Not Allowed');
     }
 
-    let content: string;
-    try {
-        content = req.body?.content;
-    } catch (e) {
-        return res.status(400).json({ error: 'Ошибка разбора тела запроса' });
+    const buffers: Uint8Array[] = [];
+    for await (const chunk of req as IncomingMessage) {
+        buffers.push(chunk);
     }
-    
+    const rawBody = Buffer.concat(buffers).toString();
+    let content: string;
+
+    try {
+        const parsed = JSON.parse(rawBody);
+        content = parsed.content;
+    } catch (err) {
+        return res.status(400).json({ error: 'Невалидный JSON' });
+    }
+
     if (!content) return res.status(400).json({ error: 'Нет поля content' });
 
     const plainText = content.replace(/<[^>]*>?/gm, '').trim();
