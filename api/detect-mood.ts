@@ -11,10 +11,16 @@ function withCORS(
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
         if (req.method === 'OPTIONS') {
-            return res.status(204).end();
+            res.status(204).end();
+            return;
         }
 
-        return handler(req, res);
+        try {
+            await handler(req, res);
+        } catch (err) {
+            console.error('Ошибка во wrapper:', err);
+            res.status(500).json({ error: 'Invocation failed', detail: String(err) });
+        }
     };
 }
 
@@ -112,11 +118,16 @@ export const config = {
 // }
 
 async function coreHandler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') {
-        return res.status(405).end('Method Not Allowed');
-    }
+    try {
+        if (req.method !== 'POST') {
+            return res.status(405).end('Method Not Allowed');
+        }
 
-    return res.status(200).json({ mood: '🧪 Тест' });
+        return res.status(200).json({ mood: '🧪 Тест' });
+    } catch (err) {
+        console.error('Ошибка в coreHandler:', err);
+        return res.status(500).json({ error: 'Internal error', detail: String(err) });
+    }
 }
 
 export default withCORS(coreHandler);
