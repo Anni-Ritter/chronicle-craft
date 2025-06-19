@@ -2,10 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuidv4 } from 'uuid';
 import { IncomingMessage } from 'http';
 
-export const config = {
-    runtime: 'nodejs',
-};
-
 function withCORS(
     handler: (req: VercelRequest, res: VercelResponse) => unknown | Promise<unknown>
 ) {
