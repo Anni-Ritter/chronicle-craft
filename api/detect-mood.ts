@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).end('Method Not Allowed');
     }
 
-    const { content } = req.body;
+    const { content } = req.body || {};
     if (!content) return res.status(400).json({ error: 'Нет поля content' });
 
     const plainText = content.replace(/<[^>]*>?/gm, '').trim();
