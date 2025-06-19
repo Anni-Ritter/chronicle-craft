@@ -28,14 +28,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).end('Method Not Allowed');
     }
 
-    const buffers: Uint8Array[] = [];
-    for await (const chunk of req as IncomingMessage) {
-        buffers.push(chunk);
-    }
-    const rawBody = Buffer.concat(buffers).toString();
-    let content: string;
+    let content = '';
 
     try {
+        const buffers: Uint8Array[] = [];
+        for await (const chunk of req as IncomingMessage) {
+            buffers.push(chunk);
+        }
+
+        const rawBody = Buffer.concat(buffers).toString();
         const parsed = JSON.parse(rawBody);
         content = parsed.content;
     } catch (err) {
