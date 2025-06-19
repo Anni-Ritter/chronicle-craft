@@ -4,8 +4,20 @@ import { v4 as uuidv4 } from 'uuid';
 const clientId = process.env.GIGACHAT_CLIENT_ID!;
 const authKey = process.env.GIGACHAT_AUTH_KEY!;
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
+    if (req.method === 'OPTIONS') {
+        return res.writeHead(204, corsHeaders).end();
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).setHeader('Allow', 'POST').end('Method Not Allowed');
+    }
 
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'Нет поля content' });
