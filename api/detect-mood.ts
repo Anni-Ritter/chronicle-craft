@@ -4,11 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 const clientId = process.env.GIGACHAT_CLIENT_ID!;
 const authKey = process.env.GIGACHAT_AUTH_KEY!;
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-};
 const withCORS = (res: VercelResponse) => {
     return res
         .setHeader('Access-Control-Allow-Origin', '*')
@@ -20,7 +15,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     withCORS(res);
 
     if (req.method === 'OPTIONS') {
-        return res.writeHead(204).end();
+        withCORS(res);
+        return res.status(204).end();
     }
 
     if (req.method !== 'POST') {
