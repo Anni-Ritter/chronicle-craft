@@ -28,10 +28,14 @@ async function coreHandler(req: VercelRequest, res: VercelResponse) {
     const authKey = process.env.GIGACHAT_AUTH_KEY;
     const clientId = process.env.GIGACHAT_CLIENT_ID;
 
-    console.log('ENV check:', {
-        GIGACHAT_AUTH_KEY: process.env.GIGACHAT_AUTH_KEY ? 'OK' : 'MISSING',
-        GIGACHAT_CLIENT_ID: process.env.GIGACHAT_CLIENT_ID ? 'OK' : 'MISSING',
-    });
+    console.log('AUTH_KEY from env:', process.env.GIGACHAT_AUTH_KEY ?? 'нет пидора ответ');
+
+
+    // console.log('ENV check:', {
+    //     GIGACHAT_AUTH_KEY: process.env.GIGACHAT_AUTH_KEY ? 'OK' : 'MISSING',
+    //     GIGACHAT_CLIENT_ID: process.env.GIGACHAT_CLIENT_ID ? 'OK' : 'MISSING',
+    // });
+
 
     if (!authKey || !clientId) {
         return res.status(500).json({ error: 'Missing env vars' });
