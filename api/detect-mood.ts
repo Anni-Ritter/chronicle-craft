@@ -9,14 +9,22 @@ const corsHeaders = {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
 };
+const withCORS = (res: VercelResponse) => {
+    return res
+        .setHeader('Access-Control-Allow-Origin', '*')
+        .setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    withCORS(res);
+
     if (req.method === 'OPTIONS') {
-        return res.writeHead(204, corsHeaders).end();
+        return res.writeHead(204).end();
     }
 
     if (req.method !== 'POST') {
-        return res.status(405).setHeader('Allow', 'POST').end('Method Not Allowed');
+        return res.status(405).end('Method Not Allowed');
     }
 
     const { content } = req.body;
