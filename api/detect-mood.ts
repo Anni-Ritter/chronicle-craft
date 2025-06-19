@@ -27,7 +27,7 @@ function withCORS(
 async function coreHandler(req: VercelRequest, res: VercelResponse) {
     const authKey = process.env.GIGACHAT_AUTH_KEY;
     const clientId = process.env.GIGACHAT_CLIENT_ID;
-    
+
     console.log('ENV check:', {
         GIGACHAT_AUTH_KEY: process.env.GIGACHAT_AUTH_KEY ? 'OK' : 'MISSING',
         GIGACHAT_CLIENT_ID: process.env.GIGACHAT_CLIENT_ID ? 'OK' : 'MISSING',
@@ -35,6 +35,10 @@ async function coreHandler(req: VercelRequest, res: VercelResponse) {
 
     if (!authKey || !clientId) {
         return res.status(500).json({ error: 'Missing env vars' });
+    }
+
+    if (typeof process.env.GIGACHAT_AUTH_KEY !== 'string') {
+        return res.status(500).json({ error: 'AUTH_KEY is not defined' });
     }
 
     if (req.method !== 'POST') {
