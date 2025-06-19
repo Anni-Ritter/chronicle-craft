@@ -2,11 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuidv4 } from 'uuid';
 import { IncomingMessage } from 'http';
 
-const withCORS = (req: VercelRequest, res: VercelResponse) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
+function withCORS(
+    handler: (req: VercelRequest, res: VercelResponse) => unknown | Promise<unknown>
+) {
+    return async (req: VercelRequest, res: VercelResponse) => {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+        if (req.method === 'OPTIONS') {
+            return res.status(204).end();
+        }
+
+        return handler(req, res);
+    };
+}
 
 export const config = {
     api: {
@@ -14,22 +24,13 @@ export const config = {
     },
 };
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-    withCORS(req, res);
-
-    if (req.method === 'OPTIONS') {
-        console.log('CORS preflight received');
-        return res.status(204).end();
-    }
-
-    const clientId = process.env.GIGACHAT_CLIENT_ID!;
-    const authKey = process.env.GIGACHAT_AUTH_KEY!;
-
+async function coreHandler(req: VercelRequest, res: VercelResponse) {
+    const authKey = process.env.GIGACHAT_AUTH_KEY;
+    const clientId = process.env.GIGACHAT_CLIENT_ID;
 
     if (!authKey || !clientId) {
-        return res.status(500).json({ error: 'Missing environment variables' });
+        return res.status(500).json({ error: 'Missing env vars' });
     }
-
 
     if (req.method !== 'POST') {
         return res.status(405).end('Method Not Allowed');
@@ -47,10 +48,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const parsed = JSON.parse(rawBody);
         content = parsed.content;
     } catch (err) {
-        return res.status(400).json({ error: 'Невалидный JSON' });
+        return res.status(400).json({ error: 'Invalid JSON' });
     }
 
-    if (!content) return res.status(400).json({ error: 'Нет поля content' });
+    if (!content) {
+        return res.status(400).json({ error: 'Нет поля content' });
+    }
 
     const plainText = content.replace(/<[^>]*>?/gm, '').trim();
 
@@ -81,7 +84,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const tokenData = await tokenRes.json();
         const token = tokenData.access_token;
 
-        if (!token) return res.status(500).json({ error: 'Не удалось получить токен' });
+        if (!token) {
+            return res.status(500).json({ error: 'Не удалось получить токен' });
+        }
 
         const chatRes = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
             method: 'POST',
@@ -105,3 +110,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: 'Ошибка GigaChat API', detail: (err as Error).message });
     }
 }
+
+export default withCORS(coreHandler);
