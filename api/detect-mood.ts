@@ -4,20 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 const clientId = process.env.GIGACHAT_CLIENT_ID!;
 const authKey = process.env.GIGACHAT_AUTH_KEY!;
 
-const withCORS = (res: VercelResponse) => {
-    return res
-        .setHeader('Access-Control-Allow-Origin', '*')
-        .setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        .setHeader('Access-Control-Allow-Headers', 'Content-Type');
-};
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-    withCORS(res);
-
+const withCORS = (req: VercelRequest, res: VercelResponse) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') {
-        withCORS(res);
-        return res.status(204).end();
+        res.status(204).end();
+        return true;
     }
+    return false;
+};
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    if (withCORS(req, res)) return;
 
     if (req.method !== 'POST') {
         return res.status(405).end('Method Not Allowed');

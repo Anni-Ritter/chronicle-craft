@@ -1,16 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/((?!api).*)",
-      "destination": "/"
-    }
-  ],
-  "functions": {
-    "api/detect-mood.ts": {
-      "methods": [
-        "OPTIONS",
-        "POST"
-      ]
-    }
-  }
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
