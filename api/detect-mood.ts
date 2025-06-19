@@ -1,7 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuidv4 } from 'uuid';
 import { IncomingMessage } from 'http';
+import { readFileSync } from 'fs';
+import { fetch, Agent } from 'undici';
+import path from 'path';
 
+const __dirname = path.dirname(__filename);
+
+const certPath = path.resolve(__dirname, '../certs/russian_trusted_root_ca.crt');
+
+const agent = new Agent({
+    connect: {
+        ca: readFileSync(certPath, 'utf8'),
+    },
+});
 function withCORS(
     handler: (req: VercelRequest, res: VercelResponse) => unknown | Promise<unknown>
 ) {
@@ -24,17 +36,26 @@ function withCORS(
     };
 }
 
+interface TokenResponse {
+    access_token: string;
+}
+
+interface GigaChatResponse {
+    choices?: {
+        message?: {
+            content?: string;
+        };
+    }[];
+}
+
 async function coreHandler(req: VercelRequest, res: VercelResponse) {
     const authKey = process.env.GIGACHAT_AUTH_KEY;
     const clientId = process.env.GIGACHAT_CLIENT_ID;
 
-    console.log('AUTH_KEY from env:', process.env.GIGACHAT_AUTH_KEY ?? 'нет пидора ответ');
-
-
-    // console.log('ENV check:', {
-    //     GIGACHAT_AUTH_KEY: process.env.GIGACHAT_AUTH_KEY ? 'OK' : 'MISSING',
-    //     GIGACHAT_CLIENT_ID: process.env.GIGACHAT_CLIENT_ID ? 'OK' : 'MISSING',
-    // });
+    console.log('ENV check:', {
+        GIGACHAT_AUTH_KEY: process.env.GIGACHAT_AUTH_KEY ? 'OK' : 'MISSING',
+        GIGACHAT_CLIENT_ID: process.env.GIGACHAT_CLIENT_ID ? 'OK' : 'MISSING',
+    });
 
 
     if (!authKey || !clientId) {
@@ -92,9 +113,10 @@ async function coreHandler(req: VercelRequest, res: VercelResponse) {
                 Authorization: `Basic ${authKey}`,
             },
             body: 'scope=GIGACHAT_API_PERS',
+            dispatcher: agent,
         });
 
-        const tokenData = await tokenRes.json();
+        const tokenData = await tokenRes.json() as TokenResponse;
         const token = tokenData.access_token;
 
         if (!token) {
@@ -114,7 +136,7 @@ async function coreHandler(req: VercelRequest, res: VercelResponse) {
             }),
         });
 
-        const chatData = await chatRes.json();
+        const chatData = await chatRes.json() as GigaChatResponse;
         const mood = chatData.choices?.[0]?.message?.content?.trim() || '📖 Неопределённое';
 
         return res.status(200).json({ mood });
