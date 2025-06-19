@@ -2,9 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { v4 as uuidv4 } from 'uuid';
 import { IncomingMessage } from 'http';
 
-const clientId = process.env.GIGACHAT_CLIENT_ID!;
-const authKey = process.env.GIGACHAT_AUTH_KEY!;
-
 const withCORS = (req: VercelRequest, res: VercelResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -21,8 +18,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     withCORS(req, res);
 
     if (req.method === 'OPTIONS') {
+        console.log('CORS preflight received');
         return res.status(204).end();
     }
+
+    const clientId = process.env.GIGACHAT_CLIENT_ID!;
+    const authKey = process.env.GIGACHAT_AUTH_KEY!;
+
+
+    if (!authKey || !clientId) {
+        return res.status(500).json({ error: 'Missing environment variables' });
+    }
+
 
     if (req.method !== 'POST') {
         return res.status(405).end('Method Not Allowed');
