@@ -8,20 +8,26 @@ const withCORS = (req: VercelRequest, res: VercelResponse) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') {
-        res.status(204).end();
-        return true;
-    }
-    return false;
 };
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    if (withCORS(req, res)) return;
+    withCORS(req, res);
+
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
 
     if (req.method !== 'POST') {
         return res.status(405).end('Method Not Allowed');
     }
 
-    const { content } = req.body || {};
+    let content: string;
+    try {
+        content = req.body?.content;
+    } catch (e) {
+        return res.status(400).json({ error: 'Ошибка разбора тела запроса' });
+    }
+    
     if (!content) return res.status(400).json({ error: 'Нет поля content' });
 
     const plainText = content.replace(/<[^>]*>?/gm, '').trim();
