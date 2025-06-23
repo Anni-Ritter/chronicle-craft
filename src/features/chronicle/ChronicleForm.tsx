@@ -21,8 +21,46 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
     const [tags, setTags] = useState<string[]>(initial?.tags || []);
     const [linkedCharacters, setLinkedCharacters] = useState<string[]>(initial?.linked_characters || []);
     const [linkedLocations, setLinkedLocations] = useState<string[]>(initial?.linked_locations || []);
+    const [eventDate, setEventDate] = useState(
+        initial?.event_date ? initial.event_date.slice(0, 10) : ''
+    );
+    const [mood, setMood] = useState(initial?.mood || '');
 
     const handleSubmit = async () => {
+        let finalMood = mood;
+
+        if (!finalMood) {
+            try {
+                const response = await fetch('https://chronicle-craft.vercel.app/api/detect-mood', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content }),
+                    mode: 'cors',
+                });
+
+                if (response.ok) {
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch {
+                        data = null;
+                    }
+                    if (data?.mood) {
+                        finalMood = data.mood;
+                    }
+                    if (Array.isArray(data?.tags)) {
+                        const combinedTags = Array.from(new Set([...tags, ...data.tags]));
+                        setTags(combinedTags);
+                    }
+                } else {
+                    console.warn('Ошибка от API detect-mood:', await response.text());
+                }
+            } catch (err) {
+                console.warn('Ошибка запроса к detect-mood:', err);
+            }
+        }
         const entry: Chronicle = {
             id: initial?.id || uuidv4(),
             title,
@@ -31,6 +69,8 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
             linked_characters: linkedCharacters,
             linked_locations: linkedLocations,
             created_at: initial?.created_at || new Date().toISOString(),
+            event_date: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
+            mood: finalMood || undefined,
         };
 
         const result = initial
@@ -151,6 +191,34 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
                         }
                     }}
                 />
+            </div>
+
+            <div>
+                <label className="block mb-1">Дата события:</label>
+                <input
+                    type="date"
+                    className="w-full border px-2 py-1 rounded"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                />
+            </div>
+
+            <div>
+                <label className="block mb-1">Настроение (опционально):</label>
+                <select
+                    value={mood}
+                    onChange={(e) => setMood(e.target.value)}
+                    className="w-full border px-2 py-1 rounded"
+                >
+                    <option value="">— Не выбрано —</option>
+                    <option value="💔 Трагичное">💔 Трагичное</option>
+                    <option value="🛡️ Эпичное">🛡️ Эпичное</option>
+                    <option value="😌 Спокойное">😌 Спокойное</option>
+                    <option value="😄 Весёлое">😄 Весёлое</option>
+                    <option value="🧩 Загадочное">🧩 Загадочное</option>
+                    <option value="💬 Личное">💬 Личное</option>
+                    <option value="❓ Неопределённое">❓ Неопределённое</option>
+                </select>
             </div>
 
             <button
