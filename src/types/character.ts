@@ -1,7 +1,7 @@
 export type ExtraField = {
-  id: string;
-  key: string;
-  value: string;
+    id: string;
+    key: string;
+    value: string;
 };
 
 export type Character = {
@@ -28,6 +28,7 @@ export type Character = {
         name: string;
     };
     episode?: string[];
+    linked_chronicles?: string[];
     created_at?: string;
     extra?: ExtraField[];
 };

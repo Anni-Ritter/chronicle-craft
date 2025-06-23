@@ -8,12 +8,14 @@ import { useCharacterStore } from "../../store/useCharacterStore";
 import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
 import { CharacterRelationCreator } from "../../features/relations/CharacterRelationCreator";
+import { useChronicleStore } from "../../store/useChronicleStore";
 
 
 export function CharacterDetailPage() {
     const { id } = useParams();
     const allCharacters = useCharacterStore((s) => s.characters);
     const relationships = useRelationshipStore((s) => s.relationships);
+    const chronicles = useChronicleStore((s) => s.chronicles);
     const character = allCharacters.find((c) => c.id === id);
     const [activeTab, setActiveTab] = useState<'info' | 'graph'>('info');
 
@@ -53,6 +55,11 @@ export function CharacterDetailPage() {
             (r) => r.source_id === character?.id || r.target_id === character?.id
         );
     }, [relationships, character?.id]);
+
+    const linkedChronicles = useMemo(() => {
+        if (!character?.linked_chronicles?.length) return [];
+        return chronicles.filter(c => character.linked_chronicles?.includes(c.id));
+    }, [chronicles, character?.linked_chronicles]);
 
     const handleSelectCharacter = useCallback(() => {
         if (activeTab !== 'info') {
@@ -151,17 +158,19 @@ export function CharacterDetailPage() {
                         </RadarChart>
                     </ResponsiveContainer>
                 </div>
-                {character?.episode && character.episode.length > 0 ? (
-                    <>
-                        <h2 className="text-xl font-semibold mt-6 mb-2">Эпизоды</h2>
+                {linkedChronicles.length > 0 && (
+                    <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2">Хроники</h2>
                         <ul className="list-disc list-inside">
-                            {character.episode.map((e, index) => (
-                                <li key={index}>{e}</li>
+                            {linkedChronicles.map((chronicle) => (
+                                <li key={chronicle.id}>
+                                    <Link to={`/chronicles/${chronicle.id}`} className="text-indigo-600 underline">
+                                        {chronicle.title}
+                                    </Link>
+                                </li>
                             ))}
                         </ul>
-                    </>
-                ) : (
-                    <p className="text-zinc-500 mt-2">Нет эпизодов</p>
+                    </div>
                 )}
                 {character?.extra && character.extra.length > 0 && (
                     <div className="mt-6">

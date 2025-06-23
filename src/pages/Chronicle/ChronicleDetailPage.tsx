@@ -72,8 +72,23 @@ export const ChronicleDetailPage: React.FC = () => {
                     <div className="flex justify-between items-center">
                         <h1 className="text-3xl font-bold">{chronicle.title}</h1>
                         <span className="text-sm text-gray-500">
-                            {new Date(chronicle.created_at).toLocaleDateString()}
+                            Добавлено: {new Date(chronicle.created_at).toLocaleDateString()}
                         </span>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div>
+                            📅 Событие:{" "}
+                            {chronicle.event_date
+                                ? new Date(chronicle.event_date).toLocaleDateString()
+                                : 'не указано'}
+                        </div>
+
+                        {chronicle.mood && (
+                            <div>
+                                🪄 Настроение: {chronicle.mood}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex flex-wrap gap-2">

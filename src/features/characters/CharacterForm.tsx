@@ -50,6 +50,8 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
     const [location, setLocation] = useState({ name: initialCharacter?.location.name || '' });
     const [episode, setEpisode] = useState<string[]>(initialCharacter?.episode || []);
     const [userId, setUserId] = useState<string | null>(null);
+    const [allChronicles, setAllChronicles] = useState<{ id: string; title: string }[]>([]);
+    const [linkedChronicles, setLinkedChronicles] = useState<string[]>(initialCharacter?.linked_chronicles || []);
     useEffect(() => {
         supabase.auth.getUser().then(({ data, error }) => {
             if (!error && data.user) {
@@ -58,6 +60,21 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
             }
         });
     }, []);
+
+    useEffect(() => {
+        const fetchChronicles = async () => {
+            const { data, error } = await supabase
+                .from('chronicles')
+                .select('id, title')
+                .eq('user_id', userId);
+
+            if (!error && data) {
+                setAllChronicles(data);
+            }
+        };
+
+        if (userId) fetchChronicles();
+    }, [userId]);
 
     useEffect(() => {
         if (initialCharacter) {
@@ -91,6 +108,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
             origin,
             location,
             episode,
+            linked_chronicles: linkedChronicles,
             created_at: initialCharacter?.created_at ?? new Date().toISOString(),
             attributes,
             extra,
@@ -210,7 +228,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                         />
                     </div>
                 ) : (
-                    <AvatarUploader onUpload={(url) => setAvatar(url)} initialUrl={avatar} bucket="avatars"/>
+                    <AvatarUploader onUpload={(url) => setAvatar(url)} initialUrl={avatar} bucket="avatars" />
                 )}
             </div>
             <div className="mb-4">
@@ -240,7 +258,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                     Пол
                 </label>
                 <input
-                    type="gender"
+                    type="text"
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
                     className="w-full p-2 border rounded"
@@ -295,19 +313,29 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                     </div>
                 )}
             </div>
-            <div>
-                <label htmlFor="episodes" className="block text-gray-700 font-bold mb-2">
-                    Эпизоды
+            <div className="mb-4">
+                <label className="block text-gray-700 font-bold mb-2">
+                    Привязанные хроники
                 </label>
-                <input
-                    type="text"
-                    value={episode.join(', ')}
-                    onChange={(e) => {
-                        const newEpisode = e.target.value.trim();
-                        setEpisode((prevEpisodes) => [...prevEpisodes, newEpisode]);
-                    }}
-                    className="w-full p-2 border rounded"
-                />
+                <div className="flex flex-col gap-2">
+                    {allChronicles.map((chronicle) => (
+                        <label key={chronicle.id} className="flex items-center">
+                            <input
+                                type="checkbox"
+                                className="mr-2"
+                                checked={linkedChronicles.includes(chronicle.id)}
+                                onChange={(e) => {
+                                    setLinkedChronicles((prev) =>
+                                        e.target.checked
+                                            ? [...prev, chronicle.id]
+                                            : prev.filter((id) => id !== chronicle.id)
+                                    );
+                                }}
+                            />
+                            {chronicle.title}
+                        </label>
+                    ))}
+                </div>
             </div>
             <ExtraFieldsEditor extra={extra} onChange={setExtra} />
             <button
