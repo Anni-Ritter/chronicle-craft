@@ -31,36 +31,22 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
 
         if (!finalMood) {
             try {
-                const response = await fetch('https://chronicle-craft.vercel.app/api/detect-mood', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ content }),
-                    mode: 'cors',
+                const { data, error } = await supabase.functions.invoke('detect-mood', {
+                    body: { text: content },
                 });
+                if (!error && data?.mood) {
+                    finalMood = data.mood;
+                }
 
-                if (response.ok) {
-                    let data;
-                    try {
-                        data = await response.json();
-                    } catch {
-                        data = null;
-                    }
-                    if (data?.mood) {
-                        finalMood = data.mood;
-                    }
-                    if (Array.isArray(data?.tags)) {
-                        const combinedTags = Array.from(new Set([...tags, ...data.tags]));
-                        setTags(combinedTags);
-                    }
-                } else {
-                    console.warn('Ошибка от API detect-mood:', await response.text());
+                if (Array.isArray(data?.tags)) {
+                    const combinedTags = Array.from(new Set([...tags, ...data.tags]));
+                    setTags(combinedTags);
                 }
             } catch (err) {
-                console.warn('Ошибка запроса к detect-mood:', err);
+                console.warn('Ошибка определения настроения:', err);
             }
         }
+
         const entry: Chronicle = {
             id: initial?.id || uuidv4(),
             title,
