@@ -117,64 +117,66 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                         </Modal>
                     </div>
                 )}
-                <nav className="hidden lg:flex items-center gap-6 font-serif">
-                    {['/', '/chronicles', '/graph', '/maps'].map((path, i) => (
-                        <a
-                            key={path}
-                            onClick={() => navigate(path)}
-                            className="text-[24px] font-garamond hover:underline cursor-pointer transition"
-                        >
-                            {['Персонажи', 'Хроники', 'Связи', 'Карта'][i]}
-                        </a>
-                    ))}
-
-                    {session ? (
-                        <div className="relative ml-6 text-[18px] font-serif" ref={profileRef}>
-                            <button
-                                onClick={() => setShowPopover(!showPopover)}
-                                className="flex items-center gap-2 bg-[#0E1B12] hover:bg-[#0E1B12] border-none  text-[#D6C5A2] cursor-pointer"
+                {session && (
+                    <nav className="hidden lg:flex items-center gap-6 font-serif">
+                        {['/', '/chronicles', '/graph', '/maps'].map((path, i) => (
+                            <a
+                                key={path}
+                                onClick={() => navigate(path)}
+                                className="text-[24px] font-garamond hover:underline cursor-pointer transition"
                             >
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} className="w-10 h-10 rounded-full object-cover" />
-                                ) : (
-                                    <div className="w-10 h-10 rounded-full" />
-                                )}
-                                {username || 'Профиль'}
-                            </button>
+                                {['Персонажи', 'Хроники', 'Связи', 'Карта'][i]}
+                            </a>
+                        ))}
 
-                            {showPopover && (
-                                <div className="absolute right-0 top-full mt-2 flex flex-col bg-[#0E1B12] border border-[#C2A774] shadow-md rounded-md overflow-hidden z-50 min-w-[150px]">
-                                    <button
-                                        onClick={() => {
-                                            navigate('/profile');
-                                            setShowPopover(false);
-                                        }}
-                                        className="px-4 py-2 text-left bg-[#0E1B12] hover:underline hover:bg-[#0E1B12] border-none transition"
-                                    >
-                                        Профиль
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            await handleLogout();
-                                            setShowPopover(false);
-                                        }}
-                                        className="px-4 py-2 text-left text-red-500 hover:underline bg-[#0E1B12] border-none hover:bg-[#0E1B12] hover:text-red-600 transition"
-                                    >
-                                        Выйти
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <Button
-                            type="button"
-                            title="Войти"
-                            onClick={onLoginClick}
-                        >
-                            Войти
-                        </Button>
-                    )}
-                </nav>
+                        {session ? (
+                            <div className="relative ml-6 text-[18px] font-serif" ref={profileRef}>
+                                <button
+                                    onClick={() => setShowPopover(!showPopover)}
+                                    className="flex items-center gap-2 bg-[#0E1B12] hover:bg-[#0E1B12] border-none  text-[#D6C5A2] cursor-pointer"
+                                >
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} className="w-10 h-10 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full" />
+                                    )}
+                                    {username || 'Профиль'}
+                                </button>
+
+                                {showPopover && (
+                                    <div className="absolute right-0 top-full mt-2 flex flex-col bg-[#0E1B12] border border-[#C2A774] shadow-md rounded-md overflow-hidden z-50 min-w-[150px]">
+                                        <button
+                                            onClick={() => {
+                                                navigate('/profile');
+                                                setShowPopover(false);
+                                            }}
+                                            className="px-4 py-2 text-left bg-[#0E1B12] hover:underline hover:bg-[#0E1B12] border-none transition"
+                                        >
+                                            Профиль
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                await handleLogout();
+                                                setShowPopover(false);
+                                            }}
+                                            className="px-4 py-2 text-left text-red-500 hover:underline bg-[#0E1B12] border-none hover:bg-[#0E1B12] hover:text-red-600 transition"
+                                        >
+                                            Выйти
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <Button
+                                type="button"
+                                title="Войти"
+                                onClick={onLoginClick}
+                            >
+                                Войти
+                            </Button>
+                        )}
+                    </nav>
+                )}
             </header>
             {statusMessage && (
                 <FloatingAlert
