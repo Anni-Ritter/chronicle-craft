@@ -4,7 +4,7 @@ import Telegram from "../assets/icon/telegram.svg";
 
 export const Footer = () => {
     return (
-        <footer className="text-[#C2A774] border-t border-[#C2A774] pt-12 pb-6 mt-20 text-[16px] font-serif">
+        <footer className="text-[#C2A774] border-t border-[#C2A774] pt-12 pb-6 mt-20 text-[16px] font-lora">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 text-start w-full justify-between">
                 <div className="max-sm:hidden">
                     <h4 className="text-[#C2A774] text-lg mb-3">Навигация</h4>

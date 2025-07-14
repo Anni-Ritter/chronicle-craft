@@ -19,26 +19,28 @@ import { RelationTypeModal } from './RelationTypeModal';
 import { CustomCurvedEdge } from '../../components/CustomCurvedEdge';
 import { useSession } from '@supabase/auth-helpers-react';
 import { ManualRelationModal } from '../../components/ManualRelationModal';
-import { HeartPlus, Save } from 'lucide-react';
+import { HeartPlus, Save, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
+import { useDraftRelationshipStore } from '../../store/useDraftRelationshipStore';
 
 interface Props {
     characters: Character[];
     relationships: Relationship[];
     onSelectCharacter?: (charId: string) => void;
+    allCharacters?: Character[];
 }
 
 export const CharacterGraph: React.FC<Props> = ({
     characters,
     relationships,
     onSelectCharacter,
+    allCharacters
 }) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [draftRelationships, setDraftRelationships] = useState<Relationship[]>([]);
     const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
     const [showModal, setShowModal] = useState(false);
     const [manualModalOpen, setManualModalOpen] = useState(false);
@@ -52,6 +54,10 @@ export const CharacterGraph: React.FC<Props> = ({
 
     const { addRelationship, updateRelationship, removeRelationship } = useRelationshipStore();
     const { fetchPositions, savePosition, setPosition, positions } = useCharacterPositionStore();
+    const {
+        draftRelationships,
+        setDraftRelationships,
+    } = useDraftRelationshipStore();
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -60,7 +66,20 @@ export const CharacterGraph: React.FC<Props> = ({
     }, [session]);
 
     useEffect(() => {
-        const updated: Node[] = characters.map((char, index) => ({
+        const activeCharacterIds = new Set<string>();
+
+        draftRelationships.forEach((rel) => {
+            activeCharacterIds.add(rel.source_id);
+            activeCharacterIds.add(rel.target_id);
+        });
+
+        characters.forEach((char) => activeCharacterIds.add(char.id));
+
+        const activeCharacters = (allCharacters || []).filter((char) =>
+            activeCharacterIds.has(char.id)
+        );
+
+        const updated: Node[] = activeCharacters.map((char, index) => ({
             id: char.id,
             data: {
                 label: (
@@ -88,11 +107,13 @@ export const CharacterGraph: React.FC<Props> = ({
         }));
 
         setNodes(updated);
-    }, [characters, positions]);
+    }, [draftRelationships, characters, allCharacters, positions]);
 
     useEffect(() => {
-        setDraftRelationships(relationships);
-    }, [relationships]);
+        if (draftRelationships.length === 0) {
+            setDraftRelationships(relationships);
+        }
+    }, []);
 
     useEffect(() => {
         const grouped = draftRelationships.reduce((acc, rel) => {
@@ -147,23 +168,27 @@ export const CharacterGraph: React.FC<Props> = ({
             color,
             created_at: new Date().toISOString(),
         };
-        setDraftRelationships((prev) => [...prev, newRel]);
+        setDraftRelationships([...draftRelationships, newRel]);
         setShowModal(false);
         setPendingConnection(null);
     };
 
-    const handleEditRelation = async ({ label, color }: { label: string; color: string }) => {
+    const handleEditRelation = ({ label, color }: { label: string; color: string }) => {
         if (!selectedEdge) return;
-        setDraftRelationships((prev) =>
-            prev.map((rel) => (rel.id === selectedEdge.id ? { ...rel, type: label, color } : rel))
+
+        const updated = draftRelationships.map((rel) =>
+            rel.id === selectedEdge.id ? { ...rel, type: label, color } : rel
         );
+        setDraftRelationships(updated);
         setSelectedEdge(null);
         setEditModalOpen(false);
     };
 
     const handleDeleteRelation = () => {
         if (!selectedEdge) return;
-        setDraftRelationships((prev) => prev.filter((rel) => rel.id !== selectedEdge.id));
+
+        const filtered = draftRelationships.filter((rel) => rel.id !== selectedEdge.id);
+        setDraftRelationships(filtered);
         setSelectedEdge(null);
         setEditModalOpen(false);
     };
@@ -247,7 +272,7 @@ export const CharacterGraph: React.FC<Props> = ({
                 {selectedEdge && editModalOpen && (
                     <RelationTypeModal
                         isOpen
-                        onSelect={handleEditRelation}
+                        onSelect={(data) => Promise.resolve(handleEditRelation(data))}
                         onClose={() => {
                             setEditModalOpen(false);
                             setSelectedEdge(null);
@@ -277,7 +302,7 @@ export const CharacterGraph: React.FC<Props> = ({
 
                 <ManualRelationModal
                     isOpen={manualModalOpen}
-                    characters={characters}
+                    characters={allCharacters || []}
                     onClose={() => setManualModalOpen(false)}
                     onCreate={({ sourceId, targetId, label, color }) => {
                         const newRel: Relationship = {
@@ -288,7 +313,7 @@ export const CharacterGraph: React.FC<Props> = ({
                             color,
                             created_at: new Date().toISOString(),
                         };
-                        setDraftRelationships((prev) => [...prev, newRel]);
+                        setDraftRelationships([...draftRelationships, newRel]);
                     }}
                 />
             </div>
@@ -306,6 +331,16 @@ export const CharacterGraph: React.FC<Props> = ({
                     className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
                 >
                     Сохранить связи
+                </Button>
+                <Button
+                    onClick={() => {
+                        const savedIds = new Set(relationships.map(r => r.id));
+                        const onlySaved = draftRelationships.filter(r => savedIds.has(r.id));
+                        setDraftRelationships(onlySaved);
+                    }}
+                    icon={<Trash2 />}
+                >
+                    Очистить черновик
                 </Button>
             </div>
             {statusMessage && (

@@ -75,6 +75,10 @@ export function CharacterDetailPage() {
         }
     }, [activeTab]);
 
+    const otherCharacters = useMemo(() => {
+        return allCharacters;
+    }, [allCharacters, character.id]);
+
     return (
         <div className="text-[#e5d9a5] font-lora mt-6 md:mt-8 px-2">
             <div className="flex flex-col">
@@ -174,8 +178,7 @@ export function CharacterDetailPage() {
                             <h2 className="text-xl md:text-2xl font-bold text-[#e5d9a5] flex items-center gap-2 mb-4">
                                 <BookCopy size={20} /> Биография
                             </h2>
-                            <div className="whitespace-pre-line text-[#c7bc98] text-[17px] leading-relaxed text-justify font-serif">
-                                {character.bio}
+                            <div dangerouslySetInnerHTML={{ __html: character.bio }} className="whitespace-pre-line text-[#c7bc98] text-[17px] leading-relaxed text-justify font-lora">
                             </div>
                         </section>
                     )}
@@ -300,6 +303,7 @@ export function CharacterDetailPage() {
                         characters={relatedCharacters}
                         relationships={relatedRelationships}
                         onSelectCharacter={handleSelectCharacter}
+                        allCharacters={otherCharacters}
                     />
                 </div>
             )}

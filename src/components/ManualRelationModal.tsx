@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Character } from '../types/character';
 import { Modal } from './Modal';
+import { Combobox } from '@headlessui/react';
 
 interface Props {
     isOpen: boolean;
@@ -41,43 +42,25 @@ export const ManualRelationModal: React.FC<Props> = ({
                 </h3>
 
                 <div className="space-y-5">
-                    <div>
-                        <label className="block mb-1 text-sm font-medium">Персонаж A</label>
-                        <select
-                            className="w-full rounded-xl bg-[#223120] text-[#f5e9c6] border border-[#c2a774] px-4 py-2 focus:outline-none focus:ring focus:ring-[#c2a774]"
-                            value={sourceId}
-                            onChange={(e) => setSourceId(e.target.value)}
-                        >
-                            <option value="">Выберите персонажа</option>
-                            {characters.map((char) => (
-                                <option key={char.id} value={char.id}>
-                                    {char.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <CharacterSelect
+                        label="Персонаж A"
+                        selectedId={sourceId}
+                        onChange={setSourceId}
+                        characters={characters}
+                    />
 
-                    <div>
-                        <label className="block mb-1 text-sm font-medium">Персонаж B</label>
-                        <select
-                            className="w-full rounded-xl bg-[#223120] text-[#f5e9c6] border border-[#c2a774] px-4 py-2 focus:outline-none focus:ring focus:ring-[#c2a774]"
-                            value={targetId}
-                            onChange={(e) => setTargetId(e.target.value)}
-                        >
-                            <option value="">Выберите персонажа</option>
-                            {characters.map((char) => (
-                                <option key={char.id} value={char.id}>
-                                    {char.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    <CharacterSelect
+                        label="Персонаж B"
+                        selectedId={targetId}
+                        onChange={setTargetId}
+                        characters={characters}
+                    />
 
                     <div>
                         <label className="block mb-1 text-sm font-medium">Название связи</label>
                         <input
                             className="w-full bg-[#223120] text-[#f5e9c6] border border-[#c2a774] rounded-xl px-4 py-2 placeholder-[#b4b48a] focus:outline-none focus:ring focus:ring-[#c2a774]"
-                            placeholder="например, враг"
+                            placeholder="Например, враг"
                             value={label}
                             onChange={(e) => setLabel(e.target.value)}
                         />
@@ -112,3 +95,62 @@ export const ManualRelationModal: React.FC<Props> = ({
         </Modal>
     );
 };
+
+function CharacterSelect({
+    label,
+    selectedId,
+    onChange,
+    characters,
+}: {
+    label: string;
+    selectedId: string;
+    onChange: (id: string) => void;
+    characters: Character[];
+}) {
+    const selected = characters.find((c) => c.id === selectedId);
+    const [query, setQuery] = useState('');
+
+    const filtered =
+        query === ''
+            ? characters
+            : characters.filter((c) =>
+                c.name.toLowerCase().includes(query.toLowerCase())
+            );
+
+    return (
+        <div className="space-y-1">
+            <label className="block text-sm font-medium">{label}</label>
+            <Combobox value={selected} onChange={(char: Character) => onChange(char.id)}>
+                <div className="relative">
+                    <div className="relative w-full">
+                        <Combobox.Input
+                            className="w-full rounded-xl bg-[#223120] text-[#f5e9c6] placeholder-[#b4b48a] border border-[#c2a774] px-4 py-2 focus:outline-none"
+                            displayValue={(char: Character) => char?.name}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Начните вводить имя..."
+                        />
+                        <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#c2a774]">
+                            ▾
+                        </Combobox.Button>
+                    </div>
+                    {filtered.length > 0 && (
+                        <Combobox.Options className="absolute no-scrollbar z-50 mt-1 max-h-60 w-full overflow-auto rounded-md bg-[#1c2916] border  border-[#c2a774] shadow-lg text-[#f5e9c6] ">
+                            {filtered.map((char) => (
+                                <Combobox.Option
+                                    key={char.id}
+                                    value={char}
+                                    className={({ active }) =>
+                                        `cursor-pointer select-none px-4 py-2 ${active ? 'bg-[#c2a774] text-[#1c2916]' : ''
+                                        }`
+                                    }
+                                >
+                                    {char.name}
+                                </Combobox.Option>
+                            ))}
+                        </Combobox.Options>
+                    )}
+                </div>
+            </Combobox>
+        </div>
+    );
+}

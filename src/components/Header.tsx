@@ -89,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                         </button>
 
                         <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
-                            <div className="border-t border-[#C2A774] shadow-md p-6 flex flex-col gap-4 text-base font-serif">
+                            <div className="border-t border-[#C2A774] shadow-md p-6 flex flex-col gap-4 text-base font-lora">
                                 {[
                                     { label: 'Персонажи', path: '/' },
                                     { label: 'Хроники', path: '/chronicles' },
@@ -118,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                     </div>
                 )}
                 {session && (
-                    <nav className="hidden lg:flex items-center gap-6 font-serif">
+                    <nav className="hidden lg:flex items-center gap-6 font-lora">
                         {['/', '/chronicles', '/graph', '/maps'].map((path, i) => (
                             <a
                                 key={path}
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                         ))}
 
                         {session ? (
-                            <div className="relative ml-6 text-[18px] font-serif" ref={profileRef}>
+                            <div className="relative ml-6 text-[18px] font-lora" ref={profileRef}>
                                 <button
                                     onClick={() => setShowPopover(!showPopover)}
                                     className="flex items-center gap-2 bg-[#0E1B12] hover:bg-[#0E1B12] border-none  text-[#D6C5A2] cursor-pointer"
