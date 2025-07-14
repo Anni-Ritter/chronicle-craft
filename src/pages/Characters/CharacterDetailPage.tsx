@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCharacterStore } from "../../store/useCharacterStore";
 import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
@@ -34,6 +34,10 @@ export function CharacterDetailPage() {
             </div>
         );
     }
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id]);
 
     const radarData = character?.attributes ? [
         { attribute: 'Сила', value: character.attributes.strength },

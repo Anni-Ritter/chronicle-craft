@@ -65,7 +65,7 @@ export const MapPointModal: React.FC<Props> = ({ point, onClose }) => {
 
     return (
         <Modal isOpen onClose={onClose}>
-            <div className="w-full bg-[#1e2c22] border border-[#c2a774] rounded-xl p-6 text-[#e5d9a5] font-lora">
+            <div className="w-full bg-[#1e2c22] max-h-[90vh] no-scrollbar overflow-auto border border-[#c2a774] rounded-xl p-6 text-[#e5d9a5] font-lora">
                 {!editMode ? (
                     <>
                         <h2 className="text-3xl font-garamond mb-2">{current?.name}</h2>

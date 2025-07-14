@@ -24,7 +24,7 @@ export const CreateMapPointModal: React.FC<Props> = ({ coords, onClose, onSave }
 
     return (
         <Modal isOpen onClose={onClose}>
-            <div className="w-full bg-[#1e2c22] border border-[#c2a774] rounded-xl p-6 text-[#e5d9a5] font-lora space-y-4">
+            <div className="w-full bg-[#1e2c22] max-h-[90vh] no-scrollbar overflow-auto border border-[#c2a774] rounded-xl p-6 text-[#e5d9a5] font-lora space-y-4">
                 <h2 className="text-2xl text-center font-garamond mb-2">Создание точки</h2>
 
                 <p className="text-sm mb-2 text-[#c2a774]">

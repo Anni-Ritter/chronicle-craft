@@ -25,6 +25,10 @@ export const ChronicleDetailPage: React.FC = () => {
             fetchCharacters(session.user.id, supabase);
         }
     }, []);
+    
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [id]);
 
     const chronicle = chronicles.find((c) => c.id === id);
 
@@ -77,7 +81,7 @@ export const ChronicleDetailPage: React.FC = () => {
 
                         <Button
                             onClick={() => setIsEditing(true)}
-                            icon={<Pencil size={20}/>}
+                            icon={<Pencil size={20} />}
                             className='text-base hidden lg:flex shrink-0'
                         >
                             Редактировать
