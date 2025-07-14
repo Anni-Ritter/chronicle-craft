@@ -4,7 +4,10 @@ import { MapForm } from '../../features/map/MapForm';
 import { useMapStore } from '../../store/useMapStore';
 import type { DBMap } from '../../types/DBMap';
 import { Modal } from '../../components/Modal';
+import { Button } from '../../components/ChronicleButton';
+import { Plus, Trash2, Map } from 'lucide-react';
 
+const MAPS_PER_PAGE = 10;
 
 export const MapListPage: React.FC = () => {
     const supabase = useSupabaseClient();
@@ -12,6 +15,7 @@ export const MapListPage: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const { maps, fetchMaps, deleteMap } = useMapStore();
     const [mapToDelete, setMapToDelete] = useState<DBMap | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -26,82 +30,144 @@ export const MapListPage: React.FC = () => {
         }
     };
 
+    const filteredMaps = maps;
+    const totalPages = Math.ceil(filteredMaps.length / MAPS_PER_PAGE);
+
+    const paginatedMaps = filteredMaps.slice(
+        (currentPage - 1) * MAPS_PER_PAGE,
+        currentPage * MAPS_PER_PAGE
+    );
+
+    const goToPage = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     return (
-        <>
-            <div className="p-6 space-y-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold">Ваши карты</h1>
-                    <button
-                        onClick={() => setShowForm(!showForm)}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+        <div className="text-[#e5d9a5] font-lora px-2 md:px-4 py-6">
+            <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-[#c2a774] pb-4 mb-6">
+                    <h1 className="text-3xl flex flex-row gap-2 items-center font-garamond text-[#e5d9a5]">
+                        <Map /> Ваши карты
+                    </h1>
+                    <Button
+                        onClick={() => setShowForm(true)}
+                        icon={<Plus size={18} />}
+                        className="max-sm:gap-0"
                     >
-                        {showForm ? 'Отмена' : 'Добавить карту'}
+                        <span className="hidden md:block">Добавить карту</span>
+                    </Button>
+                </div>
+
+                {maps.length === 0 ? (
+                    <div className="text-center text-[#c7bc98] border border-[#d6c5a2] p-8 rounded-xl shadow-inner mt-8">
+                        <p className="text-xl font-semibold text-[#e5d9a5] mb-2">Карт пока нет</p>
+                        <p className="text-sm mb-4">Создайте свою первую карту, чтобы начать наполнять мир.</p>
+                        <Button icon={<Plus />} onClick={() => setShowForm(true)}>
+                            Добавить карту
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {paginatedMaps.map((map) => (
+                            <div
+                                key={map.id}
+                                className="relative border border-[#d6c5a2] rounded-lg p-3 shadow-md hover:shadow-lg transition overflow-hidden"
+                            >
+                                <a href={`/maps/${map.id}`} className="block space-y-2">
+                                    <img
+                                        src={supabase.storage.from('map').getPublicUrl(map.image_path).data.publicUrl}
+                                        alt={map.name}
+                                        className="w-full h-40 object-cover rounded"
+                                    />
+                                    <div>
+                                        <h2 className="text-xl font-semibold">{map.name}</h2>
+                                        <p className="text-sm text-gray-500">{map.territory}</p>
+                                    </div>
+                                </a>
+
+                                <Button
+                                    variant='danger'
+                                    onClick={() => setMapToDelete(map)}
+                                    icon={<Trash2 />}
+                                    className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-sm rounded hover:bg-red-600"
+                                >
+
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            {totalPages > 1 && (
+                <div className="flex justify-center gap-2 pt-6 font-lora text-[#e5d9a5]">
+                    <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded border border-[#c2a774] hover:bg-[#3a4c3a] disabled:opacity-30"
+                    >
+                        ⪻
+                    </button>
+                    {Array.from({ length: totalPages }).map((_, index) => {
+                        const isActive = currentPage === index + 1;
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => goToPage(index + 1)}
+                                className={`px-3 py-1 rounded border font-bold transition ${isActive
+                                    ? 'bg-[#c2a774] text-[#2D422B] shadow-md'
+                                    : 'border-[#c2a774] hover:bg-[#3a4c3a]'
+                                    }`}
+                            >
+                                {index + 1}
+                            </button>
+                        );
+                    })}
+                    <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded border border-[#c2a774] hover:bg-[#3a4c3a] disabled:opacity-30"
+                    >
+                        ⪼
                     </button>
                 </div>
-
-                {showForm && (
-                    <MapForm
-                        userId={session?.user?.id ?? ''}
-                        supabase={supabase}
-                        onSuccess={() => {
-                            setShowForm(false);
-                            if (session?.user?.id) { fetchMaps(session.user.id, supabase); }
-                        }}
-                    />
-                )}
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {maps.map((map) => (
-                        <div
-                            key={map.id}
-                            className="relative border rounded shadow hover:shadow-lg transition p-4 space-y-2"
-                        >
-                            <a href={`/maps/${map.id}`} className="block space-y-2">
-                                <img
-                                    src={supabase.storage.from('map').getPublicUrl(map.image_path).data.publicUrl}
-                                    alt={map.name}
-                                    className="w-full h-40 object-cover rounded"
-                                />
-                                <div>
-                                    <h2 className="text-xl font-semibold">{map.name}</h2>
-                                    <p className="text-sm text-gray-500">{map.territory}</p>
-                                </div>
-                            </a>
-
-                            <button
-                                onClick={() => setMapToDelete(map)}
-                                className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-sm rounded hover:bg-red-600"
-                            >
-                                Удалить
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            </div>
+            )}
             <Modal isOpen={!!mapToDelete} onClose={() => setMapToDelete(null)}>
-                <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Удалить карту?</h2>
-                    <p className="text-gray-700">
-                        Вы уверены, что хотите удалить карту{" "}
-                        <span className="font-semibold">«{mapToDelete?.name}»</span>? Это действие нельзя отменить.
+                <div className="text-center text-[#c7bc98] font-lora max-sm:p-5">
+                    <h2 className="text-xl font-semibold text-[#e5d9a5] mb-4">Удалить карту</h2>
+                    <p className="mb-6">
+                        Вы уверены, что хотите удалить карту{' '}
+                        <strong className="text-[#e5d9a5]">«{mapToDelete?.name}»</strong>? Это действие необратимо.
                     </p>
-                    <div className="flex justify-end gap-2 pt-2">
-                        <button
+                    <div className="flex justify-center gap-4">
+                        <Button
+                            variant='outline'
                             onClick={() => setMapToDelete(null)}
-                            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                            className='text-base'
                         >
                             Отмена
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                            variant="danger"
                             onClick={confirmDelete}
-                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                            className='text-base'
                         >
                             Удалить
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </Modal>
-        </>
+            <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
+                <MapForm
+                    userId={session?.user?.id ?? ''}
+                    supabase={supabase}
+                    onSuccess={() => {
+                        setShowForm(false);
+                        if (session?.user?.id) fetchMaps(session.user.id, supabase);
+                    }}
+                />
+            </Modal>
+        </div>
     );
 };

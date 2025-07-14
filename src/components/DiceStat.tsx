@@ -15,10 +15,10 @@ export const DiceStat: React.FC<DiceStatProps> = ({ label, value }) => {
     }, [value]);
 
     return (
-        <div>
-            <label className="text-sm font-medium text-gray-700">{label}</label>
+        <div className="flex flex-col items-center gap-1 font-lora">
+            <span className="text-[#D6C5A2]">{label}</span>
             <div
-                className={`w-full p-2 border rounded mt-1 text-center font-bold text-lg transition-transform duration-200 ${shake ? 'animate-pulse scale-110 bg-yellow-100' : ''
+                className={`w-20 h-20 flex items-center justify-center border-2 border-[#C2A774] rounded-full text-[#D6C5A2] bg-[#0e1b12] text-xl font-bold transition-transform duration-200 ${shake ? 'scale-110 animate-pulse bg-[#C2A774] text-[#0E1B12]' : ''
                     }`}
             >
                 {value}

@@ -12,6 +12,7 @@ export const CustomCurvedEdge = ({
     data,
 }: EdgeProps) => {
     const curvature = data?.curvature ?? 0.3;
+    const indexOffset = data?.indexOffset ?? 0;
     const [edgePath] = getBezierPath({
         sourceX,
         sourceY,
@@ -19,6 +20,8 @@ export const CustomCurvedEdge = ({
         targetY,
         curvature,
     });
+
+    const labelDy = -8 + indexOffset * 12;
 
     return (
         <>
@@ -45,11 +48,14 @@ export const CustomCurvedEdge = ({
 
             {label && (
                 <text
+                    dy={labelDy}
                     style={{
                         fontSize: 12,
                         fill: style?.stroke || "#000",
-                        pointerEvents: "none",
+                        cursor: 'pointer',
+                        pointerEvents: "auto",
                     }}
+                    onClick={() => data?.onLabelClick?.(id)}
                 >
                     <textPath
                         href={`#${id}`}

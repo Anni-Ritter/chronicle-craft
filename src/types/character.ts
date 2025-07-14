@@ -9,6 +9,11 @@ export type Character = {
     user_id: string;
     name: string;
     avatar?: string;
+    age?: string;
+    birthday?: string;
+    occupation?: string;
+    affiliation?: string;
+    title?: string;
     bio: string;
     attributes: {
         strength: number;

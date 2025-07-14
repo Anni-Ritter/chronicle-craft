@@ -1,3 +1,5 @@
+export type IconType = "default" | "camp" | "city" | "temple" | "treasure";
+
 export interface MapPoint {
     id: string;
     name: string;
@@ -9,4 +11,6 @@ export interface MapPoint {
     user_id: string;
     map_id: string;
     description?: string;
+    icon_type: IconType;
 }
+

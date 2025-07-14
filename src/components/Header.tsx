@@ -1,7 +1,10 @@
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
 import { useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
-import { toast } from 'react-toastify'
+import { useEffect, useRef, useState } from 'react'
+import Logo from "../assets/logo.png";
+import { Modal } from './Modal';
+import { Button } from './ChronicleButton';
+import { FloatingAlert } from './FloatingAlert';
 
 interface HeaderProps {
     onLoginClick: () => void
@@ -14,13 +17,23 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
     const [isOpen, setIsOpen] = useState(false)
     const [username, setUsername] = useState<string | null>(null)
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+    const [showPopover, setShowPopover] = useState(false);
+    const profileRef = useRef<HTMLDivElement>(null);
+    const [statusMessage, setStatusMessage] = useState<{
+        type: 'success' | 'error';
+        text: string;
+    } | null>(null);
 
     const handleLogout = async () => {
         const { error } = await supabase.auth.signOut();
         if (error) {
-            toast.error('Ошибка при выходе');
+            setStatusMessage({ type: 'error', text: 'Ошибка при выходе' });
+        } else {
+            setStatusMessage({ type: 'success', text: 'Вы успешно вышли' });
+            navigate('/');
         }
-    }
+    };
+
 
     const handleNavigate = (path: string) => {
         navigate(path)
@@ -29,117 +42,148 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
 
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            if (!session?.user) return;
+        if (!session?.user) return;
+        supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', session.user.id)
+            .single()
+            .then(({ data, error }) => {
+                if (!error && data) {
+                    setUsername(data.username);
+                    setAvatarUrl(data.avatar_url);
+                }
+            });
+    }, [session]);
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('username, avatar_url')
-                .eq('id', session.user.id)
-                .single();
-
-            if (!error && data) {
-                setUsername(data.username);
-                setAvatarUrl(data.avatar_url);
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                profileRef.current &&
+                !profileRef.current.contains(e.target as Node)
+            ) {
+                setShowPopover(false);
             }
         };
 
-        fetchProfile();
-    }, [session]);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     return (
-        <header className="p-4 flex justify-between items-center bg-white relative z-50">
-            <h1
-                onClick={() => navigate('/')}
-                className="text-xl font-bold cursor-pointer"
-            >
-                ChronicleCraft ✨
-            </h1>
+        <>
+            <header className="max-w-[1440px] text-[#D6C5A2] py-[24px] flex justify-between items-center relative z-50 border-b border-[#C2A774]">
+                <h1
+                    onClick={() => navigate('/')}
+                    className="text-[32px] font-fancy cursor-pointer tracking-wide flex flex-row items-center gap-3"
+                >
+                    <img src={Logo} alt="logo" className="w-12 h-12" /> ChronicleCraft
+                </h1>
 
-            <div className="md:hidden">
-                <button onClick={() => setIsOpen(!isOpen)} className="text-2xl">
-                    ☰
-                </button>
-                {isOpen && (
-                    <div className="absolute top-full left-0 w-full bg-white border-t mt-2 shadow-md p-4 flex flex-col gap-2">
-                        <button onClick={() => handleNavigate('/')} className="text-indigo-600 text-left">
-                            Персонажи
+                {session && (
+                    <div className="lg:hidden">
+                        <button onClick={() => setIsOpen(true)} className="text-3xl text-[#C2A774] px-3 py-1">
+                            ☰
                         </button>
-                        <button onClick={() => handleNavigate('/chronicles')} className="text-indigo-600 text-left">
-                            Хроники
-                        </button>
-                        <button onClick={() => handleNavigate('/graph')} className="text-indigo-600 text-left">
-                            Связи
-                        </button>
-                        <button onClick={() => handleNavigate('/maps')} className="text-indigo-600 text-left">
-                            Карта
-                        </button>
-                        {session ? (
-                            <>
-                                <a onClick={() => navigate('/profile')} className="text-sm text-gray-700 mt-2">
-                                    {username || 'Профиль'}
-                                </a>
-                                <button
+
+                        <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
+                            <div className="border-t border-[#C2A774] shadow-md p-6 flex flex-col gap-4 text-base font-serif">
+                                {[
+                                    { label: 'Персонажи', path: '/' },
+                                    { label: 'Хроники', path: '/chronicles' },
+                                    { label: 'Связи', path: '/graph' },
+                                    { label: 'Карта', path: '/maps' },
+                                    { label: 'Профиль', path: '/profile' },
+                                ].map(({ label, path }) => (
+                                    <button
+                                        key={label}
+                                        onClick={() => handleNavigate(path)}
+                                        className="text-center text-lg text-[#C2A774] transition py-1 bg-transparent border-none"
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+
+                                <Button
+                                    variant='danger'
                                     onClick={handleLogout}
-                                    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition mt-2"
+                                    className='text-sm'
                                 >
                                     Выйти
-                                </button>
-                            </>
-                        ) : (
-                            <button
-                                onClick={() => {
-                                    onLoginClick()
-                                    setIsOpen(false)
-                                }}
-                                className="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition"
-                            >
-                                Войти
-                            </button>
-                        )}
+                                </Button>
+                            </div>
+                        </Modal>
                     </div>
                 )}
-            </div>
-
-            <nav className="hidden md:flex items-center gap-4">
-                <a onClick={() => navigate('/')} className="text-indigo-600 hover:underline cursor-pointer">
-                    Персонажи
-                </a>
-                <a onClick={() => navigate('/chronicles')} className="text-indigo-600 hover:underline cursor-pointer">
-                    Хроники
-                </a>
-                <a onClick={() => navigate('/graph')} className="text-indigo-600 hover:underline cursor-pointer">
-                    Связи
-                </a>
-                <a onClick={() => navigate('/maps')} className="text-indigo-600 hover:underline cursor-pointer">
-                    Карта
-                </a>
-                {session ? (
-                    <div className="flex items-center gap-4">
-                        <a className="text-sm cursor-pointer flex items-center gap-2" onClick={() => navigate('/profile')}>
-                            {avatarUrl ? (
-                                <img src={avatarUrl} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
-                            ) : (
-                                <div className="w-6 h-6 rounded-full bg-gray-300" />
-                            )}
-                            {username || 'Профиль'}
-                        </a>
-                        <button
-                            onClick={handleLogout}
-                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition"
+                <nav className="hidden lg:flex items-center gap-6 font-serif">
+                    {['/', '/chronicles', '/graph', '/maps'].map((path, i) => (
+                        <a
+                            key={path}
+                            onClick={() => navigate(path)}
+                            className="text-[24px] font-garamond hover:underline cursor-pointer transition"
                         >
-                            Выйти
-                        </button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={onLoginClick}
-                        className="bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition"
-                    >
-                        Войти
-                    </button>
-                )}
-            </nav>
-        </header>
+                            {['Персонажи', 'Хроники', 'Связи', 'Карта'][i]}
+                        </a>
+                    ))}
+
+                    {session ? (
+                        <div className="relative ml-6 text-[18px] font-serif" ref={profileRef}>
+                            <button
+                                onClick={() => setShowPopover(!showPopover)}
+                                className="flex items-center gap-2 bg-[#0E1B12] hover:bg-[#0E1B12] border-none  text-[#D6C5A2] cursor-pointer"
+                            >
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} className="w-10 h-10 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-full" />
+                                )}
+                                {username || 'Профиль'}
+                            </button>
+
+                            {showPopover && (
+                                <div className="absolute right-0 top-full mt-2 flex flex-col bg-[#0E1B12] border border-[#C2A774] shadow-md rounded-md overflow-hidden z-50 min-w-[150px]">
+                                    <button
+                                        onClick={() => {
+                                            navigate('/profile');
+                                            setShowPopover(false);
+                                        }}
+                                        className="px-4 py-2 text-left bg-[#0E1B12] hover:underline hover:bg-[#0E1B12] border-none transition"
+                                    >
+                                        Профиль
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            await handleLogout();
+                                            setShowPopover(false);
+                                        }}
+                                        className="px-4 py-2 text-left text-red-500 hover:underline bg-[#0E1B12] border-none hover:bg-[#0E1B12] hover:text-red-600 transition"
+                                    >
+                                        Выйти
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <Button
+                            type="button"
+                            title="Войти"
+                            onClick={onLoginClick}
+                        >
+                            Войти
+                        </Button>
+                    )}
+                </nav>
+            </header>
+            {statusMessage && (
+                <FloatingAlert
+                    type={statusMessage.type}
+                    message={statusMessage.text}
+                    onClose={() => setStatusMessage(null)}
+                    position="top-right"
+                />
+            )}
+        </>
     )
 }

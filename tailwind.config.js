@@ -10,6 +10,8 @@ export default {
         'fade-in-down': 'fadeInDown 0.5s ease-out forwards',
         'noise': 'noise 6s infinite alternate',
         'pulse-soft': 'pulse 3s ease-in-out infinite',
+        'wobble': 'wobble 2s infinite',
+        'fade-in-up': 'fade-in-up 0.4s ease-out',
       },
       keyframes: {
         fadeInDown: {
@@ -29,6 +31,17 @@ export default {
           '0%, 100%': { opacity: '0.2' },
           '50%': { opacity: '0.5' },
         },
+        'fade-in-up': {
+          '0%': { opacity: 0, transform: 'translateY(10px)' },
+          '100%': { opacity: 1, transform: 'translateY(0)' },
+        },
+      },
+      fontFamily: {
+        garamond: ['"Cormorant Garamond"', 'serif'],
+        lora: ['Lora', 'serif'],
+      },
+      screens: {
+        'max-sm': { max: '640px' },
       },
     },
   },

@@ -12,7 +12,7 @@ export const AvatarUploader = ({ onUpload, initialUrl, bucket = 'avatars', pathP
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [preview, setPreview] = useState<string | null>(initialUrl ?? null);
-
+    const previousUrlRef = useRef<string | null>(initialUrl ?? null);
     useEffect(() => {
         setPreview(initialUrl ?? null);
     }, [initialUrl]);
@@ -26,23 +26,32 @@ export const AvatarUploader = ({ onUpload, initialUrl, bucket = 'avatars', pathP
         const fileName = `${Date.now()}.${ext}`;
         const filePath = pathPrefix ? `${pathPrefix}/${fileName}` : fileName;
 
-        const { error } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
             .from(bucket)
-            .upload(filePath, file);
+            .upload(filePath, file, { upsert: false });
 
-        if (error) {
-            alert("Ошибка загрузки: " + error.message);
+        if (uploadError) {
+            alert("Ошибка загрузки: " + uploadError.message);
             setUploading(false);
             return;
         }
 
-        const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
 
-        if (data?.publicUrl) {
-            setPreview(data.publicUrl);
-            onUpload(data.publicUrl);
+        if (urlData?.publicUrl) {
+            setPreview(urlData.publicUrl);
+            onUpload(urlData.publicUrl);
+
+            if (previousUrlRef.current) {
+                const oldPath = previousUrlRef.current.split(`${bucket}/`)[1];
+                if (oldPath) {
+                    await supabase.storage.from(bucket).remove([oldPath]);
+                    console.log("Удалён старый файл:", oldPath);
+                }
+            }
+
+            previousUrlRef.current = urlData.publicUrl;
         }
-
         setUploading(false);
     };
 
@@ -53,7 +62,7 @@ export const AvatarUploader = ({ onUpload, initialUrl, bucket = 'avatars', pathP
     };
 
     return (
-        <div className="relative w-32 h-32 mx-auto group cursor-pointer" onClick={handleClick}>
+        <div className="relative w-32 h-32 group cursor-pointer" onClick={handleClick}>
             {preview ? (
                 <img
                     src={preview}

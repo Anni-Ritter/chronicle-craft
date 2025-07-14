@@ -2,8 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --cc-bg: #0e1b12;
+    --cc-text: #D6C5A2;
+    --cc-text-muted: #c7bc98;
+    --cc-accent: #C2A774;
+    --cc-accent-hover: #e5d9a5;
+    --cc-border: #223120;
+    --cc-surface: #1a2218;
+    --cc-danger: #D76F6F;
+    --cc-danger-hover: #b44f4f;
+    --cc-input-bg: #0e1b12;
+    --cc-shadow: 0 0 25px #c2a77480;
+}
+
+
+body {
+    background-color: var(--cc-bg);
+    color: var(--cc-text);
+    font-family: 'Cormorant Garamond', serif;
+}
+
 .ProseMirror {
     outline: none;
+    font-size: 1rem;
+    line-height: 1.6;
 }
 
 .ProseMirror ul {
@@ -19,7 +42,24 @@
 }
 
 input:-webkit-autofill {
-    box-shadow: 0 0 0px 1000px white inset !important;
-    -webkit-box-shadow: 0 0 0px 1000px white inset !important;
-    -webkit-text-fill-color: #000 !important;
+    box-shadow: 0 0 0px 1000px #0e1b12 inset !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0e1b12 inset !important;
+    -webkit-text-fill-color: #e5d9a5 !important;
+}
+
+.rich-editor ul {
+    list-style-type: disc;
+    margin-left: 1.5rem;
+    padding-left: 1rem;
+}
+
+.rich-editor ol {
+    list-style-type: decimal;
+    margin-left: 1.5rem;
+    padding-left: 1rem;
+}
+
+.scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    touch-action: auto;
 }

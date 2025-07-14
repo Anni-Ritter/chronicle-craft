@@ -1,5 +1,4 @@
 import { Link, useParams } from "react-router-dom";
-
 import {
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer
 } from 'recharts';
@@ -7,9 +6,12 @@ import { useCallback, useMemo, useState } from "react";
 import { useCharacterStore } from "../../store/useCharacterStore";
 import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
-import { CharacterRelationCreator } from "../../features/relations/CharacterRelationCreator";
 import { useChronicleStore } from "../../store/useChronicleStore";
-
+import { BicepsFlexed, BookCopy, BrainCircuit, Dna, Dot, Earth, House, LibraryBig, Link as LinkIcon, Pencil, Pin, ShieldUser, Smile, Sparkle, Sparkles, VenusAndMars, Zap } from "lucide-react";
+import { Button } from "../../components/ChronicleButton";
+import { Modal } from "../../components/Modal";
+import { CharacterForm } from "../../features/characters/CharacterForm";
+import { useSupabaseClient } from "@supabase/auth-helpers-react";
 
 export function CharacterDetailPage() {
     const { id } = useParams();
@@ -18,17 +20,21 @@ export function CharacterDetailPage() {
     const chronicles = useChronicleStore((s) => s.chronicles);
     const character = allCharacters.find((c) => c.id === id);
     const [activeTab, setActiveTab] = useState<'info' | 'graph'>('info');
+    const [isEditing, setIsEditing] = useState(false);
+    const { updateCharacter } = useCharacterStore();
+    const supabase = useSupabaseClient();
 
     if (!character) {
         return (
-            <div className="p-6">
-                <h1 className="text-xl font-bold text-red-600">Персонаж не найден</h1>
-                <Link to="/" className="text-indigo-600 underline mt-4 block">
+            <div className="p-6 text-center text-[#e5d9a5]">
+                <h1 className="text-2xl font-bold text-red-400">Персонаж не найден</h1>
+                <Link to="/" className="text-[#c2a774] underline mt-4 inline-block">
                     ← Вернуться к списку
                 </Link>
             </div>
         );
     }
+
     const radarData = character?.attributes ? [
         { attribute: 'Сила', value: character.attributes.strength },
         { attribute: 'Интеллект', value: character.attributes.intelligence },
@@ -37,7 +43,6 @@ export function CharacterDetailPage() {
         { attribute: 'Ловкость', value: character.attributes.dexterity },
         { attribute: 'Выносливость', value: character.attributes.endurance },
     ] : [];
-
 
     const relatedCharacters = useMemo(() => {
         return allCharacters.filter((c) =>
@@ -57,9 +62,8 @@ export function CharacterDetailPage() {
     }, [relationships, character?.id]);
 
     const linkedChronicles = useMemo(() => {
-        if (!character?.linked_chronicles?.length) return [];
-        return chronicles.filter(c => character.linked_chronicles?.includes(c.id));
-    }, [chronicles, character?.linked_chronicles]);
+        return chronicles.filter((c) => c.linked_characters.includes(character.id));
+    }, [chronicles, character.id]);
 
     const handleSelectCharacter = useCallback(() => {
         if (activeTab !== 'info') {
@@ -68,140 +72,241 @@ export function CharacterDetailPage() {
     }, [activeTab]);
 
     return (
-        <div className="p-6 max-w-3xl mx-auto">
-            <div className="flex space-x-4 mb-6">
-                <button
-                    className={`px-4 py-2 rounded ${activeTab === 'info' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setActiveTab('info')}
-                >
-                    ℹ️ Информация
-                </button>
-                <button
-                    className={`px-4 py-2 rounded ${activeTab === 'graph' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
-                    onClick={() => setActiveTab('graph')}
-                >
-                    🔗 Связи
-                </button>
+        <div className="text-[#e5d9a5] font-lora mt-6 md:mt-8 px-2">
+            <div className="flex flex-col">
+                <div className="max-sm:text-sm text-lg text-[#c7bc98] flex flex-row items-center mb-6 md:mb-8">
+                    <Link to="/" className="text-[#c2a774] hover:underline">Главная</Link>
+                    <span className="mx-2"><Dot /></span>
+                    <Link to="/characters" className="text-[#c2a774] hover:underline">Персонажи</Link>
+                    <span className="mx-2"><Dot /></span>
+                    <span className="text-[#e5d9a5] font-semibold">{character.name}</span>
+                </div>
+
+                <div className="flex gap-4 mb-6">
+                    <Button
+                        onClick={() => setActiveTab('info')}
+                        icon={<LibraryBig />}
+                        className={`font-semibold ${activeTab === 'info' ? 'bg-[#c2a774]' : 'bg-transparent text-[#c2a774] hover:text-[#0E1B12]'}`}
+                    >
+                        Информация
+                    </Button>
+                    <Button
+                        onClick={() => setActiveTab('graph')}
+                        icon={<LinkIcon />}
+                        className={`font-semibold ${activeTab === 'graph' ? 'bg-[#c2a774]' : 'bg-transparent text-[#c2a774] hover:text-[#0E1B12]'}`}
+                    >
+                        Связи
+                    </Button>
+                </div>
             </div>
 
-            {activeTab === 'info' && (<div>
-                {character?.name && (
-                    <div className="flex justify-between items-center">
-                        {character.avatar && (
-                            <img
-                                src={character.avatar}
-                                alt={character.name}
-                                className="w-[200px] h-[200px] rounded-full object-cover"
-                            />
-                        )}
-                        <h1 className="text-3xl font-bold mb-2">{character.name}</h1>
-                        <Link
-                            to={`/character/edit/${character.id}`}
-                            className=" bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm"
+            {activeTab === 'info' && (
+                <div className="mt-8">
+                    <div className="flex flex-row md:items-start w-full justify-between">
+                        <div className="flex max-sm:flex-col flex-row items-start gap-8 w-full">
+                            <div className="flex flex-col gap-4 justify-center w-full items-center md:w-fit">
+                                {character.avatar && (
+                                    <img src={character.avatar} alt={character.name} className="max-sm:w-[250px] max-sm:h-[250px] w-[150px] h-[150px] rounded-full object-cover border border-[#c2a774]" />
+                                )}
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className="hidden max-sm:flex flex-row items-center gap-2 text-[#c2a774] hover:underline"
+                                >
+                                    <Pencil size={16} /> Редактировать
+                                </button>
+                            </div>
+                            <div>
+                                <h1 className="text-[32px] font-bold text-[#D6C5A2] mb-2">{character.name}</h1>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-sm:text-sm text-base">
+                                    {character.status &&
+                                        <div className="flex flex-row items-center gap-1">
+                                            <Pin size={16} className="text-[#C2A774]" />
+                                            <span className="font-semibold text-[#C2A774]">Статус:</span>
+                                            {character.status}
+                                        </div>
+                                    }
+                                    {character.species &&
+                                        <div className="flex flex-row items-center gap-1">
+                                            <Dna size={16} className="text-[#C2A774]" />
+                                            <span className="font-semibold text-[#C2A774]">Вид:</span>
+                                            {character.species}
+                                        </div>
+                                    }
+                                    {character.gender &&
+                                        <div className="flex flex-row items-center gap-1">
+                                            <VenusAndMars size={16} className="text-[#C2A774]" />
+                                            <span className="font-semibold text-[#C2A774]">Пол:</span>
+                                            {character.gender}
+                                        </div>
+                                    }
+                                    {character.origin?.name &&
+                                        <div className="flex flex-row items-center gap-1">
+                                            <Earth size={16} className="text-[#C2A774]" />
+                                            <span className="font-semibold text-[#C2A774]">Родина:</span>
+                                            {character.origin.name}
+                                        </div>
+                                    }
+                                    {character.location?.name &&
+                                        <div className="flex flex-row items-center gap-1">
+                                            <House size={16} className="text-[#C2A774]" />
+                                            <span className="font-semibold text-[#C2A774]">Местонахождение:</span>
+                                            {character.location.name}
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <Button
+                            onClick={() => setIsEditing(true)}
+                            icon={<Pencil size={20} />}
+                            className="max-sm:hidden text-base"
                         >
-                            ✏️ Редактировать
-                        </Link>
+                            Редактировать
+                        </Button>
                     </div>
-                )}
-                {character?.bio && <p className="text-zinc-700">{character.bio}</p>}
-                {character?.status && (
-                    <p className="mt-4">
-                        Статус: <span className="font-bold">{character.status}</span>
-                    </p>
-                )}
-                {character?.species && (
-                    <p className="mt-2">
-                        Вид: <span className="font-bold">{character.species}</span>
-                    </p>
-                )}
-                {character?.gender && (
-                    <p className="mt-2">
-                        Пол: <span className="font-bold">{character.gender}</span>
-                    </p>
-                )}
-                {character?.origin && (
-                    <p className="mt-2">
-                        Первоначальное место:{" "}
-                        <span className="font-bold">{character.origin.name}</span>
-                    </p>
-                )}
-                {character?.location && (
-                    <p className="mt-2">
-                        Текущее место:{" "}
-                        <span className="font-bold">{character.location.name}</span>
-                    </p>
-                )}
-                <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-2">Атрибуты</h2>
-                    <ul className="list-disc list-inside">
-                        {character?.attributes ? (
-                            <>
-                                <li>Сила: {character.attributes.strength}</li>
-                                <li>Интеллект: {character.attributes.intelligence}</li>
-                                <li>Магия: {character.attributes.magic}</li>
-                                <li>Харизма: {character.attributes.charisma}</li>
-                                <li>Ловкость: {character.attributes.dexterity}</li>
-                                <li>Выносливость: {character.attributes.endurance}</li>
-                            </>
-                        ) : (
-                            <li className="text-zinc-500">Нет атрибутов</li>
-                        )}
-                    </ul>
-                </div>
-                <div className="mt-4 h-80">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                            <PolarGrid />
-                            <PolarAngleAxis dataKey="attribute" />
-                            <PolarRadiusAxis angle={30} domain={[0, 12]} />
-                            <Radar name="Атрибуты" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                        </RadarChart>
-                    </ResponsiveContainer>
-                </div>
-                {linkedChronicles.length > 0 && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2">Хроники</h2>
-                        <ul className="list-disc list-inside">
-                            {linkedChronicles.map((chronicle) => (
-                                <li key={chronicle.id}>
-                                    <Link to={`/chronicles/${chronicle.id}`} className="text-indigo-600 underline">
-                                        {chronicle.title}
-                                    </Link>
+
+                    {character.bio && (
+                        <section className="bg-[#223120] border border-[#c2a774] rounded-xl p-6 mt-8 shadow-md">
+                            <h2 className="text-xl md:text-2xl font-bold text-[#e5d9a5] flex items-center gap-2 mb-4">
+                                <BookCopy size={20} /> Биография
+                            </h2>
+                            <div className="whitespace-pre-line text-[#c7bc98] text-[17px] leading-relaxed text-justify font-serif">
+                                {character.bio}
+                            </div>
+                        </section>
+                    )}
+
+                    <div className="flex flex-col w-full md:items-center">
+                        <h2 className="text-xl md:text-2xl w-full flex justify-center mt-4 md:mt-8 mb-8 md:mb-[32px] font-bold pt-8 border-t border-[#c2a774] pb-1">
+                            <span className="flex flex-row items-center gap-2">
+                                <Sparkle />
+                                Атрибуты
+                            </span>
+                        </h2>
+                        <div className="bg-[#223120] border border-[#c2a774] rounded-xl p-4 mb-6 shadow-md">
+                            <ul className="grid grid-cols-2 md:grid-cols-3 gap-1 text-lg text-center text-[#e5d9a5]">
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <Smile size={16} /> Харизма:
+                                    </span>
+                                    {character.attributes.charisma}
                                 </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
-                {character?.extra && character.extra.length > 0 && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2">Дополнительные поля</h2>
-                        <ul className="list-disc list-inside">
-                            {character.extra.map((field) => (
-                                <li key={field.id}>
-                                    <span className="font-semibold">{field.key}:</span> {field.value}
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <BicepsFlexed size={16} />Сила:
+                                    </span>
+                                    {character.attributes.strength}
                                 </li>
-                            ))}
-                        </ul>
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <Sparkles size={16} /> Магия:
+                                    </span>
+                                    {character.attributes.magic}
+                                </li>
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <BrainCircuit size={16} /> Интеллект:
+                                    </span>
+                                    {character.attributes.intelligence}
+                                </li>
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <Zap size={16} />Ловкость:
+                                    </span>
+                                    {character.attributes.dexterity}
+                                </li>
+                                <li className="flex flex-row items-center gap-1 justify-center">
+                                    <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
+                                        <ShieldUser size={16} />Выносливость:
+                                    </span>
+                                    {character.attributes.endurance}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div className="h-[250px] md:h-[450px] w-full mt-4 text-[10px] md:text-[16px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                                    <PolarGrid stroke="#c2a77466" />
+                                    <PolarAngleAxis dataKey="attribute" stroke="#e5d9a5" />
+                                    <PolarRadiusAxis angle={30} domain={[0, 12]} stroke="#c2a77466" />
+                                    <Radar name="Атрибуты" dataKey="value" stroke="#c2a774" fill="#c2a774" fillOpacity={0.3} />
+                                </RadarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                )}
-            </div>
+
+                    {linkedChronicles.length > 0 && (
+                        <div className="flex flex-col w-full md:items-center">
+                            <h2 className="text-xl md:text-2xl w-full flex justify-center md:mt-8 mb-8 md:mb-[32px] font-bold pt-8 border-t border-[#c2a774] pb-1">
+                                <span className="flex flex-row items-center gap-2">
+                                    <BookCopy />
+                                    Хроники с участием персонажа
+                                </span>
+                            </h2>
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                                {linkedChronicles.map((chronicle) => {
+                                    const moodEmoji = chronicle.mood?.split(' ')[0] || '';
+                                    return (
+                                        <li
+                                            key={chronicle.id}
+                                            className="bg-[#223120] border border-[#c2a774] rounded-xl p-4 shadow-md hover:shadow-lg transition"
+                                        >
+                                            <Link
+                                                to={`/chronicles/${chronicle.id}`}
+                                                className="text-[#e5d9a5] text-[17px] font-semibold flex items-start gap-2 hover:underline"
+                                            >
+                                                <span className="text-xl leading-none">{moodEmoji}</span>
+                                                <span>
+                                                    {chronicle.title}{' '}
+                                                    <span className="text-[#c7bc98] font-normal italic text-sm">
+                                                        ({new Date(chronicle.event_date).toLocaleDateString('ru-RU')})
+                                                    </span>
+                                                </span>
+                                            </Link>
+                                            <div
+                                                dangerouslySetInnerHTML={{ __html: chronicle.content }}
+                                                className="mt-2 text-sm text-[#c7bc98] italic line-clamp-3"
+                                            />
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    )}
+
+                    {character?.extra && character?.extra?.length > 0 && (
+                        <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-12 shadow-md space-y-2">
+                            <h2 className="text-lg font-semibold text-[#e5d9a5]">📚 Дополнительно</h2>
+                            <ul className="list-disc list-inside text-[#c7bc98]">
+                                {character.extra.map((field) => (
+                                    <li key={field.id}>
+                                        <span className="font-semibold text-[#e5d9a5]">{field.key}:</span> {field.value}
+                                    </li>
+                                ))}
+                            </ul>
+                        </section>
+                    )}
+                </div>
             )}
+
             {activeTab === 'graph' && character && (
-                <div>
+                <div className="mt-6">
                     <CharacterGraph
                         characters={relatedCharacters}
                         relationships={relatedRelationships}
                         onSelectCharacter={handleSelectCharacter}
                     />
-                    <CharacterRelationCreator
-                        allCharacters={allCharacters}
-                        currentCharacter={character}
-                    />
                 </div>
             )}
-            <Link to="/" className="inline-block mt-6 text-indigo-600 underline">
-                ← Назад
-            </Link>
+
+            <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+                <CharacterForm
+                    initialCharacter={character}
+                    onFinish={() => setIsEditing(false)}
+                    onSave={(char) => updateCharacter(char, supabase)}
+                />
+            </Modal>
         </div>
     );
 }

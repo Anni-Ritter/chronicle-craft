@@ -36,17 +36,26 @@ export const useChronicleStore = create<ChronicleStore>()(
             updateChronicle: async (updated, supabase) => {
                 const { data, error } = await supabase
                     .from('chronicles')
-                    .update(updated)
+                    .update({
+                        title: updated.title,
+                        content: updated.content,
+                        tags: updated.tags,
+                        linked_characters: updated.linked_characters,
+                        linked_locations: updated.linked_locations,
+                        event_date: updated.event_date,
+                        mood: updated.mood,
+                    })
                     .eq('id', updated.id)
                     .select();
+
                 if (!error && data) {
                     set({
                         chronicles: get().chronicles.map((c) => (c.id === updated.id ? data[0] : c)),
                     });
                 }
+
                 return { error };
             },
-
             removeChronicle: async (id, supabase) => {
                 const { error } = await supabase.from('chronicles').delete().eq('id', id);
                 if (!error) {

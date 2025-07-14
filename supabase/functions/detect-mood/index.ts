@@ -6,6 +6,10 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function hasEmoji(text: string): boolean {
+    return /\p{Emoji}/u.test(text);
+}
+
 serve(async (req) => {
     try {
         if (req.method === 'OPTIONS') {
@@ -17,6 +21,15 @@ serve(async (req) => {
 
         const { text } = await req.json();
 
+        const apiKey = Deno.env.get("OPENAI_KEY");
+        if (!apiKey) {
+            return new Response("❌ OPENAI_API_KEY не задан в переменных окружения", {
+                status: 500,
+                headers: corsHeaders,
+            });
+        }
+
+
         if (!text) {
             return new Response("⛔ Поле 'content' не передано", {
                 status: 400,
@@ -26,26 +39,16 @@ serve(async (req) => {
 
         const plainText = text.replace(/<[^>]*>?/gm, '').trim();
         const prompt = `
-            Ты — ассистент, который анализирует краткие истории (хроники) и определяет их общее настроение.
+                Ты — ассистент, который анализирует краткие истории (хроники) и определяет их общее настроение.
 
-            Прочитай текст ниже и верни результат в следующем формате:
-            [эмоджи] [название настроения]
+                Прочитай текст ниже и верни результат в следующем формате:
+                [эмоджи] [название настроения]
 
-            Никаких пояснений. Только один вариант.
+                Никаких пояснений. Только один вариант.
 
-            Вот текст хроники:
-            "${plainText}"
-            `;
-
-        console.log('⏳ Prompt to OpenAI:', prompt);
-
-        const apiKey = Deno.env.get("OPENAI_API_KEY");
-        if (!apiKey) {
-            return new Response("❌ OPENAI_API_KEY не задан в переменных окружения", {
-                status: 500,
-                headers: corsHeaders,
-            });
-        }
+                Вот текст хроники:
+                "${plainText}"
+                `;
 
         const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
@@ -54,16 +57,13 @@ serve(async (req) => {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                model: "gpt-4o", // или "gpt-3.5-turbo"
-                messages: [
-                    { role: "user", content: prompt }
-                ],
+                model: "gpt-4o",
+                messages: [{ role: "user", content: prompt }],
                 temperature: 0.5,
             }),
         });
 
         const data = await openaiRes.json();
-
         if (!openaiRes.ok) {
             console.error("❌ Ошибка OpenAI:", data);
             return new Response(JSON.stringify({ error: "OpenAI error", detail: data }), {
@@ -72,11 +72,12 @@ serve(async (req) => {
             });
         }
 
-        const mood = data.choices?.[0]?.message?.content || "📖 Неопределённое";
+        let mood = data.choices?.[0]?.message?.content?.trim() || "📖 Неопределённое";
 
         return new Response(JSON.stringify({ mood }), {
             headers: { "Content-Type": "application/json", ...corsHeaders },
         });
+
     } catch (err) {
         console.error("💥 Global error:", err);
         return new Response(JSON.stringify({ error: "Internal error", detail: `${err}` }), {

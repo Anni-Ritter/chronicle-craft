@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { FloatingInput } from './FloatingInput';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const AuthForm = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false)
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,30 +23,59 @@ export const AuthForm = () => {
     };
 
     return (
-        <form onSubmit={handleAuth} className="max-w-md mx-auto p-4 border rounded">
-            <h2 className="text-xl font-bold mb-2">{isSignUp ? 'Регистрация' : 'Вход'}</h2>
-            <input
-                type="email"
-                placeholder="Email"
-                className="mb-2 w-full p-2 border rounded"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-                type="password"
-                placeholder="Пароль"
-                className="mb-2 w-full p-2 border rounded"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-            />
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-            <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded w-full">
+        <form
+            onSubmit={handleAuth}
+            className="bg-[#223120] border border-[#c2a774] text-[#e5d9a5] font-lora px-4 py-6 rounded-2xl shadow-md space-y-6"
+        >
+            <h3 className="text-xl text-center font-bold tracking-wide">
+                {isSignUp ? 'Регистрация' : 'Вход'}
+            </h3>
+
+
+            <div className="mb-4">
+                <FloatingInput
+                    label="Email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#c2a774]"
+                />
+            </div>
+
+            <div className="mb-4 relative">
+                <FloatingInput
+                    label="Пароль"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#c2a774]"
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#c2a774] border-none"
+                >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+            </div>
+
+            {error && (
+                <p className="text-red-600 text-sm mb-3 text-center">{error}</p>
+            )}
+
+            <button
+                type="submit"
+                className="w-full bg-[#c2a774] hover:bg-[#e5d9a5] text-[#2D422B] py-2 rounded-xl font-semibold transition"
+            >
                 {isSignUp ? 'Создать аккаунт' : 'Войти'}
             </button>
+
             <button
                 type="button"
-                className="mt-2 text-sm text-indigo-700 underline"
                 onClick={() => setIsSignUp(!isSignUp)}
+                className="w-full text-sm underline hover:text-[#e5d9a5] transition border-none"
             >
                 {isSignUp ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
             </button>

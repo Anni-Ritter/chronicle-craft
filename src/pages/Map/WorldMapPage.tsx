@@ -3,12 +3,14 @@ import { useSupabaseClient, useSession } from '@supabase/auth-helpers-react';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { MapPoint } from '../../types/mapPoint';
+import type { IconType } from '../../types/mapPoint';
 import { useMapStorePoint } from '../../store/useMapStorePoint';
 import type { DBMap } from '../../types/DBMap';
 import { useParams } from 'react-router-dom';
 import { MapPointModal } from '../../features/map/MapPointModal';
 import { CreateMapPointModal } from '../../features/map/CreateMapPointModal';
-import { getDominantColorFromImage } from '../../lib/GetDominantColorFromImage';
+import Table from "../../assets/black-wooden-background.png"
+import { Church, Gem, Landmark, MapIcon, Tent } from 'lucide-react';
 
 export const WorldMapPage: React.FC = () => {
     const supabase = useSupabaseClient();
@@ -26,11 +28,9 @@ export const WorldMapPage: React.FC = () => {
     const [dragging, setDragging] = useState(false);
     const [startDrag, setStartDrag] = useState<{ x: number; y: number } | null>(null);
     const [isGrabbing, setIsGrabbing] = useState(false);
-    const [backgroundColor, setBackgroundColor] = useState<string>('#e0e0e0');
     const [newPointCoords, setNewPointCoords] = useState<{ x: number; y: number } | null>(null);
     const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null);
     const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
-    const [transitioningBg, setTransitioningBg] = useState(false);
     const pinchStartRef = useRef<number | null>(null);
     const pinchScaleStartRef = useRef<number | null>(null);
 
@@ -80,12 +80,6 @@ export const WorldMapPage: React.FC = () => {
 
     useEffect(() => {
         if (!mapUrl) return;
-
-        setTransitioningBg(true);
-        getDominantColorFromImage(mapUrl).then((color) => {
-            if (color) setBackgroundColor(color);
-            setTimeout(() => setTransitioningBg(false), 300);
-        });
     }, [mapUrl]);
 
     useEffect(() => {
@@ -126,27 +120,38 @@ export const WorldMapPage: React.FC = () => {
         }
     };
 
-    const handleWheel = (e: React.WheelEvent) => {
-        e.preventDefault();
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
 
-        if (!containerRef.current || !imageSize) return;
+        const handleWheelEvent = (e: WheelEvent) => {
+            e.preventDefault();
 
-        const rect = containerRef.current.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+            if (!containerRef.current || !imageSize) return;
 
-        const prevScale = scale;
-        const delta = -e.deltaY / 500;
-        const newScale = Math.min(Math.max(prevScale + delta, minScale), 4);
+            const rect = containerRef.current.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
 
-        const scaleFactor = newScale / prevScale;
+            const prevScale = scale;
+            const delta = -e.deltaY / 500;
+            const newScale = Math.min(Math.max(prevScale + delta, minScale), 4);
 
-        const newOffsetX = (offset.x - mouseX) * scaleFactor + mouseX;
-        const newOffsetY = (offset.y - mouseY) * scaleFactor + mouseY;
+            const scaleFactor = newScale / prevScale;
 
-        setScale(newScale);
-        setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
-    };
+            const newOffsetX = (offset.x - mouseX) * scaleFactor + mouseX;
+            const newOffsetY = (offset.y - mouseY) * scaleFactor + mouseY;
+
+            setScale(newScale);
+            setOffset(clampOffset({ x: newOffsetX, y: newOffsetY }));
+        };
+
+        container.addEventListener('wheel', handleWheelEvent, { passive: false });
+
+        return () => {
+            container.removeEventListener('wheel', handleWheelEvent);
+        };
+    }, [scale, offset, minScale]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         setDragging(true);
@@ -263,14 +268,12 @@ export const WorldMapPage: React.FC = () => {
         };
     };
 
-
-
     if (!map) {
         return <div className="p-6 text-red-600">Карта не найдена или вы не авторизованы.</div>;
     }
     return (
-        <div className="md:p-6">
-            <h1 className="text-3xl font-bold mb-4">{map.name}</h1>
+        <div className="py-4 md:p-6">
+            <h1 className="text-3xl font-lora mb-4">{map.name}</h1>
 
             {mapUrl ? (
                 <div
@@ -280,11 +283,12 @@ export const WorldMapPage: React.FC = () => {
                     style={{
                         width: '100%',
                         height: '80vh',
-                        backgroundColor: backgroundColor,
-                        filter: transitioningBg ? 'blur(2px)' : 'none',
+                        backgroundImage: `url(${Table})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
                         touchAction: 'none',
                     }}
-                    onWheel={handleWheel}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
@@ -329,21 +333,11 @@ export const WorldMapPage: React.FC = () => {
                             }}
                             style={{
                                 display: 'block',
-                                boxShadow: '0 0 60px rgba(0,0,0,0.3)',
+                                boxShadow: '0 0 60px rgba(0,0,0,0.3), 0 0 0 12px #a88d63',
                                 borderRadius: '12px',
                             }}
                             draggable={false}
                         />
-                        {/* <div
-                            className="absolute inset-0"
-                            style={{
-                                background: `
-                                          radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.3) 100%)
-                                        `,
-                                mixBlendMode: 'multiply',
-                                pointerEvents: 'none',
-                            }}
-                        /> */}
 
                         {mapPoints.map((point) => (
                             <div
@@ -353,33 +347,29 @@ export const WorldMapPage: React.FC = () => {
                                     left: `${point.x * 100}%`,
                                     top: `${point.y * 100}%`,
                                     transform: 'translate(-50%, -50%)',
-                                    backdropFilter: 'blur(30px)',
-                                    WebkitBackdropFilter: 'blur(30px)',
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedPoint(point);
                                 }}
                             >
-                                {imageSize && (
+                                <div className="relative group flex flex-col items-center">
                                     <div
-                                        className="absolute z-0"
-                                        style={{
-                                            left: offset.x + imageSize!.width * scale / 2,
-                                            top: offset.y + imageSize!.height * scale / 2,
-                                            width: 200,
-                                            height: 200,
-                                            background: 'radial-gradient(circle, rgba(255,255,255,0.2), transparent)',
-                                            transform: 'translate(-50%, -50%)',
-                                            filter: 'blur(30px)',
-                                            animation: 'pulse 3s ease-in-out infinite',
-                                        }}
-                                    />
-                                )}
-                                <div className="w-4 h-4 bg-red-500 rounded-full shadow-md transition-transform hover:scale-125 cursor-pointer" />
-                                <span className="absolute top-5 left-1/2 -translate-x-1/2 text-xs text-black bg-white bg-opacity-75 px-1 rounded pointer-events-none">
-                                    {point.name}
-                                </span>
+                                        className="transition-transform hover:scale-125 cursor-pointer text-[#c2a774] bg-[#0e1b12] bg-opacity-70 border border-[#c2a774] rounded-full p-1 shadow-md group-hover:shadow-lg"
+                                    >
+                                        {point.icon_type === 'default' && <MapIcon size={32} />}
+                                        {point.icon_type === 'camp' && <Tent size={32} />}
+                                        {point.icon_type === 'city' && <Landmark size={32} />}
+                                        {point.icon_type === 'temple' && <Church size={32} />}
+                                        {point.icon_type === 'treasure' && <Gem size={32} />}
+                                    </div>
+
+                                    <span
+                                        className="absolute top-14 left-1/2 -translate-x-1/2 text-xs text-[#0e1b12] bg-[#f5f1e6] border border-[#c2a774] font-lora rounded px-2 py-[2px] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-0 whitespace-nowrap"
+                                    >
+                                        {point.name}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -395,12 +385,18 @@ export const WorldMapPage: React.FC = () => {
                 <CreateMapPointModal
                     coords={newPointCoords}
                     onClose={() => setNewPointCoords(null)}
-                    onSave={async (name: string) => {
+                    onSave={async (data: {
+                        name: string;
+                        description?: string;
+                        iconType: IconType;
+                    }) => {
+                        const { name, description, iconType } = data;
                         if (!map || !session?.user?.id) return;
-
                         const newPoint: MapPoint = {
                             id: uuidv4(),
                             name,
+                            description,
+                            icon_type: iconType,
                             x: newPointCoords.x,
                             y: newPointCoords.y,
                             user_id: session.user.id,

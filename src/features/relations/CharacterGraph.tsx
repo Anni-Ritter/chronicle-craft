@@ -17,8 +17,11 @@ import { useCharacterPositionStore } from '../../store/useCharacterPositionStore
 import { supabase } from '../../lib/supabaseClient';
 import { RelationTypeModal } from './RelationTypeModal';
 import { CustomCurvedEdge } from '../../components/CustomCurvedEdge';
-import { toast } from 'react-toastify';
 import { useSession } from '@supabase/auth-helpers-react';
+import { ManualRelationModal } from '../../components/ManualRelationModal';
+import { HeartPlus, Save } from 'lucide-react';
+import { Button } from '../../components/ChronicleButton';
+import { FloatingAlert } from '../../components/FloatingAlert';
 
 interface Props {
     characters: Character[];
@@ -38,6 +41,11 @@ export const CharacterGraph: React.FC<Props> = ({
     const [draftRelationships, setDraftRelationships] = useState<Relationship[]>([]);
     const [pendingConnection, setPendingConnection] = useState<Connection | null>(null);
     const [showModal, setShowModal] = useState(false);
+    const [manualModalOpen, setManualModalOpen] = useState(false);
+    const [statusMessage, setStatusMessage] = useState<{
+        type: 'success' | 'error';
+        text: string;
+    } | null>(null);
 
     const session = useSession();
     const graphType = 'default';
@@ -56,12 +64,12 @@ export const CharacterGraph: React.FC<Props> = ({
             id: char.id,
             data: {
                 label: (
-                    <div className="flex flex-col items-center text-sm">
+                    <div className="flex flex-col items-center text-xs text-[#e5d9a5]">
                         {char.avatar && (
                             <img
                                 src={char.avatar}
                                 alt={char.name}
-                                className="w-12 h-12 rounded-full object-cover mb-1 border border-white shadow"
+                                className="w-14 h-14 rounded-full object-cover mb-1 border border-[#e5d9a5] shadow-md"
                             />
                         )}
                         <span>{char.name}</span>
@@ -71,8 +79,11 @@ export const CharacterGraph: React.FC<Props> = ({
             position: positions[char.id] ?? { x: 100 + index * 150, y: 100 },
             style: {
                 padding: 10,
-                borderRadius: 8,
-                width: 100,
+                borderRadius: 16,
+                width: 110,
+                backgroundColor: '#1f2b1f',
+                border: '1px solid #e5d9a5',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
             },
         }));
 
@@ -85,7 +96,7 @@ export const CharacterGraph: React.FC<Props> = ({
 
     useEffect(() => {
         const grouped = draftRelationships.reduce((acc, rel) => {
-            const key = `${rel.source_id}-${rel.target_id}`;
+            const key = [rel.source_id, rel.target_id].sort().join('-');
             acc[key] = acc[key] || [];
             acc[key].push(rel);
             return acc;
@@ -94,7 +105,10 @@ export const CharacterGraph: React.FC<Props> = ({
         const updatedEdges: Edge[] = [];
         Object.values(grouped).forEach((group) => {
             group.forEach((rel, index) => {
-                const curvature = 0.3 + (index - (group.length - 1) / 2) * 0.15;
+                const offset = index - (group.length - 1) / 2;
+                const curvature = 0.3 + offset * 0.2;
+                const textDy = -8 + offset * 12;
+
                 updatedEdges.push({
                     id: rel.id,
                     source: rel.source_id,
@@ -103,10 +117,13 @@ export const CharacterGraph: React.FC<Props> = ({
                     type: 'custom',
                     animated: true,
                     style: {
-                        stroke: rel.color || '#888',
+                        stroke: rel.color || '#a0c48c',
+                        strokeWidth: 3,
                     },
                     data: {
                         curvature,
+                        indexOffset: offset,
+                        textDy,
                     },
                 });
             });
@@ -182,78 +199,123 @@ export const CharacterGraph: React.FC<Props> = ({
             }
 
             if (hasError) {
-                toast.error('Часть позиций не сохранилась');
+                setStatusMessage({ type: 'error', text: 'Часть позиций не сохранилась' });
             } else {
-                toast.success('Связи и позиции успешно сохранены!');
+                setStatusMessage({ type: 'success', text: 'Связи и позиции успешно сохранены!' });
             }
 
         } catch (error) {
-            toast.error('Ошибка при сохранении связей или позиций');
+            setStatusMessage({ type: 'error', text: 'Ошибка при сохранении связей или позиций' });
             console.error(error);
         }
     };
 
     return (
-        <div style={{ height: 600 }}>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onConnect={onConnect}
-                onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
-                onEdgeClick={(_, edge) => {
-                    setSelectedEdge(edge);
-                    setEditModalOpen(true);
-                }}
-                onNodeDragStop={(_, node) => {
-                    setPosition(node.id, node.position);
-                    setNodes((nds) =>
-                        nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-                    );
-                }}
-                edgeTypes={{ custom: CustomCurvedEdge }}
-            >
-                <MiniMap />
-                <Controls />
-                <Background />
-            </ReactFlow>
-
-            <div className="text-right mt-10 px-4">
-                <button
-                    onClick={handleSave}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+        <>
+            <div className="relative h-[600px] mt-5 sm:h-[80vh] w-full overflow-hidden rounded-xl border border-[#e5d9a5] bg-[#1a2218] touch-none">
+                <ReactFlow
+                    fitView
+                    panOnScroll
+                    zoomOnScroll
+                    zoomOnPinch
+                    panOnDrag
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
+                    onEdgeClick={(_, edge) => {
+                        setSelectedEdge(edge);
+                        setEditModalOpen(true);
+                    }}
+                    onNodeDragStop={(_, node) => {
+                        setPosition(node.id, node.position);
+                        setNodes((nds) =>
+                            nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
+                        );
+                    }}
+                    edgeTypes={{ custom: CustomCurvedEdge }}
                 >
-                    💾 Сохранить связи
-                </button>
+                    {window.innerWidth > 640 && (
+                        <MiniMap nodeColor="#e5d9a5" maskColor="rgba(26,34,24,0.9)" />
+                    )}
+                    <Controls showInteractive={false} style={{ background: '#2e4632', color: '#e5d9a5' }} />
+                    <Background gap={16} color="#2e4632" />
+                </ReactFlow>
+
+                {selectedEdge && editModalOpen && (
+                    <RelationTypeModal
+                        isOpen
+                        onSelect={handleEditRelation}
+                        onClose={() => {
+                            setEditModalOpen(false);
+                            setSelectedEdge(null);
+                        }}
+                        onDelete={handleDeleteRelation}
+                        initialData={{
+                            label: selectedEdge.label?.toString() || '',
+                            color: selectedEdge.style?.stroke || '#888',
+                        }}
+                        modalClassName="bg-[#1f2b1f] text-[#e5d9a5] border border-[#e5d9a5] rounded-xl p-6 shadow-xl"
+                        buttonClassName="bg-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded hover:bg-[#f0eac4]"
+                    />
+                )}
+
+                {showModal && (
+                    <RelationTypeModal
+                        isOpen
+                        onSelect={handleAddRelation}
+                        onClose={() => {
+                            setShowModal(false);
+                            setPendingConnection(null);
+                        }}
+                        modalClassName="bg-[#1f2b1f] text-[#e5d9a5] border border-[#e5d9a5] rounded-xl p-6 shadow-xl"
+                        buttonClassName="bg-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded hover:bg-[#f0eac4]"
+                    />
+                )}
+
+                <ManualRelationModal
+                    isOpen={manualModalOpen}
+                    characters={characters}
+                    onClose={() => setManualModalOpen(false)}
+                    onCreate={({ sourceId, targetId, label, color }) => {
+                        const newRel: Relationship = {
+                            id: crypto.randomUUID(),
+                            source_id: sourceId,
+                            target_id: targetId,
+                            type: label,
+                            color,
+                            created_at: new Date().toISOString(),
+                        };
+                        setDraftRelationships((prev) => [...prev, newRel]);
+                    }}
+                />
             </div>
-
-            {selectedEdge && editModalOpen && (
-                <RelationTypeModal
-                    isOpen
-                    onSelect={handleEditRelation}
-                    onClose={() => {
-                        setEditModalOpen(false);
-                        setSelectedEdge(null);
-                    }}
-                    onDelete={handleDeleteRelation}
-                    initialData={{
-                        label: selectedEdge.label?.toString() || '',
-                        color: selectedEdge.style?.stroke || '#888',
-                    }}
+            <div className="flex flex-wrap gap-2 mt-8 w-full max-sm:justify-center">
+                <Button
+                    onClick={() => setManualModalOpen(true)}
+                    icon={<HeartPlus />}
+                    className="bg-[#2e4632] text-[#e5d9a5] hover:bg-[#3a5c3f] transition"
+                >
+                    Вручную
+                </Button>
+                <Button
+                    onClick={handleSave}
+                    icon={<Save />}
+                    className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
+                >
+                    Сохранить связи
+                </Button>
+            </div>
+            {statusMessage && (
+                <FloatingAlert
+                    type={statusMessage.type}
+                    message={statusMessage.text}
+                    onClose={() => setStatusMessage(null)}
+                    position="top-right"
                 />
             )}
-
-            {showModal && (
-                <RelationTypeModal
-                    isOpen
-                    onSelect={handleAddRelation}
-                    onClose={() => {
-                        setShowModal(false);
-                        setPendingConnection(null);
-                    }}
-                />
-            )}
-        </div>
+        </>
     );
 };

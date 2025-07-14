@@ -8,13 +8,16 @@ import { PublicPage } from './pages/PublicPage';
 import { CharacterGraph } from './features/relations/CharacterGraph';
 import { ChroniclesPage } from './pages/Chronicle/ChroniclesPage';
 import { CharacterDetailPage } from './pages/Characters/CharacterDetailPage';
-import { CharacterEditPage } from './pages/Characters/CharacterEditPage';
 import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
 import { MapListPage } from './pages/Map/MapListPage';
 import { WorldMapPage } from './pages/Map/WorldMapPage';
 import { ProfilePage } from './pages/ProfilePage';
 
-export const AppRouter = () => {
+interface AppRouterProps {
+    onLoginClick: () => void;
+}
+
+export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
     const session = useSession();
     const supabase = useSupabaseClient();
     const navigate = useNavigate();
@@ -31,30 +34,35 @@ export const AppRouter = () => {
         relationshipStore.fetchRelationships(supabase);
     }, [session]);
 
+
+    if (!session) {
+        return (
+            <Routes>
+                <Route path="*" element={<PublicPage onLoginClick={onLoginClick} />} />
+            </Routes>
+        );
+    }
+
     return (
         <Routes>
-            <Route path="/" element={session ? <CharactersPage /> : <PublicPage />} />
+            <Route path="/" element={<CharactersPage />} />
+            <Route path="/characters" element={<CharactersPage />} />
             <Route path="/character/:id" element={<CharacterDetailPage />} />
-            <Route path="/character/edit/:id" element={<CharacterEditPage />} />
             <Route
                 path="/graph"
                 element={
-                    session ? (
-                        <CharacterGraph
-                            characters={characters}
-                            relationships={relationships}
-                            onSelectCharacter={(id) => navigate(`/character/${id}`)}
-                        />
-                    ) : (
-                        <PublicPage />
-                    )
+                    <CharacterGraph
+                        characters={characters}
+                        relationships={relationships}
+                        onSelectCharacter={(id) => navigate(`/character/${id}`)}
+                    />
                 }
             />
             <Route path="/chronicles" element={<ChroniclesPage />} />
             <Route path="/chronicles/:id" element={<ChronicleDetailPage />} />
             <Route path="/maps" element={<MapListPage />} />
             <Route path="/maps/:mapId" element={<WorldMapPage />} />
-            <Route path='/profile' element={<ProfilePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
         </Routes>
     );
 };

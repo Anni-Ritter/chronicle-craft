@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
-import { toast } from 'react-toastify';
 import { AvatarUploader } from '../components/AvatarUploader';
 import { FloatingInput } from '../components/FloatingInput';
 import { Modal } from '../components/Modal';
+import { Button } from '../components/ChronicleButton';
+import { Pen } from 'lucide-react';
+import { FloatingAlert } from '../components/FloatingAlert';
 
 export const ProfilePage = () => {
     const supabase = useSupabaseClient();
@@ -13,13 +15,26 @@ export const ProfilePage = () => {
     const [newEmail, setNewEmail] = useState('');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [newPassword, setNewPassword] = useState('');
-    const [loading, setLoading] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [showEmailEdit, setShowEmailEdit] = useState(false);
+    const [showPasswordEdit, setShowPasswordEdit] = useState(false);
+    const [emailError, setEmailError] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState<{
+        text: string;
+        type: 'success' | 'error';
+    } | null>(null);
 
     useEffect(() => {
         if (!user) return;
         fetchProfile();
     }, [user]);
+
+    useEffect(() => {
+        if (statusMessage) {
+            const timeout = setTimeout(() => setStatusMessage(null), 4000);
+            return () => clearTimeout(timeout);
+        }
+    }, [statusMessage]);
 
     const fetchProfile = async () => {
         const { data, error } = await supabase
@@ -29,7 +44,7 @@ export const ProfilePage = () => {
             .single();
 
         if (error) {
-            toast.error('Ошибка при загрузке профиля');
+            setStatusMessage({ text: 'Ошибка при загрузке профиля', type: 'error' });
         } else {
             setUsername(data.username || '');
             setAvatarUrl(data.avatar_url || '');
@@ -38,7 +53,6 @@ export const ProfilePage = () => {
     };
 
     const updateProfile = async () => {
-        setLoading(true);
         const updates = {
             id: user?.id,
             username,
@@ -48,21 +62,27 @@ export const ProfilePage = () => {
 
         const { error } = await supabase.from('profiles').upsert(updates);
 
-        if (error) toast.error('Ошибка при обновлении');
-        else toast.success('Профиль обновлён');
-
-        setLoading(false);
+        if (error) {
+            setStatusMessage({ text: 'Ошибка при обновлении профиля', type: 'error' });
+        } else {
+            setStatusMessage({ text: 'Профиль обновлён', type: 'success' });
+        }
     };
 
     const handlePasswordChange = async () => {
         if (newPassword.length < 6) {
-            toast.error('Пароль должен содержать не менее 6 символов');
+            setStatusMessage({ text: 'Пароль должен содержать минимум 6 символов', type: 'error' });
             return;
         }
 
         const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) toast.error('Ошибка при смене пароля');
-        else toast.success('Пароль обновлён');
+        if (error) {
+            setStatusMessage({ text: 'Ошибка при смене пароля', type: 'error' });
+        } else {
+            setStatusMessage({ text: 'Пароль обновлён', type: 'success' });
+            setShowPasswordEdit(false);
+            setNewPassword('');
+        }
     };
 
     const handleAvatarUpload = (url: string) => {
@@ -71,10 +91,12 @@ export const ProfilePage = () => {
 
     return (
         <>
-            <div className="max-w-xl mx-auto p-6">
-                <h1 className="text-2xl font-bold mb-4">Настройки профиля</h1>
+            <div className="w-full max-w-2xl mt-[64px] mx-auto bg-[#223120] border border-[#3d4a38] rounded-xl p-4 sm:p-8 shadow-md">
+                <h1 className="text-3xl font-garamond text-[#e5d9a5] border-b border-[#c2a774] pb-2 mb-6">
+                    Настройки профиля
+                </h1>
 
-                <div className='flex flex-row mb-5 gap-10 items-center'>
+                <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 bg-[#0e1b12] p-4 rounded-lg border border-[#c2a774] mb-6 text-center sm:text-left">
                     <div>
                         <AvatarUploader
                             key={avatarUrl}
@@ -84,9 +106,19 @@ export const ProfilePage = () => {
                             pathPrefix={user?.id}
                         />
                     </div>
-                    <div className='flex flex-col text-start'>
-                        <span>{user?.email}</span>
-                        <span>{username}</span>
+                    <div className="flex flex-col max-sm:justify-center max-sm:items-center gap-1 text-[#e5d9a5] font-lora ">
+                        <span className="italic text-[#c2a774]">Добро пожаловать!</span>
+                        <span className="text-[#a5a58f]">Вы можете обновить свой аватар</span>
+                        <Button
+                            variant="ghost"
+                            icon={<Pen size={16} />}
+                            className="md:self-start mt-1 hover:underline px-0"
+                            onClick={() => {
+                                document.querySelector<HTMLInputElement>('input[type="file"]')?.click();
+                            }}
+                        >
+                            Обновить аватар
+                        </Button>
                     </div>
                 </div>
 
@@ -96,104 +128,186 @@ export const ProfilePage = () => {
                     onChange={(e) => setUsername(e.target.value)}
                 />
 
-
-                <div className="border-t pt-6 gap-5 my-3 flex flex-row justify-between">
-                    <FloatingInput
-                        label="Новая почта"
-                        type="email"
-                        value={newEmail}
-                        onChange={(e) => setNewEmail(e.target.value)}
-                        error={!newEmail.includes('@') ? 'Некорректный email' : undefined}
+                {statusMessage && (
+                    <FloatingAlert
+                        type={statusMessage.type}
+                        message={statusMessage.text}
+                        onClose={() => setStatusMessage(null)}
+                        className="mt-4"
                     />
-                    <button
-                        onClick={async () => {
-                            if (!newEmail || newEmail === user?.email) {
-                                toast.error('Введите новый email, отличный от текущего');
-                                return;
-                            }
+                )}
 
-                            const { error } = await supabase.auth.updateUser({ email: newEmail });
-                            if (error) toast.error('Ошибка при смене email: ' + error.message);
-                            else toast.success('Письмо с подтверждением отправлено на новый email');
-                        }}
-                        className="bg-gray-700 text-white px-4 py-2 w-[250px] h-[50px] whitespace-nowrap rounded"
-                    >
-                        Сменить email
-                    </button>
+                <div className="mt-6">
+                    {showEmailEdit ? (
+                        <div className="flex flex-col gap-1 max-sm:gap-5 items-start">
+                            <FloatingInput
+                                label="Новый email"
+                                type="email"
+                                value={newEmail}
+                                onChange={(e) => {
+                                    setNewEmail(e.target.value);
+                                    setEmailError(!e.target.value.includes('@') ? 'Некорректный email' : null);
+                                }}
+                                error={emailError ?? undefined}
+                            />
+                            <div className="flex flex-col max-sm:flex-row gap-2 mt-2 max-sm:mt-0">
+                                <Button
+                                    onClick={async () => {
+                                        if (!newEmail || newEmail === user?.email) {
+                                            setStatusMessage({ text: 'Введите новый email, отличный от текущего', type: 'error' });
+                                            return;
+                                        }
+
+                                        const { error } = await supabase.auth.updateUser({ email: newEmail });
+                                        if (error) {
+                                            setStatusMessage({ text: `Ошибка: ${error.message}`, type: 'error' });
+                                        } else {
+                                            setStatusMessage({ text: 'Письмо с подтверждением отправлено', type: 'success' });
+                                            setShowEmailEdit(false);
+                                        }
+                                    }}
+                                    variant="outline"
+                                    className="min-w-[150px]"
+                                >
+                                    Подтвердить
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setNewEmail(user?.email ?? '');
+                                        setShowEmailEdit(false);
+                                    }}
+                                >
+                                    Отмена
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="relative mt-6">
+                            <FloatingInput
+                                label="Email"
+                                value={user?.email ?? ''}
+                                readOnly
+                            />
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowEmailEdit(true)}
+                                className="absolute top-1/2 right-2 -translate-y-1/2 text-sm"
+                                icon={<Pen size={16} />}
+                            >
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
-                <div className="border-t pt-6 gap-5 my-3 flex flex-row justify-between">
-                    <FloatingInput
-                        label="Новый пароль"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                    />
-                    <button
-                        onClick={handlePasswordChange}
-                        className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 w-[250px] p-[50px] whitespace-nowrap rounded"
-                    >
-                        Сменить пароль
-                    </button>
+                <div className="mt-6">
+                    {showPasswordEdit ? (
+                        <div className="flex flex-col gap-1 max-sm:gap-5 items-start">
+                            <FloatingInput
+                                label="Новый пароль"
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                error={newPassword.length > 0 && newPassword.length < 6 ? 'Минимум 6 символов' : undefined}
+                            />
+                            <div className="flex flex-col max-sm:flex-row gap-2 mt-2 max-sm:mt-0">
+                                <Button
+                                    onClick={handlePasswordChange}
+                                    variant="outline"
+                                    className="min-w-[150px]"
+                                >
+                                    Подтвердить
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setNewPassword('');
+                                        setShowPasswordEdit(false);
+                                    }}
+                                >
+                                    Отмена
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="relative mt-6">
+                            <FloatingInput
+                                label="Пароль"
+                                value="••••••••"
+                                type="password"
+                                readOnly
+                            />
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowPasswordEdit(true)}
+                                className="absolute top-1/2 right-2 -translate-y-1/2 text-sm"
+                                icon={<Pen size={16} />}
+                            >
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
 
-                <div className='flex flex-row justify-between items-center mt-10'>
-                    <button
+                <div className='flex flex-col sm:flex-row justify-between items-center gap-4 mt-10'>
+                    <Button
                         onClick={updateProfile}
-                        disabled={loading}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded"
+                        className='text-base'
                     >
-                        {loading ? 'Сохраняем...' : 'Сохранить профиль'}
-                    </button>
+                        Сохранить профиль
+                    </Button>
 
-                    <button
+                    <Button
+                        variant='danger'
                         onClick={() => setIsDeleteModalOpen(true)}
-                        className="text-red-500 underline text-sm"
+                        className='text-sm'
                     >
                         Удалить аккаунт
-                    </button>
+                    </Button>
                 </div>
             </div>
             <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
-                <h2 className="text-lg font-semibold mb-4 text-center">Удалить аккаунт</h2>
-                <p className="text-sm text-gray-700 mb-6 text-center">
-                    Вы уверены, что хотите удалить аккаунт? Это действие <strong>необратимо</strong>, и ваши данные будут удалены.
-                </p>
-                <div className="flex justify-end gap-3">
-                    <button
-                        onClick={() => setIsDeleteModalOpen(false)}
-                        className="px-4 py-2 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
-                    >
-                        Отмена
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (!user) return;
+                <div className="bg-[#1e2c22] border border-[#c2a774] rounded-xl p-6 text-[#e5d9a5] font-lora">
+                    <h2 className="text-2xl font-garamond text-center mb-4">
+                        Удалить аккаунт
+                    </h2>
 
-                            const { error: deleteError } = await supabase
-                                .from('profiles')
-                                .delete()
-                                .eq('id', user.id);
+                    <p className="font-lora text-[#f5e9c6] mb-6 text-center">
+                        Вы уверены, что хотите удалить аккаунт? Это действие <strong className="text-[#e88]">необратимо</strong>, и ваши данные будут удалены.
+                    </p>
 
-                            if (deleteError) {
-                                toast.error('Не удалось удалить профиль');
-                                return;
-                            }
+                    <div className="flex justify-end gap-4">
+                        <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+                            Отмена
+                        </Button>
+                        <Button
+                            variant="danger"
+                            onClick={async () => {
+                                if (!user) return;
 
-                            const { error: logoutError } = await supabase.auth.signOut();
-                            if (logoutError) {
-                                toast.error('Ошибка при выходе');
-                            } else {
-                                toast.success('Аккаунт удалён');
-                            }
+                                const { error: deleteError } = await supabase
+                                    .from('profiles')
+                                    .delete()
+                                    .eq('id', user.id);
 
-                            setIsDeleteModalOpen(false);
-                        }}
-                        className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
-                    >
-                        Удалить
-                    </button>
+                                if (deleteError) {
+                                    setStatusMessage({ text: 'Не удалось удалить профиль', type: 'error' });
+                                    return;
+                                }
+
+                                const { error: logoutError } = await supabase.auth.signOut();
+                                if (logoutError) {
+                                    setStatusMessage({ text: 'Ошибка при выходе', type: 'error' });
+                                } else {
+                                    setStatusMessage({ text: 'Аккаунт удалён', type: 'success' });
+                                }
+
+                                setIsDeleteModalOpen(false);
+                            }}
+                        >
+                            Удалить
+                        </Button>
+                    </div>
                 </div>
             </Modal>
         </>
