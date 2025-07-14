@@ -58,7 +58,7 @@ export const RelationTypeModal: React.FC<Props> = ({
                         type="text"
                         value={label}
                         onChange={(e) => setLabel(e.target.value)}
-                        placeholder="например, союзник"
+                        placeholder="Например, союзник"
                         className="w-full rounded-xl px-4 py-2 bg-[#223120] text-[#f5e9c6] border border-[#c2a774] placeholder-[#b4b48a] focus:outline-none focus:ring focus:ring-[#c2a774]"
                     />
                 </div>

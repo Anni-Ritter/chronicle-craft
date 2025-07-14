@@ -12,6 +12,7 @@ import { Button } from "../../components/ChronicleButton";
 import { Modal } from "../../components/Modal";
 import { CharacterForm } from "../../features/characters/CharacterForm";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useDraftRelationshipStore } from "../../store/useDraftRelationshipStore";
 
 export function CharacterDetailPage() {
     const { id } = useParams();
@@ -23,6 +24,7 @@ export function CharacterDetailPage() {
     const [isEditing, setIsEditing] = useState(false);
     const { updateCharacter } = useCharacterStore();
     const supabase = useSupabaseClient();
+    const { setDraftRelationships } = useDraftRelationshipStore();
 
     if (!character) {
         return (
@@ -38,6 +40,15 @@ export function CharacterDetailPage() {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [id]);
+
+    useEffect(() => {
+        if (character) {
+            const filtered = relationships.filter(
+                (r) => r.source_id === character.id || r.target_id === character.id
+            );
+            setDraftRelationships(filtered);
+        }
+    }, [character, relationships]);
 
     const radarData = character?.attributes ? [
         { attribute: 'Сила', value: character.attributes.strength },
@@ -284,7 +295,7 @@ export function CharacterDetailPage() {
 
                     {character?.extra && character?.extra?.length > 0 && (
                         <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-12 shadow-md space-y-2">
-                            <h2 className="text-lg font-semibold text-[#e5d9a5] flex flex-row gap-2 items-center"><Scroll size={20}/> Дополнительно</h2>
+                            <h2 className="text-lg font-semibold text-[#e5d9a5] flex flex-row gap-2 items-center"><Scroll size={20} /> Дополнительно</h2>
                             <ul className="list-disc list-inside text-[#c7bc98]">
                                 {character.extra.map((field) => (
                                     <li key={field.id}>

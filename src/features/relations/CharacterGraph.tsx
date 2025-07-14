@@ -19,7 +19,7 @@ import { RelationTypeModal } from './RelationTypeModal';
 import { CustomCurvedEdge } from '../../components/CustomCurvedEdge';
 import { useSession } from '@supabase/auth-helpers-react';
 import { ManualRelationModal } from '../../components/ManualRelationModal';
-import { HeartPlus, Save, Trash2 } from 'lucide-react';
+import { HeartPlus, Save } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
 import { useDraftRelationshipStore } from '../../store/useDraftRelationshipStore';
@@ -108,12 +108,6 @@ export const CharacterGraph: React.FC<Props> = ({
 
         setNodes(updated);
     }, [draftRelationships, characters, allCharacters, positions]);
-
-    useEffect(() => {
-        if (draftRelationships.length === 0) {
-            setDraftRelationships(relationships);
-        }
-    }, []);
 
     useEffect(() => {
         const grouped = draftRelationships.reduce((acc, rel) => {
@@ -304,7 +298,7 @@ export const CharacterGraph: React.FC<Props> = ({
                     isOpen={manualModalOpen}
                     characters={allCharacters || []}
                     onClose={() => setManualModalOpen(false)}
-                    onCreate={({ sourceId, targetId, label, color }) => {
+                    onCreate={async ({ sourceId, targetId, label, color }) => {
                         const newRel: Relationship = {
                             id: crypto.randomUUID(),
                             source_id: sourceId,
@@ -314,6 +308,15 @@ export const CharacterGraph: React.FC<Props> = ({
                             created_at: new Date().toISOString(),
                         };
                         setDraftRelationships([...draftRelationships, newRel]);
+                        try {
+                            await addRelationship(newRel, supabase);
+                            setStatusMessage({ type: 'success', text: 'Связь успешно создана!' });
+                        } catch (error) {
+                            console.error('Ошибка при сохранении связи:', error);
+                            setStatusMessage({ type: 'error', text: 'Ошибка при сохранении связи' });
+                        }
+                        {session && await savePosition(sourceId, positions[sourceId] ?? { x: 100, y: 100 }, session.user.id, graphType, supabase);}
+                        {session && await savePosition(targetId, positions[targetId] ?? { x: 200, y: 100 }, session.user.id, graphType, supabase);}
                     }}
                 />
             </div>
@@ -331,16 +334,6 @@ export const CharacterGraph: React.FC<Props> = ({
                     className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
                 >
                     Сохранить связи
-                </Button>
-                <Button
-                    onClick={() => {
-                        const savedIds = new Set(relationships.map(r => r.id));
-                        const onlySaved = draftRelationships.filter(r => savedIds.has(r.id));
-                        setDraftRelationships(onlySaved);
-                    }}
-                    icon={<Trash2 />}
-                >
-                    Очистить черновик
                 </Button>
             </div>
             {statusMessage && (

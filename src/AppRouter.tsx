@@ -54,6 +54,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
                     <CharacterGraph
                         characters={characters}
                         relationships={relationships}
+                        allCharacters={characters}
                         onSelectCharacter={(id) => navigate(`/character/${id}`)}
                     />
                 }
