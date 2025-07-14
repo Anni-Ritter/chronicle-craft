@@ -7,7 +7,7 @@ import { useCharacterStore } from "../../store/useCharacterStore";
 import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
 import { useChronicleStore } from "../../store/useChronicleStore";
-import { BicepsFlexed, BookCopy, BrainCircuit, Dna, Dot, Earth, House, LibraryBig, Link as LinkIcon, Pencil, Pin, ShieldUser, Smile, Sparkle, Sparkles, VenusAndMars, Zap } from "lucide-react";
+import { BicepsFlexed, BookCopy, BrainCircuit, Dna, Dot, Earth, House, LibraryBig, Link as LinkIcon, Pencil, Pin, Scroll, ShieldUser, Smile, Sparkle, Sparkles, VenusAndMars, Zap } from "lucide-react";
 import { Button } from "../../components/ChronicleButton";
 import { Modal } from "../../components/Modal";
 import { CharacterForm } from "../../features/characters/CharacterForm";
@@ -284,7 +284,7 @@ export function CharacterDetailPage() {
 
                     {character?.extra && character?.extra?.length > 0 && (
                         <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-12 shadow-md space-y-2">
-                            <h2 className="text-lg font-semibold text-[#e5d9a5]">📚 Дополнительно</h2>
+                            <h2 className="text-lg font-semibold text-[#e5d9a5] flex flex-row gap-2 items-center"><Scroll size={20}/> Дополнительно</h2>
                             <ul className="list-disc list-inside text-[#c7bc98]">
                                 {character.extra.map((field) => (
                                     <li key={field.id}>
