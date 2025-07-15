@@ -8,6 +8,9 @@ import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { CirclePlus, Users } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { normalizeText } from '../../lib/NormalizeText';
+import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
+import { useWorldStore } from '../../store/useWorldStore';
+import { WorldSelector } from '../../components/WorldSelector';
 
 
 const CHARACTERS_PER_PAGE = 10;
@@ -19,21 +22,33 @@ function CharactersPage() {
     const [isModalOpen, setModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
+    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
+    const { fetchWorlds } = useWorldStore();
+
+    useEffect(() => {
+        if (session?.user?.id && selectedWorldId) {
+            fetchCharacters(session.user.id, supabase, selectedWorldId);
+        } else if (session?.user?.id && !selectedWorldId) {
+            fetchCharacters(session.user.id, supabase, undefined);
+        } else {
+            clearCharacters();
+        }
+    }, [session, selectedWorldId]);
 
     useEffect(() => {
         if (session?.user?.id) {
-            fetchCharacters(session.user.id, supabase);
-        }
-        else {
-            clearCharacters();
+            fetchWorlds(session.user.id, supabase);
         }
     }, [session]);
 
     const handleAdd = async (char: Character) => {
-        if (session?.user?.id) {
-            await addCharacter(char, supabase);
-            setModalOpen(false);
-        }
+        if (!selectedWorldId) return;
+
+        await addCharacter(
+            { ...char, user_id: session?.user?.id!, world_id: selectedWorldId },
+            supabase
+        );
+        setModalOpen(false);
     };
 
     const normalizedSearch = normalizeText(searchTerm);
@@ -53,34 +68,43 @@ function CharactersPage() {
             setCurrentPage(page);
         }
     };
+
     return (
         <div className='max-w-[1440px] mx-auto mt-10 px-2 md:px-4 space-y-10'>
+
             <div className="flex justify-between items-center border-b border-[#c2a774] pb-4">
-                <h1 className="text-3xl flex flex-row gap-2 items-center font-garamond text-[#e5d9a5]"><Users /> Персонажи</h1>
+                <h1 className="text-3xl flex flex-row gap-2 items-center font-garamond text-[#e5d9a5]">
+                    <Users /> Персонажи
+                </h1>
                 <Button onClick={() => setModalOpen(true)} icon={<CirclePlus size={18} />} className='max-sm:gap-0'><span className='hidden md:block'>Добавить</span></Button>
             </div>
-            <div className="relative w-full">
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0e1b12]/50 w-5 h-5 pointer-events-none"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                >
-                    <path d="m21 21-4.34-4.34" />
-                    <circle cx="11" cy="11" r="8" />
-                </svg>
-                <input
-                    type="text"
-                    placeholder="Поиск..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setCurrentPage(1);
-                    }}
-                    className="pl-10 pr-4 py-3 rounded-lg w-full bg-[#D6C5A2] text-[#0E1B12] border border-[#0E1B12] placeholder:text-[18px] placeholder:text-[#0e1b12]/50"
-                />
+            <div className='flex flex-col w-full justify-between gap-3 md:gap-8'>
+                <div className="relative w-full">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0e1b12]/50 w-5 h-5 pointer-events-none"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                    >
+                        <path d="m21 21-4.34-4.34" />
+                        <circle cx="11" cy="11" r="8" />
+                    </svg>
+                    <input
+                        type="text"
+                        placeholder="Поиск..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setCurrentPage(1);
+                        }}
+                        className="pl-10 pr-4 py-3 rounded-lg w-full bg-[#D6C5A2] text-[#0E1B12] border border-[#0E1B12] placeholder:text-[18px] placeholder:text-[#0e1b12]/50"
+                    />
+                </div>
+                <div className='w-fit'>
+                    <WorldSelector />
+                </div>
             </div>
             <div className="flex flex-col gap-4">
                 {paginatedCharacters.map((char) => (

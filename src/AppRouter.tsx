@@ -2,6 +2,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useRelationshipStore } from './store/useRelationshipStore';
+
 import { useEffect } from 'react';
 import CharactersPage from './pages/Characters/Characters';
 import { PublicPage } from './pages/PublicPage';
@@ -12,6 +13,8 @@ import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
 import { MapListPage } from './pages/Map/MapListPage';
 import { WorldMapPage } from './pages/Map/WorldMapPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { useWorldSelectionStore } from './store/useWorldSelectionStore';
+import { WorldsPage } from './pages/World/WorldsPage';
 
 interface AppRouterProps {
     onLoginClick: () => void;
@@ -25,14 +28,15 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
     const relationships = useRelationshipStore((s) => s.relationships);
     const characterStore = useCharacterStore();
     const relationshipStore = useRelationshipStore();
+    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
 
     useEffect(() => {
         const uid = session?.user?.id;
-        if (!uid) return;
+        if (!uid || !selectedWorldId) return;
 
-        characterStore.fetchCharacters(uid, supabase);
-        relationshipStore.fetchRelationships(supabase);
-    }, [session]);
+        characterStore.fetchCharacters(uid, supabase, selectedWorldId);
+        relationshipStore.fetchRelationships(supabase, selectedWorldId);
+    }, [session, selectedWorldId]);
 
 
     if (!session) {
@@ -64,6 +68,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
             <Route path="/maps" element={<MapListPage />} />
             <Route path="/maps/:mapId" element={<WorldMapPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/worlds" element={<WorldsPage />} />
         </Routes>
     );
 };

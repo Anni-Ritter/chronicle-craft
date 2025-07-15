@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BookOpen, Link, Upload } from 'lucide-react';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { Button } from '../../components/ChronicleButton';
+import { useWorldStore } from '../../store/useWorldStore';
 
 interface CharacterFormProps {
     onFinish: () => void;
@@ -54,6 +55,9 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
     const [userId, setUserId] = useState<string | null>(null);
     const [allChronicles, setAllChronicles] = useState<{ id: string; title: string }[]>([]);
     const [linkedChronicles, setLinkedChronicles] = useState<string[]>(initialCharacter?.linked_chronicles || []);
+    const { worlds } = useWorldStore();
+    const [selectedWorld, setSelectedWorld] = useState<string>(initialCharacter?.world_id || '');
+    const [showWorldDropdown, setShowWorldDropdown] = useState(false);
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data, error }) => {
@@ -109,6 +113,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
             created_at: initialCharacter?.created_at ?? new Date().toISOString(),
             attributes,
             extra,
+            world_id: selectedWorld || null,
         };
 
         onSave(updatedChar);
@@ -189,6 +194,49 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                 ) : (
                     <AvatarUploader onUpload={setAvatar} initialUrl={avatar} bucket="avatars" />
                 )}
+            </section>
+
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md relative">
+                <label className="block mb-2 font-lora">Выберите мир:</label>
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setShowWorldDropdown((prev) => !prev)}
+                        className="w-full px-4 py-2 bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6] rounded-xl flex justify-between items-center"
+                    >
+                        {selectedWorld
+                            ? worlds.find((w) => w.id === selectedWorld)?.name
+                            : '— Мир не выбран —'}
+                        <span className="ml-2 text-[#c2a774]">▼</span>
+                    </button>
+
+                    {showWorldDropdown && (
+                        <ul className="absolute left-0 mt-2 min-w-full bg-[#0e1b12] border border-[#c2a774] rounded-xl shadow-lg text-[#f5e9c6] z-30 overflow-hidden">
+                            <li
+                                className="px-4 py-2 hover:bg-[#3a4c3a] cursor-pointer"
+                                onClick={() => {
+                                    setSelectedWorld('');
+                                    setShowWorldDropdown(false);
+                                }}
+                            >
+                                — Мир не выбран —
+                            </li>
+                            {worlds.map((world) => (
+                                <li
+                                    key={world.id}
+                                    onClick={() => {
+                                        setSelectedWorld(world.id);
+                                        setShowWorldDropdown(false);
+                                    }}
+                                    className={`px-4 py-2 cursor-pointer hover:bg-[#3a4c3a] ${selectedWorld === world.id ? 'bg-[#3a4c3a]' : ''
+                                        }`}
+                                >
+                                    {world.name}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             </section>
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">

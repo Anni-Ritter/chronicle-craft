@@ -8,4 +8,5 @@ export interface Chronicle {
     tags: string[];
     linked_characters: string[];
     linked_locations: string[];
+    world_id?: string | null;
 }

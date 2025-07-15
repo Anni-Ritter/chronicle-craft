@@ -8,6 +8,7 @@ import { ChronicleForm } from '../../features/chronicle/ChronicleForm';
 import { BookCopy, Clock, Dot, MapPin, Pencil, Smile, Sparkle, User2 } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ChronicleButton';
+import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 
 export const ChronicleDetailPage: React.FC = () => {
     const { id } = useParams();
@@ -18,14 +19,18 @@ export const ChronicleDetailPage: React.FC = () => {
     const { characters, fetchCharacters } = useCharacterStore();
     const [notFound, setNotFound] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
+
 
     useEffect(() => {
-        fetchChronicles(supabase);
-        if (session?.user?.id) {
-            fetchCharacters(session.user.id, supabase);
+        if (selectedWorldId) {
+            fetchChronicles(supabase, selectedWorldId);
+            if (session?.user?.id) {
+                fetchCharacters(session.user.id, supabase, selectedWorldId);
+            }
         }
-    }, []);
-    
+    }, [session, selectedWorldId]);
+
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [id]);

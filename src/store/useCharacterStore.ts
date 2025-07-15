@@ -7,7 +7,8 @@ interface CharacterStore {
     characters: Character[];
     fetchCharacters: (
         userId: string,
-        supabase: SupabaseClient
+        supabase: SupabaseClient,
+        worldId?: string
     ) => Promise<{ error: PostgrestError | null }>;
 
     addCharacter: (
@@ -33,11 +34,13 @@ export const useCharacterStore = create<CharacterStore>()(
         (set, get) => ({
             characters: [],
 
-            fetchCharacters: async (userId, supabase) => {
-                const { data, error } = await supabase
-                    .from('characters')
-                    .select('*')
-                    .eq('user_id', userId);
+            fetchCharacters: async (userId, supabase, worldId) => {
+                let query = supabase.from('characters').select('*').eq('user_id', userId);
+
+                if (worldId) {
+                    query = query.eq('world_id', worldId);
+                }
+                const { data, error } = await query;
 
                 if (!error) {
                     set({ characters: data as Character[] });
@@ -47,6 +50,11 @@ export const useCharacterStore = create<CharacterStore>()(
             },
 
             addCharacter: async (char, supabase) => {
+                if (!char.world_id) {
+                    console.warn('Character must have a world_id!');
+                    return { error: new Error('world_id is required') as PostgrestError };
+                }
+
                 const { data, error } = await supabase
                     .from('characters')
                     .insert([char])

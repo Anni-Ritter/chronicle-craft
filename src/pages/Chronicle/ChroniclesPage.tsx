@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import React, { useEffect, useState } from 'react';
+import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { ChronicleForm } from '../../features/chronicle/ChronicleForm';
 import { ChronicleViewSwitcher } from '../../features/chronicle/ChronicleViewSwitcher';
 import { Modal } from '../../components/Modal';
 import { BookMarked, CirclePlus, Search } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
+import { useWorldStore } from '../../store/useWorldStore';
 
 export const ChroniclesPage: React.FC = () => {
     const [showForm, setShowForm] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const supabase = useSupabaseClient();
+    const { fetchWorlds } = useWorldStore();
+    const session = useSession();
 
+    useEffect(() => {
+        if (session?.user?.id) {
+            fetchWorlds(session.user.id, supabase);
+        }
+    }, [session]);
     return (
         <div className='max-w-[1440px] mx-auto mt-10 px-2 md:px-4 space-y-10'>
             <div className="flex justify-between items-center border-b border-[#c2a774] pb-4">

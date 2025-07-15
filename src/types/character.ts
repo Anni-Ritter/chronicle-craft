@@ -36,4 +36,5 @@ export type Character = {
     linked_chronicles?: string[];
     created_at?: string;
     extra?: ExtraField[];
+    world_id?: string | null;
 };

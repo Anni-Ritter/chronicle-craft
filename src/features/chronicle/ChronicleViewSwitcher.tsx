@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import parse from 'html-react-parser';
 import { Select } from '../../components/Select';
 import { normalizeText } from '../../lib/NormalizeText';
+import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
+import { useWorldStore } from '../../store/useWorldStore';
 
 interface ChronicleViewSwitcherProps {
     searchTerm?: string;
@@ -18,14 +20,33 @@ export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ se
     const session = useSession();
     const [filterCharacter, setFilterCharacter] = useState<string | null>(null);
     const [filterTag, setFilterTag] = useState<string | null>(null);
+    const { worlds, fetchWorlds } = useWorldStore();
+    const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
+    useEffect(() => {
+        if (session?.user?.id) {
+            fetchWorlds(session.user.id, supabase);
+        }
+    }, [session]);
 
     useEffect(() => {
-        fetchChronicles(supabase);
-        if (session?.user?.id) {
+        if (!session?.user?.id) return;
+
+        if (selectedWorldId) {
+            fetchChronicles(supabase, selectedWorldId);
+            fetchCharacters(session.user.id, supabase, selectedWorldId);
+        } else {
+            supabase
+                .from('chronicles')
+                .select('*')
+                .then(({ data, error }) => {
+                    if (!error && data) {
+                        useChronicleStore.setState({ chronicles: data });
+                    }
+                });
+
             fetchCharacters(session.user.id, supabase);
         }
-    }, []);
-
+    }, [session, selectedWorldId]);
     const normalizedSearch = normalizeText(searchTerm ?? '');
 
     const filteredChronicles = chronicles.filter((chronicle) => {
@@ -49,6 +70,14 @@ export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ se
         <div className="space-y-8">
             <div className="flex flex-wrap justify-between items-center gap-4">
                 <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+                    <Select
+                        value={selectedWorldId}
+                        onChange={(val) => setSelectedWorldId(val)}
+                        placeholder="Все миры"
+                        options={[
+                            ...worlds.map((w) => ({ value: w.id, label: w.name }))
+                        ]}
+                    />
                     <Select
                         value={filterCharacter}
                         onChange={(val) => setFilterCharacter(val)}

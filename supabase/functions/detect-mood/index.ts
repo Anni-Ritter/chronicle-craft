@@ -6,10 +6,6 @@ const corsHeaders = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function hasEmoji(text: string): boolean {
-    return /\p{Emoji}/u.test(text);
-}
-
 serve(async (req) => {
     try {
         if (req.method === 'OPTIONS') {

@@ -95,6 +95,7 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                                     { label: 'Хроники', path: '/chronicles' },
                                     { label: 'Связи', path: '/graph' },
                                     { label: 'Карта', path: '/maps' },
+                                    { label: 'Миры', path: '/worlds' },
                                     { label: 'Профиль', path: '/profile' },
                                 ].map(({ label, path }) => (
                                     <button
@@ -119,13 +120,13 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                 )}
                 {session && (
                     <nav className="hidden lg:flex items-center gap-6 font-lora">
-                        {['/', '/chronicles', '/graph', '/maps'].map((path, i) => (
+                        {['/', '/chronicles', '/graph', '/maps', '/worlds'].map((path, i) => (
                             <a
                                 key={path}
                                 onClick={() => navigate(path)}
                                 className="text-[24px] font-garamond hover:underline cursor-pointer transition"
                             >
-                                {['Персонажи', 'Хроники', 'Связи', 'Карта'][i]}
+                                {['Персонажи', 'Хроники', 'Связи', 'Карта', 'Миры'][i]}
                             </a>
                         ))}
 

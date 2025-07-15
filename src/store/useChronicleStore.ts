@@ -5,7 +5,7 @@ import type { Chronicle } from '../types/chronicle';
 
 interface ChronicleStore {
     chronicles: Chronicle[];
-    fetchChronicles: (supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
+    fetchChronicles: (supabase: SupabaseClient, worldId: string) => Promise<{ error: PostgrestError | null }>;
     addChronicle: (entry: Chronicle, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
     updateChronicle: (updated: Chronicle, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
     removeChronicle: (id: string, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
@@ -17,8 +17,8 @@ export const useChronicleStore = create<ChronicleStore>()(
         (set, get) => ({
             chronicles: [],
 
-            fetchChronicles: async (supabase) => {
-                const { data, error } = await supabase.from('chronicles').select('*');
+            fetchChronicles: async (supabase, worldId) => {
+                const { data, error } = await supabase.from('chronicles').select('*').eq('world_id', worldId);
                 if (!error && data) {
                     set({ chronicles: data as Chronicle[] });
                 }
@@ -44,6 +44,7 @@ export const useChronicleStore = create<ChronicleStore>()(
                         linked_locations: updated.linked_locations,
                         event_date: updated.event_date,
                         mood: updated.mood,
+                        world_id: updated.world_id,
                     })
                     .eq('id', updated.id)
                     .select();

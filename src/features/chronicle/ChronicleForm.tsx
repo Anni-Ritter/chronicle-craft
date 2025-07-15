@@ -7,6 +7,7 @@ import { RichTextEditor } from '../../components/RichTextEditor';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { BookOpen, Plus, X } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
+import { useWorldStore } from '../../store/useWorldStore';
 
 interface Props {
     onFinish: () => void;
@@ -65,6 +66,10 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
         initial?.event_date ? initial.event_date.slice(0, 10) : ''
     );
     const [mood, setMood] = useState(initial?.mood || '');
+    const { worlds } = useWorldStore();
+    const [selectedWorld, setSelectedWorld] = useState(initial?.world_id || '');
+    const [worldError, setWorldError] = useState(false);
+    const [isWorldDropdownOpen, setIsWorldDropdownOpen] = useState(false);
 
     const handleSubmit = async () => {
         let finalMood = mood;
@@ -90,6 +95,11 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
                 }
             }
         }
+        if (!selectedWorld) {
+            setWorldError(true);
+            return;
+        }
+        setWorldError(false);
 
         const finalTags = [...tags];
         const finalLocations = [...linkedLocations];
@@ -114,6 +124,7 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
             created_at: initial?.created_at || new Date().toISOString(),
             event_date: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
             mood: finalMood || undefined,
+            world_id: selectedWorld || null,
         };
 
         const result = initial
@@ -127,6 +138,8 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
         }
     };
 
+
+
     return (
         <form className="bg-[#0e1b12] h-[90vh] overflow-auto scroll-touch no-scrollbar border border-[#c2a774] text-[#e5d9a5] font-lora rounded-3xl shadow-lg max-w-full md:max-w-3xl md:mx-auto space-y-10 px-3 md:px-6 py-10">
             <h2 className="text-2xl text-center tracking-wide flex items-center justify-center gap-2"><BookOpen /> Хроника</h2>
@@ -139,6 +152,54 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                 />
+            </section>
+
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md relative">
+                <label className="block mb-2 font-lora">Выберите мир:</label>
+
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setIsWorldDropdownOpen((prev) => !prev)}
+                        className="w-full px-4 py-2 bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6] rounded-xl flex justify-between items-center"
+                    >
+                        {selectedWorld
+                            ? worlds.find((w) => w.id === selectedWorld)?.name
+                            : '— Мир не выбран —'}
+                        <span className="ml-2 text-[#c2a774]">▼</span>
+                    </button>
+
+                    {isWorldDropdownOpen && (
+                        <ul className="absolute left-0 mt-2 min-w-full bg-[#0e1b12] border border-[#c2a774] rounded-xl shadow-lg text-[#f5e9c6] z-30 overflow-hidden">
+                            <li
+                                className="px-4 py-2 hover:bg-[#3a4c3a] cursor-pointer"
+                                onClick={() => {
+                                    setSelectedWorld('');
+                                    setIsWorldDropdownOpen(false);
+                                }}
+                            >
+                                — Мир не выбран —
+                            </li>
+                            {worlds.map((world) => (
+                                <li
+                                    key={world.id}
+                                    onClick={() => {
+                                        setSelectedWorld(world.id);
+                                        setIsWorldDropdownOpen(false);
+                                    }}
+                                    className={`px-4 py-2 cursor-pointer hover:bg-[#3a4c3a] ${selectedWorld === world.id ? 'bg-[#3a4c3a]' : ''
+                                        }`}
+                                >
+                                    {world.name}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
+
+                {worldError && (
+                    <p className="text-sm text-red-500 mt-2">Пожалуйста, выберите мир.</p>
+                )}
             </section>
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">
