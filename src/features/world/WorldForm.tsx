@@ -112,9 +112,9 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
                         setShowCalendar(!showCalendar);
                     }}
                     icon={showCalendar ? <ChevronUp /> : <ChevronDown />}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 flex-row"
                 >
-                    🗓️ Календарь мира
+                    Календарь мира
                 </Button>
                 {showCalendar && (
                     <div className="mt-4">
