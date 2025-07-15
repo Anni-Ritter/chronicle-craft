@@ -5,7 +5,10 @@ import { useMapStore } from '../../store/useMapStore';
 import type { DBMap } from '../../types/DBMap';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ChronicleButton';
-import { Plus, Trash2, Map } from 'lucide-react';
+import { Plus, Trash2, Map, Pen } from 'lucide-react';
+import { useWorldStore } from '../../store/useWorldStore';
+import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
+import { WorldSelector } from '../../components/WorldSelector';
 
 const MAPS_PER_PAGE = 10;
 
@@ -16,12 +19,20 @@ export const MapListPage: React.FC = () => {
     const { maps, fetchMaps, deleteMap } = useMapStore();
     const [mapToDelete, setMapToDelete] = useState<DBMap | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
+    const { fetchWorlds } = useWorldStore();
+    const [mapToEdit, setMapToEdit] = useState<DBMap | null>(null);
 
     useEffect(() => {
         if (session?.user?.id) {
-            fetchMaps(session.user.id, supabase);
+            fetchWorlds(session.user.id, supabase);
         }
     }, [session]);
+    useEffect(() => {
+        if (session?.user?.id) {
+            fetchMaps(session.user.id, supabase, selectedWorldId);
+        }
+    }, [session, selectedWorldId]);
 
     const confirmDelete = async () => {
         if (mapToDelete) {
@@ -51,22 +62,22 @@ export const MapListPage: React.FC = () => {
                     <h1 className="text-3xl flex flex-row gap-2 items-center font-garamond text-[#e5d9a5]">
                         <Map /> Ваши карты
                     </h1>
-                    <Button
-                        onClick={() => setShowForm(true)}
-                        icon={<Plus size={18} />}
-                        className="max-sm:gap-0"
-                    >
-                        <span className="hidden md:block">Добавить карту</span>
-                    </Button>
+                    <div className="flex items-center gap-4">
+                        <WorldSelector />
+                        <Button
+                            onClick={() => setShowForm(true)}
+                            icon={<Plus size={18} />}
+                            className="max-sm:gap-0"
+                        >
+                            <span className="hidden md:block">Добавить карту</span>
+                        </Button>
+                    </div>
                 </div>
 
                 {maps.length === 0 ? (
                     <div className="text-center text-[#c7bc98] border border-[#d6c5a2] p-8 rounded-xl shadow-inner mt-8">
                         <p className="text-xl font-semibold text-[#e5d9a5] mb-2">Карт пока нет</p>
                         <p className="text-sm mb-4">Создайте свою первую карту, чтобы начать наполнять мир.</p>
-                        <Button icon={<Plus />} onClick={() => setShowForm(true)}>
-                            Добавить карту
-                        </Button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -88,12 +99,19 @@ export const MapListPage: React.FC = () => {
                                 </a>
 
                                 <Button
+                                    variant="outline"
+                                    onClick={() => setMapToEdit(map)}
+                                    icon={<Pen />}
+                                    className="absolute top-2 right-14 bg-[#1e2d1c] text-[#d6c5a2] px-2 py-1 text-sm rounded hover:bg-[#3a4c3a]"
+                                >
+                                </Button>
+
+                                <Button
                                     variant='danger'
                                     onClick={() => setMapToDelete(map)}
                                     icon={<Trash2 />}
                                     className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-sm rounded hover:bg-red-600"
                                 >
-
                                 </Button>
                             </div>
                         ))}
@@ -164,7 +182,23 @@ export const MapListPage: React.FC = () => {
                     supabase={supabase}
                     onSuccess={() => {
                         setShowForm(false);
-                        if (session?.user?.id) fetchMaps(session.user.id, supabase);
+                        if (session?.user?.id) fetchMaps(session.user.id, supabase, selectedWorldId);
+                    }}
+                />
+            </Modal>
+
+            <Modal isOpen={showForm || !!mapToEdit} onClose={() => {
+                setShowForm(false);
+                setMapToEdit(null);
+            }}>
+                <MapForm
+                    userId={session?.user?.id ?? ''}
+                    supabase={supabase}
+                    initial={mapToEdit ?? undefined}
+                    onSuccess={() => {
+                        setShowForm(false);
+                        setMapToEdit(null);
+                        if (session?.user?.id) fetchMaps(session.user.id, supabase, selectedWorldId);
                     }}
                 />
             </Modal>

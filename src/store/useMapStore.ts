@@ -6,7 +6,7 @@ import type { DBMap } from '../types/DBMap';
 interface MapDataStore {
     maps: DBMap[];
     activeMapId: string | null;
-    fetchMaps: (userId: string, supabase: SupabaseClient, worldId: string) => Promise<void>;
+    fetchMaps: (userId: string, supabase: SupabaseClient, worldId?: string | null) => Promise<void>;
     setActiveMap: (mapId: string) => void;
     deleteMap: (mapId: string, supabase: SupabaseClient) => Promise<void>;
 }
@@ -18,12 +18,17 @@ export const useMapStore = create<MapDataStore>()(
             activeMapId: null,
 
             fetchMaps: async (userId, supabase, worldId) => {
-                const { data, error } = await supabase
+                let query = supabase
                     .from('maps')
                     .select('*')
                     .eq('user_id', userId)
-                    .eq('world_id', worldId)
                     .order('created_at', { ascending: false });
+
+                if (worldId) {
+                    query = query.eq('world_id', worldId);
+                }
+
+                const { data, error } = await query;
 
                 if (!error && data) {
                     set({ maps: data });

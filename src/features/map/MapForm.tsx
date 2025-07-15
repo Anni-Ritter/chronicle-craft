@@ -3,37 +3,79 @@ import { v4 as uuidv4 } from 'uuid';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from '../../components/ChronicleButton';
 import { Map } from 'lucide-react';
+import { useWorldStore } from '../../store/useWorldStore';
+import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
+import type { DBMap } from '../../types/DBMap';
 
 interface Props {
     userId: string;
     supabase: SupabaseClient;
     onSuccess: () => void;
+    initial?: DBMap;
 }
 
-export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess }) => {
-    const [name, setName] = useState('');
-    const [territory, setTerritory] = useState('');
+export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess, initial }) => {
+    const [name, setName] = useState(initial?.name || '');
+    const [territory, setTerritory] = useState(initial?.territory || '');
     const [file, setFile] = useState<File | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const { worlds } = useWorldStore();
+    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
+    const [worldId, setWorldId] = useState<string | null>(
+        initial?.world_id ?? selectedWorldId ?? null
+    );
 
     const handleSubmit = async () => {
-        if (!file || !name) {
+        if (!name || (!file && !initial)) {
             setError('Укажите имя и выберите файл');
             return;
         }
 
+        if (!worldId) {
+            setError('Пожалуйста, выберите мир');
+            return;
+        }
+
         setLoading(true);
-        const ext = file.name.split('.').pop();
-        const filename = `${uuidv4()}.${ext}`;
-        const filepath = `${userId}/${filename}`;
 
-        const { error: uploadError } = await supabase.storage
-            .from('map')
-            .upload(filepath, file);
+        let imagePath = initial?.image_path ?? null;
 
-        if (uploadError) {
-            setError(uploadError.message);
+        if (file) {
+            const ext = file.name.split('.').pop();
+            const filename = `${uuidv4()}.${ext}`;
+            const filepath = `${userId}/${filename}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('map')
+                .upload(filepath, file);
+
+            if (uploadError) {
+                setError(uploadError.message);
+                setLoading(false);
+                return;
+            }
+
+            imagePath = filepath;
+        }
+
+        if (initial) {
+            const { error: updateError } = await supabase
+                .from('maps')
+                .update({
+                    name,
+                    territory,
+                    world_id: worldId,
+                    image_path: imagePath,
+                })
+                .eq('id', initial.id);
+
+            if (updateError) {
+                setError(updateError.message);
+            } else {
+                onSuccess();
+            }
+
             setLoading(false);
             return;
         }
@@ -42,7 +84,8 @@ export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess }) => {
             name,
             territory,
             user_id: userId,
-            image_path: filepath,
+            image_path: imagePath,
+            world_id: worldId,
         });
 
         if (insertError) {
@@ -66,7 +109,7 @@ export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess }) => {
             className="bg-[#0e1b12]  overflow-y-auto no-scrollbar border border-[#c2a774] text-[#e5d9a5] font-lora rounded-3xl shadow-lg px-3 md:px-6 py-10 space-y-10"
         >
             <h2 className="text-2xl text-center tracking-wide text-[#e5d9a5] mb-4 flex flex-row gap-2 items-center justify-center">
-                <Map /> Новая карта
+                <Map /> {initial ? 'Редактировать карту' : 'Новая карта'}
             </h2>
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] shadow-md space-y-4">
@@ -102,8 +145,28 @@ export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess }) => {
                     />
                 </div>
 
+                <div>
+                    <label className="block font-lora mb-1 text-[#c2a774]">Мир</label>
+                    <select
+                        value={worldId ?? ''}
+                        onChange={(e) => setWorldId(e.target.value || null)}
+                        className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#c2a774]"
+                    >
+                        <option value="">— Мир не выбран —</option>
+                        {worlds.map((world) => (
+                            <option key={world.id} value={world.id}>
+                                {world.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
                 {error && (
                     <p className="text-sm text-red-500 font-medium">{error}</p>
+                )}
+
+                {initial?.image_path && !file && (
+                    <p className="text-sm text-[#c7bc98] italic mt-1">Будет использован уже загруженный файл</p>
                 )}
             </section>
 

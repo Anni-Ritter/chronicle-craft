@@ -5,4 +5,5 @@ export interface DBMap {
     territory: string;
     image_path: string;
     created_at: string;
+    world_id?: string | null;
 }
