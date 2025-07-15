@@ -63,3 +63,11 @@ input:-webkit-autofill {
     -webkit-overflow-scrolling: touch;
     touch-action: auto;
 }
+
+.clamped-html {
+    position: relative;
+    display: -webkit-box;
+    -webkit-line-clamp: 5;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

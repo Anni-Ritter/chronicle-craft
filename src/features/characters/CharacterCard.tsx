@@ -25,6 +25,10 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
         await removeCharacter(character.id, supabase);
         setIsDeleteModalOpen(false);
     };
+
+    const plainText = character.bio.replace(/<[^>]+>/g, '');
+    const bioPreview =
+        plainText.length > 390 ? plainText.slice(0, 390).trim() + '...' : plainText;
     return (
         <>
             <div
@@ -56,15 +60,15 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                 </div>
 
                                 {character.bio && (
-                                    <div className="hidden md:flex overflow-hidden max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100 transition-all duration-500 text-[#c7bc98] text-[16px] font-lora mt-2 bg-[#00000033] px-3 py-2 rounded-xl backdrop-blur-sm">
-                                        {character.bio}
+                                    <div className="hidden md:flex flex-col clamped-html overflow-hidden max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100 transition-all duration-500 text-[#c7bc98] text-[16px] font-lora mt-2 bg-[#00000033] px-3 py-2 rounded-xl backdrop-blur-sm">
+                                        {bioPreview}
                                     </div>
                                 )}
                             </div>
 
                         </div>
-                        <div className="lg:hidden text-sm font-lora">
-                            {character.bio}
+                        <div className="lg:hidden flex flex-col text-sm clamped-html font-lora">
+                            {bioPreview}
                         </div>
                     </div>
 
