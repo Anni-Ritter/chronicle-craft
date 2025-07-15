@@ -110,6 +110,10 @@ export const CharacterGraph: React.FC<Props> = ({
     }, [draftRelationships, characters, allCharacters, positions]);
 
     useEffect(() => {
+        setDraftRelationships(relationships);
+    }, [relationships]);
+
+    useEffect(() => {
         const grouped = draftRelationships.reduce((acc, rel) => {
             const key = [rel.source_id, rel.target_id].sort().join('-');
             acc[key] = acc[key] || [];
@@ -232,6 +236,22 @@ export const CharacterGraph: React.FC<Props> = ({
     return (
         <>
             <div className="relative h-[600px] mt-5 sm:h-[80vh] w-full overflow-hidden rounded-xl border border-[#e5d9a5] bg-[#1a2218] touch-none">
+                <div className="flex flex-row gap-2 pl-5 md:pl-5 mt-8 w-full">
+                    <Button
+                        onClick={() => setManualModalOpen(true)}
+                        icon={<HeartPlus className='max-sm:w-4 max-sm:h-4'/>}
+                        className="bg-[#2e4632] text-[#e5d9a5] hover:bg-[#3a5c3f] transition"
+                    >
+                        <span className='max-sm:text-sm'>Вручную</span>
+                    </Button>
+                    <Button
+                        onClick={handleSave}
+                        icon={<Save className='max-sm:w-4 max-sm:h-4'/>}
+                        className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
+                    >
+                        <span className='max-sm:text-sm'>Сохранить связи</span>
+                    </Button>
+                </div>
                 <ReactFlow
                     fitView
                     panOnScroll
@@ -315,26 +335,10 @@ export const CharacterGraph: React.FC<Props> = ({
                             console.error('Ошибка при сохранении связи:', error);
                             setStatusMessage({ type: 'error', text: 'Ошибка при сохранении связи' });
                         }
-                        {session && await savePosition(sourceId, positions[sourceId] ?? { x: 100, y: 100 }, session.user.id, graphType, supabase);}
-                        {session && await savePosition(targetId, positions[targetId] ?? { x: 200, y: 100 }, session.user.id, graphType, supabase);}
+                        { session && await savePosition(sourceId, positions[sourceId] ?? { x: 100, y: 100 }, session.user.id, graphType, supabase); }
+                        { session && await savePosition(targetId, positions[targetId] ?? { x: 200, y: 100 }, session.user.id, graphType, supabase); }
                     }}
                 />
-            </div>
-            <div className="flex flex-wrap gap-2 mt-8 w-full max-sm:justify-center">
-                <Button
-                    onClick={() => setManualModalOpen(true)}
-                    icon={<HeartPlus />}
-                    className="bg-[#2e4632] text-[#e5d9a5] hover:bg-[#3a5c3f] transition"
-                >
-                    Вручную
-                </Button>
-                <Button
-                    onClick={handleSave}
-                    icon={<Save />}
-                    className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
-                >
-                    Сохранить связи
-                </Button>
             </div>
             {statusMessage && (
                 <FloatingAlert
