@@ -95,10 +95,6 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
                 }
             }
         }
-        if (!selectedWorld) {
-            setWorldError(true);
-            return;
-        }
         setWorldError(false);
 
         const finalTags = [...tags];

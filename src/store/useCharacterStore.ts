@@ -50,11 +50,6 @@ export const useCharacterStore = create<CharacterStore>()(
             },
 
             addCharacter: async (char, supabase) => {
-                if (!char.world_id) {
-                    console.warn('Character must have a world_id!');
-                    return { error: new Error('world_id is required') as PostgrestError };
-                }
-
                 const { data, error } = await supabase
                     .from('characters')
                     .insert([char])

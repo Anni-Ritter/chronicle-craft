@@ -23,13 +23,13 @@ export type Character = {
         dexterity: number;
         endurance: number;
     };
-    status: string;
-    species: string;
-    gender: string;
-    origin: {
+    status?: string;
+    species?: string;
+    gender?: string;
+    origin?: {
         name: string;
     };
-    location: {
+    location?: {
         name: string;
     };
     episode?: string[];

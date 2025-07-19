@@ -42,10 +42,8 @@ function CharactersPage() {
     }, [session]);
 
     const handleAdd = async (char: Character) => {
-        if (!selectedWorldId) return;
-
         await addCharacter(
-            { ...char, user_id: session?.user?.id!, world_id: selectedWorldId },
+            { ...char, user_id: session?.user?.id!, world_id: selectedWorldId || null, },
             supabase
         );
         setModalOpen(false);

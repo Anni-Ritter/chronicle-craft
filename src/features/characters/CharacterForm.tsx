@@ -45,8 +45,8 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
     const [status, setStatus] = useState(initialCharacter?.status || '');
     const [species, setSpecies] = useState(initialCharacter?.species || '');
     const [gender, setGender] = useState(initialCharacter?.gender || '');
-    const [origin, setOrigin] = useState({ name: initialCharacter?.origin.name || '' });
-    const [location, setLocation] = useState({ name: initialCharacter?.location.name || '' });
+    const [origin, setOrigin] = useState({ name: initialCharacter?.origin?.name || '' });
+    const [location, setLocation] = useState({ name: initialCharacter?.location?.name || '' });
     const [age, setAge] = useState(initialCharacter?.age || '');
     const [birthday, setBirthday] = useState(initialCharacter?.birthday || '');
     const [occupation, setOccupation] = useState(initialCharacter?.occupation || '');
@@ -89,7 +89,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
         location: [location, setLocation],
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || userId === null) return;
 
@@ -116,8 +116,12 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
             world_id: selectedWorld || null,
         };
 
-        onSave(updatedChar);
-        onFinish();
+        try {
+            await onSave(updatedChar);
+            onFinish();
+        } catch (error) {
+            console.error("Ошибка при сохранении персонажа:", error);
+        }
     };
 
     const rollAllDice = () => {
@@ -273,7 +277,8 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
 
             <div className="flex justify-end">
                 <Button
-                    onClick={handleSubmit}
+                   
+                    type="submit"
                     className="font-semibold"
                 >
                     {initialCharacter ? 'Сохранить изменения' : 'Добавить персонажа'}
