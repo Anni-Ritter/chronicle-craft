@@ -7,12 +7,14 @@ import { Modal } from '../../components/Modal';
 import { Globe2, Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import type { World } from '../../types/world';
 import { WorldForm } from '../../features/world/WorldForm';
+import { useNavigate } from 'react-router-dom';
 
 export const WorldsPage = () => {
     const session = useSession();
     const supabase = useSupabaseClient();
     const { worlds, fetchWorlds, removeWorld } = useWorldStore();
     const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
+    const navigate = useNavigate();
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingWorld, setEditingWorld] = useState<World | null>(null);
     const [deletingWorld, setDeletingWorld] = useState<World | null>(null);
@@ -58,7 +60,10 @@ export const WorldsPage = () => {
                     {worlds.map((world: World) => (
                         <li
                             key={world.id}
-                            onClick={() => setSelectedWorldId(world.id)}
+                            onClick={() => {
+                                setSelectedWorldId(world.id);
+                                navigate(`/worlds/${world.id}`);
+                            }}
                             className={`
                                 group relative bg-[#223120] border border-[#c2a774] rounded-2xl p-4 shadow-md 
                                 hover:shadow-[0_0_25px_#c2a77480] transition cursor-pointer

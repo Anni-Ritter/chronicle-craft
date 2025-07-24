@@ -10,6 +10,7 @@ export interface World {
         daysInMonth?: number[];
         customWeekNames?: string[];
         customMonthNames?: string[];
+        currentYear?: number;
         epochStart?: {
             day: number;
             month: number;

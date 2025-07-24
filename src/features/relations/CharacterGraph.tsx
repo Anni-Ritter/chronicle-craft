@@ -239,49 +239,51 @@ export const CharacterGraph: React.FC<Props> = ({
                 <div className="flex flex-row gap-2 pl-5 md:pl-5 mt-8 w-full">
                     <Button
                         onClick={() => setManualModalOpen(true)}
-                        icon={<HeartPlus className='max-sm:w-4 max-sm:h-4'/>}
+                        icon={<HeartPlus className='max-sm:w-4 max-sm:h-4' />}
                         className="bg-[#2e4632] text-[#e5d9a5] hover:bg-[#3a5c3f] transition"
                     >
                         <span className='max-sm:text-sm'>Вручную</span>
                     </Button>
                     <Button
                         onClick={handleSave}
-                        icon={<Save className='max-sm:w-4 max-sm:h-4'/>}
+                        icon={<Save className='max-sm:w-4 max-sm:h-4' />}
                         className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
                     >
                         <span className='max-sm:text-sm'>Сохранить связи</span>
                     </Button>
                 </div>
-                <ReactFlow
-                    fitView
-                    panOnScroll
-                    zoomOnScroll
-                    zoomOnPinch
-                    panOnDrag
-                    nodes={nodes}
-                    edges={edges}
-                    onNodesChange={onNodesChange}
-                    onEdgesChange={onEdgesChange}
-                    onConnect={onConnect}
-                    onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
-                    onEdgeClick={(_, edge) => {
-                        setSelectedEdge(edge);
-                        setEditModalOpen(true);
-                    }}
-                    onNodeDragStop={(_, node) => {
-                        setPosition(node.id, node.position);
-                        setNodes((nds) =>
-                            nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-                        );
-                    }}
-                    edgeTypes={{ custom: CustomCurvedEdge }}
-                >
-                    {window.innerWidth > 640 && (
-                        <MiniMap nodeColor="#e5d9a5" maskColor="rgba(26,34,24,0.9)" />
-                    )}
-                    <Controls showInteractive={false} style={{ background: '#2e4632', color: '#e5d9a5' }} />
-                    <Background gap={16} color="#2e4632" />
-                </ReactFlow>
+                <div className="h-[90%] max-sm:h-[80%]">
+                    <ReactFlow
+                        fitView
+                        panOnScroll
+                        zoomOnScroll
+                        zoomOnPinch
+                        panOnDrag
+                        nodes={nodes}
+                        edges={edges}
+                        onNodesChange={onNodesChange}
+                        onEdgesChange={onEdgesChange}
+                        onConnect={onConnect}
+                        onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
+                        onEdgeClick={(_, edge) => {
+                            setSelectedEdge(edge);
+                            setEditModalOpen(true);
+                        }}
+                        onNodeDragStop={(_, node) => {
+                            setPosition(node.id, node.position);
+                            setNodes((nds) =>
+                                nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
+                            );
+                        }}
+                        edgeTypes={{ custom: CustomCurvedEdge }}
+                    >
+                        {window.innerWidth > 640 && (
+                            <MiniMap nodeColor="#e5d9a5" maskColor="rgba(26,34,24,0.9)" />
+                        )}
+                        <Controls showInteractive={false} style={{ background: '#2e4632', color: '#e5d9a5' }} />
+                        <Background gap={16} color="#2e4632" />
+                    </ReactFlow>
+                </div>
 
                 {selectedEdge && editModalOpen && (
                     <RelationTypeModal

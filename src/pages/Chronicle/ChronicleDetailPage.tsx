@@ -5,10 +5,11 @@ import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useChronicleStore } from '../../store/useChronicleStore';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ChronicleForm } from '../../features/chronicle/ChronicleForm';
-import { BookCopy, Clock, Dot, MapPin, Pencil, Smile, Sparkle, User2 } from 'lucide-react';
+import { BookCopy, Dot, MapPin, Pencil, Smile, Sparkle, Trash2, User2 } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ChronicleButton';
-import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
+import { formatWorldDate } from '../../lib/formatWorldDate';
+import { useWorldStore } from '../../store/useWorldStore';
 
 export const ChronicleDetailPage: React.FC = () => {
     const { id } = useParams();
@@ -17,25 +18,25 @@ export const ChronicleDetailPage: React.FC = () => {
     const session = useSession();
     const { chronicles, fetchChronicles } = useChronicleStore();
     const { characters, fetchCharacters } = useCharacterStore();
+    const { worlds, fetchWorlds } = useWorldStore();
     const [notFound, setNotFound] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
-
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
-        if (selectedWorldId) {
-            fetchChronicles(supabase, selectedWorldId);
-            if (session?.user?.id) {
-                fetchCharacters(session.user.id, supabase, selectedWorldId);
-            }
+        if (session?.user?.id) {
+            fetchWorlds(session.user.id, supabase);
+            fetchChronicles(supabase);
+            fetchCharacters(session.user.id, supabase);
         }
-    }, [session, selectedWorldId]);
+    }, [session?.user?.id]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [id]);
 
     const chronicle = chronicles.find((c) => c.id === id);
+    const chronicleWorld = worlds.find((w) => w.id === chronicle?.world_id) || null;
 
     useEffect(() => {
         if (chronicles.length > 0 && !chronicle) {
@@ -45,6 +46,19 @@ export const ChronicleDetailPage: React.FC = () => {
 
     const getCharacterName = (id: string) =>
         characters.find((c) => c.id === id)?.name || '???';
+
+    const handleDelete = async () => {
+        if (!chronicle?.id) return;
+
+        const { error } = await supabase.from('chronicles').delete().eq('id', chronicle.id);
+
+        if (!error) {
+            setIsDeleting(false);
+            navigate('/chronicles');
+        } else {
+            console.error('Ошибка при удалении:', error);
+        }
+    };
 
     if (notFound) {
         return (
@@ -91,19 +105,24 @@ export const ChronicleDetailPage: React.FC = () => {
                         >
                             Редактировать
                         </Button>
+                        <Button
+                            variant='danger'
+                            onClick={() => setIsDeleting(true)}
+                            icon={<Trash2 className="w-5 h-5" />}
+                            className='text-base hidden lg:flex shrink-0'
+                        >
+                        </Button>
                     </div>
-                    <p className="text-[#c7bc98] text-sm sm:text-base flex flex-row gap-1 items-center">
-                        <Clock className='w-4 h-4' /> {new Date(chronicle.created_at).toLocaleDateString('ru-RU')}
-                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 text-[#c7bc98] text-sm sm:text-base">
                     <div className="flex items-center gap-2">
                         <Sparkle className="w-4 h-4 text-[#C2A774]" />
                         <span className="font-semibold text-[#C2A774]">Дата события:</span>
-                        {chronicle.event_date
-                            ? new Date(chronicle.event_date).toLocaleDateString('ru-RU')
+                        {chronicle.event_date && chronicleWorld?.calendar
+                            ? formatWorldDate(chronicle.event_date, chronicleWorld.calendar)
                             : 'не указано'}
+
                     </div>
                     {chronicle.mood && (
                         <div className="flex items-center gap-2">
@@ -145,14 +164,22 @@ export const ChronicleDetailPage: React.FC = () => {
                     {parse(chronicle.content)}
                 </div>
 
-                <Button
-                    onClick={() => setIsEditing(true)}
-                    icon={<Pencil className='w-5 h-5' />}
-                    className='text-base lg:hidden'
-                >
-                    Редактировать
-                </Button>
-
+                <div className='flex gap-2'>
+                    <Button
+                        onClick={() => setIsEditing(true)}
+                        icon={<Pencil className='w-5 h-5' />}
+                        className='text-base lg:hidden'
+                    >
+                        Редактировать
+                    </Button>
+                    <Button
+                        variant='danger'
+                        onClick={() => setIsDeleting(true)}
+                        icon={<Trash2 className="w-5 h-5" />}
+                        className='text-base lg:hidden'
+                    >
+                    </Button>
+                </div>
             </div>
 
             <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
@@ -161,6 +188,28 @@ export const ChronicleDetailPage: React.FC = () => {
                     supabase={supabase}
                     onFinish={() => setIsEditing(false)}
                 />
+            </Modal>
+
+            <Modal isOpen={isDeleting} onClose={() => setIsDeleting(false)}>
+                <div className="bg-[#0e1b12] p-6 rounded-2xl text-[#e5d9a5] border border-[#c2a774] shadow-xl space-y-4">
+                    <h3 className="text-xl font-bold">Удалить хронику?</h3>
+                    <p className="text-[#c7bc98]">Это действие необратимо. Вы уверены?</p>
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Button
+                            onClick={() => setIsDeleting(false)}
+                            variant='outline'
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            onClick={handleDelete}
+                            variant='danger'
+                            icon={<Trash2 className="w-5 h-5" />}
+                        >
+                            Удалить
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

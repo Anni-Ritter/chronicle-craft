@@ -8,6 +8,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { BookOpen, Plus, X } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { useWorldStore } from '../../store/useWorldStore';
+import { WorldDatePicker } from '../../components/WorldDatePicker';
 
 interface Props {
     onFinish: () => void;
@@ -68,6 +69,8 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
     const [mood, setMood] = useState(initial?.mood || '');
     const { worlds } = useWorldStore();
     const [selectedWorld, setSelectedWorld] = useState(initial?.world_id || '');
+    const selectedWorldData = worlds.find((w) => w.id === selectedWorld);
+    const calendar = selectedWorldData?.calendar;
     const [worldError, setWorldError] = useState(false);
     const [isWorldDropdownOpen, setIsWorldDropdownOpen] = useState(false);
 
@@ -118,7 +121,7 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
             linked_characters: linkedCharacters,
             linked_locations: finalLocations,
             created_at: initial?.created_at || new Date().toISOString(),
-            event_date: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
+            event_date: eventDate || "",
             mood: finalMood || undefined,
             world_id: selectedWorld || null,
         };
@@ -150,7 +153,7 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
                 />
             </section>
 
-            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md relative">
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">
                 <label className="block mb-2 font-lora">Выберите мир:</label>
 
                 <div className="relative">
@@ -325,13 +328,21 @@ export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) 
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">
                 <label className="block mb-2 font-medium">Дата события:</label>
-                <input
-                    type="date"
-                    className="w-full px-3 py-2 bg-[#0e1b12] border border-[#c2a774] text-[#e5d9a5] rounded-xl
+                {calendar ? (
+                    <WorldDatePicker
+                        calendar={calendar}
+                        initialDate={eventDate}
+                        onChange={(value) => setEventDate(value)}
+                    />
+                ) : (
+                    <input
+                        type="date"
+                        className="w-full px-3 py-2 bg-[#0e1b12] border border-[#c2a774] text-[#e5d9a5] rounded-xl
                     [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                />
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                    />
+                )}
             </section>
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">

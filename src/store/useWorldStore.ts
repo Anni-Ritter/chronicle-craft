@@ -41,6 +41,7 @@ export const useWorldStore = create<WorldStore>((set) => ({
             .update({
                 name: updatedWorld.name,
                 description: updatedWorld.description,
+                calendar: updatedWorld.calendar,
             })
             .eq('id', updatedWorld.id)
             .select();

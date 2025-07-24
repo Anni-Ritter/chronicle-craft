@@ -8,6 +8,8 @@ import { Select } from '../../components/Select';
 import { normalizeText } from '../../lib/NormalizeText';
 import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import { useWorldStore } from '../../store/useWorldStore';
+import { formatWorldDate } from '../../lib/formatWorldDate';
+import type { Chronicle } from '../../types/chronicle';
 
 interface ChronicleViewSwitcherProps {
     searchTerm?: string;
@@ -22,6 +24,15 @@ export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ se
     const [filterTag, setFilterTag] = useState<string | null>(null);
     const { worlds, fetchWorlds } = useWorldStore();
     const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
+    const selectedWorld = worlds.find((w) => w.id === selectedWorldId);
+    const worldCalendar = selectedWorld?.calendar ?? null;
+    const sortChronicles = (a: Chronicle, b: Chronicle) => {
+        if (worldCalendar && a.event_date && b.event_date) {
+            return parseInt(a.event_date) - parseInt(b.event_date);
+        } else {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+    };
     useEffect(() => {
         if (session?.user?.id) {
             fetchWorlds(session.user.id, supabase);
@@ -101,7 +112,7 @@ export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ se
                 <div className="text-center text-[#aaa] font-lora">Нет подходящих хроник 😔</div>
             ) : (
                 <div className="relative pl-6 border-l-2 border-[#c2a774]/60 space-y-12">
-                    {filteredChronicles.map((c, index) => (
+                    {[...filteredChronicles].sort(sortChronicles).map((c, index) => (
                         <div
                             key={c.id}
                             className="relative group opacity-0 animate-fade-in-down"
@@ -114,7 +125,11 @@ export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ se
                                 className="block border border-[#c2a774] bg-[#223120] hover:shadow-[0_0_25px_#c2a77480] transition rounded-2xl p-6 shadow-md"
                             >
                                 <div className="flex justify-between text-sm text-[#a0a0a0] mb-2 font-lora">
-                                    <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                                    <span>
+                                        {worldCalendar && c.event_date
+                                            ? formatWorldDate(c.event_date, worldCalendar)
+                                            : new Date(c.created_at).toLocaleDateString()}
+                                    </span>
                                     {c.tags.length > 0 && (
                                         <div className="flex gap-1 flex-wrap">
                                             {c.tags.map((tag) => (

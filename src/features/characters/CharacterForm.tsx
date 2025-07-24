@@ -200,7 +200,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
                 )}
             </section>
 
-            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md relative">
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] mt-6 shadow-md">
                 <label className="block mb-2 font-lora">Выберите мир:</label>
                 <div className="relative">
                     <button

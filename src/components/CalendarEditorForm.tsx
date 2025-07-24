@@ -149,6 +149,37 @@ export const CalendarEditorForm: React.FC<Props> = ({ onSave }) => {
                     </label>
                 </div>
             </section>
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] shadow-md">
+                <label className="block mb-2">Текущий год:</label>
+                <input
+                    type="number"
+                    placeholder="Год (например, 1 или 2025)"
+                    className="w-full px-4 py-2 rounded-lg bg-[#0e1b12] text-[#f5e9c6] border border-[#c2a774] placeholder:text-[#f5e9c6]/50"
+                    value={calendar.currentYear ? Number(calendar.currentYear) : ''}
+                    onChange={(e) => updateField('currentYear', +e.target.value)}
+                />
+            </section>
+
+            <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] shadow-md">
+                <label className="block mb-2">Количество дней в каждом месяце:</label>
+                <div className="grid gap-2">
+                    {Array.from({ length: calendar.monthsInYear }).map((_, i) => (
+                        <input
+                            key={i}
+                            type="number"
+                            min={1}
+                            className="w-full px-4 py-2 rounded-lg bg-[#0e1b12] text-[#f5e9c6] border border-[#c2a774] placeholder:text-[#f5e9c6]/50"
+                            placeholder={`Дней в месяце ${i + 1}`}
+                            value={calendar.daysInMonth?.[i] ? Number(calendar.daysInMonth[i]) : ''}
+                            onChange={(e) => {
+                                const updated = [...(calendar.daysInMonth || [])];
+                                updated[i] = +e.target.value;
+                                updateField('daysInMonth', updated);
+                            }}
+                        />
+                    ))}
+                </div>
+            </section>
 
             <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] shadow-md">
                 <label className="block mb-2">Названия дней недели:</label>

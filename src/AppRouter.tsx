@@ -13,8 +13,8 @@ import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
 import { MapListPage } from './pages/Map/MapListPage';
 import { WorldMapPage } from './pages/Map/WorldMapPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { useWorldSelectionStore } from './store/useWorldSelectionStore';
 import { WorldsPage } from './pages/World/WorldsPage';
+import { WorldDetailsPage } from './pages/World/WorldDetailsPage';
 
 interface AppRouterProps {
     onLoginClick: () => void;
@@ -28,15 +28,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
     const relationships = useRelationshipStore((s) => s.relationships);
     const characterStore = useCharacterStore();
     const relationshipStore = useRelationshipStore();
-    const selectedWorldId = useWorldSelectionStore((s) => s.selectedWorldId);
 
     useEffect(() => {
         const uid = session?.user?.id;
-        if (!uid || !selectedWorldId) return;
+        if (!uid) return;
 
-        characterStore.fetchCharacters(uid, supabase, selectedWorldId);
-        relationshipStore.fetchRelationships(supabase, selectedWorldId);
-    }, [session, selectedWorldId]);
+        characterStore.fetchCharacters(uid, supabase);
+        relationshipStore.fetchRelationships(supabase);
+    }, [session]);
 
 
     if (!session) {
@@ -69,6 +68,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
             <Route path="/maps/:mapId" element={<WorldMapPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/worlds" element={<WorldsPage />} />
+            <Route path="/worlds/:id" element={<WorldDetailsPage />} />
         </Routes>
     );
 };

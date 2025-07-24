@@ -5,7 +5,7 @@ import type { Chronicle } from '../types/chronicle';
 
 interface ChronicleStore {
     chronicles: Chronicle[];
-    fetchChronicles: (supabase: SupabaseClient, worldId: string) => Promise<{ error: PostgrestError | null }>;
+    fetchChronicles: (supabase: SupabaseClient, worldId?: string) => Promise<{ error: PostgrestError | null }>;
     addChronicle: (entry: Chronicle, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
     updateChronicle: (updated: Chronicle, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;
     removeChronicle: (id: string, supabase: SupabaseClient) => Promise<{ error: PostgrestError | null }>;

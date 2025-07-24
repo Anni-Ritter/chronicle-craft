@@ -7,7 +7,6 @@ interface RelationshipStore {
     relationships: Relationship[];
     fetchRelationships: (
         supabase: SupabaseClient,
-        worldId: string
     ) => Promise<{ error: PostgrestError | null }>;
 
     addRelationship: (
@@ -33,11 +32,10 @@ export const useRelationshipStore = create<RelationshipStore>()(
         (set, get) => ({
             relationships: [],
 
-            fetchRelationships: async (supabase, worldId) => {
+            fetchRelationships: async (supabase) => {
                 const { data, error } = await supabase
                     .from('relationships')
                     .select('*')
-                    .eq('world_id', worldId);
 
                 if (!error && data) {
                     set({ relationships: data as Relationship[] });

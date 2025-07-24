@@ -13,6 +13,7 @@ import { Modal } from "../../components/Modal";
 import { CharacterForm } from "../../features/characters/CharacterForm";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useDraftRelationshipStore } from "../../store/useDraftRelationshipStore";
+import { formatEventDate } from "../../lib/formatEventDate";
 
 export function CharacterDetailPage() {
     const { id } = useParams();
@@ -125,7 +126,7 @@ export function CharacterDetailPage() {
                         <div className="flex max-sm:flex-col flex-row items-start gap-8 w-full">
                             <div className="flex flex-col gap-4 justify-center w-full items-center md:w-fit">
                                 {character.avatar && (
-                                    <img src={character.avatar} alt={character.name} className="max-sm:w-[250px] max-sm:h-[250px] w-[150px] h-[150px] rounded-full object-cover border border-[#c2a774]" />
+                                    <img src={character.avatar} alt={character.name} className="max-sm:min-w-[250px] max-sm:max-w-[250px] max-sm:max-h-[250px] max-sm:min-h-[250px] max-w-[150px] max-h-[150px] min-w-[150px] min-h-[150px] rounded-full object-cover border border-[#c2a774]" />
                                 )}
                                 <button
                                     onClick={() => setIsEditing(true)}
@@ -136,7 +137,12 @@ export function CharacterDetailPage() {
                             </div>
                             <div>
                                 <h1 className="text-[32px] font-bold text-[#D6C5A2] mb-2">{character.name}</h1>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-sm:text-sm text-base">
+
+                                <div className="flex flex-row items-center gap-1">
+                                    <Sparkles size={16} className="text-[#C2A774]" />
+                                    <span className="font-semibold text-[#C2A774]">Возраст:</span> {character.age}
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 mt-2 gap-4 max-sm:text-sm text-base">
                                     {character.status &&
                                         <div className="flex flex-row items-center gap-1">
                                             <Pin size={16} className="text-[#C2A774]" />
@@ -144,13 +150,7 @@ export function CharacterDetailPage() {
                                             {character.status}
                                         </div>
                                     }
-                                    {character.species &&
-                                        <div className="flex flex-row items-center gap-1">
-                                            <Dna size={16} className="text-[#C2A774]" />
-                                            <span className="font-semibold text-[#C2A774]">Вид:</span>
-                                            {character.species}
-                                        </div>
-                                    }
+
                                     {character.gender &&
                                         <div className="flex flex-row items-center gap-1">
                                             <VenusAndMars size={16} className="text-[#C2A774]" />
@@ -168,8 +168,21 @@ export function CharacterDetailPage() {
                                     {character.location?.name &&
                                         <div className="flex flex-row items-center gap-1">
                                             <House size={16} className="text-[#C2A774]" />
-                                            <span className="font-semibold text-[#C2A774]">Местонахождение:</span>
+                                            <span className="font-semibold text-[#C2A774]">Жилье:</span>
                                             {character.location.name}
+                                        </div>
+                                    }
+                                    {character.species &&
+                                        <div className="flex items-start gap-1">
+                                            <Dna size={16} className="text-[#C2A774] mt-1" />
+                                            <div>
+                                                <span className="font-semibold text-[#C2A774]">Вид:</span>
+                                                <ul className="ml-1 list-disc list-inside text-[#e5d9a5]">
+                                                    {character.species.split(',').map((part, index) => (
+                                                        <li key={index}>{part.trim()}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
                                         </div>
                                     }
                                 </div>
@@ -278,7 +291,7 @@ export function CharacterDetailPage() {
                                                 <span>
                                                     {chronicle.title}{' '}
                                                     <span className="text-[#c7bc98] font-normal italic text-sm">
-                                                        ({new Date(chronicle.event_date).toLocaleDateString('ru-RU')})
+                                                        ({formatEventDate(chronicle.event_date)})
                                                     </span>
                                                 </span>
                                             </Link>
