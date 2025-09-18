@@ -16,6 +16,18 @@
     --cc-shadow: 0 0 25px #c2a77480;
 }
 
+:root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+}
+
+.sa-top {
+    padding-top: max(12px, var(--sat));
+}
+
+.sa-bot {
+    padding-bottom: max(8px, var(--sab));
+}
 
 body {
     background-color: var(--cc-bg);
