@@ -30,7 +30,7 @@ export function InstallPwaButton() {
         <button
             ref={ref}
             onClick={handleClick}
-            className="px-3 py-2 rounded-lg border border-[color:var(--cc-accent)] text-[color:var(--cc-accent)] hover:bg-[color:var(--cc-accent-hover)] transition"
+            className="px-3 py-2 rounded-lg text-[color:var(--cc-accent)] hover:bg-[color:var(--cc-accent-hover)] transition"
         >
             Установить
         </button>

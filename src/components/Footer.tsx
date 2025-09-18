@@ -1,6 +1,7 @@
 import Github from "../assets/icon/github.svg";
 import Discord from "../assets/icon/discord.svg";
 import Telegram from "../assets/icon/telegram.svg";
+import { InstallPwaButton } from './InstallPwaButton';
 
 export const Footer = () => {
     return (
@@ -44,6 +45,7 @@ export const Footer = () => {
                     </ul>
                 </div>
             </div>
+            <InstallPwaButton />
             <p className="text-center mt-12 text-xs opacity-40">
                 © {new Date().getFullYear()} ChronicleCraft. Сделано с магией ✨
             </p>

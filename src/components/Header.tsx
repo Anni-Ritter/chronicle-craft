@@ -5,7 +5,6 @@ import Logo from "../assets/logo.png";
 import { Modal } from './Modal';
 import { Button } from './ChronicleButton';
 import { FloatingAlert } from './FloatingAlert';
-import { InstallPwaButton } from './InstallPwaButton';
 
 interface HeaderProps {
     onLoginClick: () => void
@@ -99,13 +98,11 @@ export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
                 >
                     <img src={Logo} alt="logo" className="w-12 h-12" /> ChronicleCraft
                 </h1>
-                <InstallPwaButton />
                 {session && (
                     <div className="lg:hidden">
                         <button onClick={() => setIsOpen(true)} className="text-3xl text-[#C2A774] px-3 py-1">
                             ☰
                         </button>
-                        <InstallPwaButton />
                         <Modal isOpen={isOpen} onClose={() => setIsOpen(false)}>
                             <div className="border-t border-[#C2A774] shadow-md p-6 flex flex-col gap-4 text-base font-lora">
                                 {[
