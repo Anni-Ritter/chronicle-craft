@@ -45,7 +45,9 @@ export const Footer = () => {
                     </ul>
                 </div>
             </div>
-            <InstallPwaButton />
+            <div className="w-full justify-center flex items-center">
+                <InstallPwaButton />
+            </div>
             <p className="text-center mt-12 text-xs opacity-40">
                 © {new Date().getFullYear()} ChronicleCraft. Сделано с магией ✨
             </p>
