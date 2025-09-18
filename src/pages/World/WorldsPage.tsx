@@ -13,7 +13,7 @@ export const WorldsPage = () => {
     const session = useSession();
     const supabase = useSupabaseClient();
     const { worlds, fetchWorlds, removeWorld } = useWorldStore();
-    const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
+    const { selectedWorldId } = useWorldSelectionStore();
     const navigate = useNavigate();
     const [isModalOpen, setModalOpen] = useState(false);
     const [editingWorld, setEditingWorld] = useState<World | null>(null);
@@ -61,7 +61,6 @@ export const WorldsPage = () => {
                         <li
                             key={world.id}
                             onClick={() => {
-                                setSelectedWorldId(world.id);
                                 navigate(`/worlds/${world.id}`);
                             }}
                             className={`

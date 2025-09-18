@@ -112,7 +112,7 @@ export const ProfilePage = () => {
                         <Button
                             variant="ghost"
                             icon={<Pen size={16} />}
-                            className="md:self-start mt-1 hover:underline px-0"
+                            className="md:self-start mt-1 hover:underline px-3"
                             onClick={() => {
                                 document.querySelector<HTMLInputElement>('input[type="file"]')?.click();
                             }}
@@ -150,7 +150,7 @@ export const ProfilePage = () => {
                                 }}
                                 error={emailError ?? undefined}
                             />
-                            <div className="flex flex-col max-sm:flex-row gap-2 mt-2 max-sm:mt-0">
+                            <div className="flex flex-row gap-2 mt-2 max-sm:mt-0">
                                 <Button
                                     onClick={async () => {
                                         if (!newEmail || newEmail === user?.email) {
@@ -167,7 +167,7 @@ export const ProfilePage = () => {
                                         }
                                     }}
                                     variant="outline"
-                                    className="min-w-[150px]"
+                                    className="min-w-[150px] text-sm"
                                 >
                                     Подтвердить
                                 </Button>
@@ -177,6 +177,7 @@ export const ProfilePage = () => {
                                         setNewEmail(user?.email ?? '');
                                         setShowEmailEdit(false);
                                     }}
+                                    className="min-w-[150px] text-sm"
                                 >
                                     Отмена
                                 </Button>
@@ -210,11 +211,11 @@ export const ProfilePage = () => {
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 error={newPassword.length > 0 && newPassword.length < 6 ? 'Минимум 6 символов' : undefined}
                             />
-                            <div className="flex flex-col max-sm:flex-row gap-2 mt-2 max-sm:mt-0">
+                            <div className="flex flex-row gap-2 mt-2 max-sm:mt-0">
                                 <Button
                                     onClick={handlePasswordChange}
                                     variant="outline"
-                                    className="min-w-[150px]"
+                                    className="min-w-[150px] text-sm"
                                 >
                                     Подтвердить
                                 </Button>
@@ -224,6 +225,7 @@ export const ProfilePage = () => {
                                         setNewPassword('');
                                         setShowPasswordEdit(false);
                                     }}
+                                    className="min-w-[150px] text-sm"
                                 >
                                     Отмена
                                 </Button>

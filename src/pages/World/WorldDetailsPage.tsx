@@ -6,7 +6,6 @@ import { useChronicleStore } from '../../store/useChronicleStore';
 import { useMapStore } from '../../store/useMapStore';
 import { Globe2, BookMarked, MapPinned, Users, Pencil } from 'lucide-react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import { WorldCalendarWidget } from '../../components/WorldCalendarWidget';
 import { WorldForm } from '../../features/world/WorldForm';
 import { Modal } from '../../components/Modal';
@@ -18,7 +17,6 @@ export const WorldDetailsPage = () => {
     const supabase = useSupabaseClient();
     const session = useSession();
     const { worlds, fetchWorlds } = useWorldStore();
-    const { setSelectedWorldId } = useWorldSelectionStore();
 
     const world = worlds.find(w => w.id === id);
 
@@ -35,8 +33,6 @@ export const WorldDetailsPage = () => {
         fetchCharacters(session.user.id, supabase, id);
         fetchChronicles(supabase, id);
         fetchMaps(session.user.id, supabase, id);
-
-        setSelectedWorldId(id);
     }, [id, session?.user?.id]);
 
     if (!world) return (

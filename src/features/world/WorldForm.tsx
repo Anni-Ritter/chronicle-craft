@@ -16,7 +16,7 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [showCalendar, setShowCalendar] = useState(false);
-
+    const [details, setDetails] = useState<World['details']>({});
     const supabase = useSupabaseClient();
     const user = useUser();
     const { addWorld, updateWorld } = useWorldStore();
@@ -38,6 +38,7 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
         if (initialWorld) {
             setName(initialWorld.name);
             setDescription(initialWorld.description || '');
+            if (initialWorld.details) setDetails(initialWorld.details);
             if (initialWorld.calendar) setCalendar(initialWorld.calendar);
         } else {
             resetCalendar();
@@ -54,6 +55,7 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
                 name,
                 description,
                 calendar,
+                details,
                 id: initialWorld.id,
                 created_at: initialWorld.created_at,
             };
@@ -66,6 +68,7 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
                     name,
                     description,
                     calendar,
+                    details,
                 },
                 supabase
             );
@@ -128,6 +131,228 @@ export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
                     </div>
                 )}
             </div>
+
+            {details &&
+                <section className="bg-[#223120] rounded-xl p-4 border border-[#c2a774] shadow-md space-y-6">
+                    <h3 className="text-xl font-semibold text-[#e5d9a5]">🌍 География и население</h3>
+                    <div>
+                        <label className="block mb-2 font-medium">Материки</label>
+                        <textarea
+                            placeholder="Перечислите континенты через запятую"
+                            className="w-full px-4 py-2 rounded bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6] placeholder:text-[#f5e9c6]/50"
+                            value={details.continents?.join(', ') || ''}
+                            onChange={(e) =>
+                                setDetails({ ...details, continents: e.target.value.split(',').map(s => s.trim()) })
+                            }
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Климатические зоны</label>
+                        <textarea
+                            placeholder="Например: тропики, пустыни, умеренный климат"
+                            className="w-full px-4 py-2 rounded bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6] placeholder:text-[#f5e9c6]/50"
+                            value={details.climateZones?.join(', ') || ''}
+                            onChange={(e) =>
+                                setDetails({ ...details, climateZones: e.target.value.split(',').map(s => s.trim()) })
+                            }
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Знаковые объекты</label>
+                        <textarea
+                            placeholder="Например: Гора Солнца, Башня Ветров"
+                            className="w-full px-4 py-2 rounded bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6] placeholder:text-[#f5e9c6]/50"
+                            value={details.landmarks?.join(', ') || ''}
+                            onChange={(e) =>
+                                setDetails({ ...details, landmarks: e.target.value.split(',').map(s => s.trim()) })
+                            }
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Страны</label>
+                        {(details.countries || []).map((country, idx) => (
+                            <div key={idx} className="border border-[#c2a774] rounded p-3 mb-3 space-y-2 bg-[#0e1b12]">
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Название страны"
+                                    value={country.name}
+                                    onChange={(e) => {
+                                        const updated = [...(details.countries || [])];
+                                        updated[idx].name = e.target.value;
+                                        setDetails({ ...details, countries: updated });
+                                    }}
+                                />
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Столица"
+                                    value={country.capital || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.countries || [])];
+                                        updated[idx].capital = e.target.value;
+                                        setDetails({ ...details, countries: updated });
+                                    }}
+                                />
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Форма правления"
+                                    value={country.government || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.countries || [])];
+                                        updated[idx].government = e.target.value;
+                                        setDetails({ ...details, countries: updated });
+                                    }}
+                                />
+                                <textarea
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Описание страны"
+                                    value={country.description || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.countries || [])];
+                                        updated[idx].description = e.target.value;
+                                        setDetails({ ...details, countries: updated });
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <Button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setDetails({
+                                    ...details,
+                                    countries: [...(details.countries || []), { name: '' }],
+                                });
+                            }}
+                            className="mt-2"
+                        >
+                            + Добавить страну
+                        </Button>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Расы</label>
+                        {(details.races || []).map((race, idx) => (
+                            <div key={idx} className="border border-[#c2a774] rounded p-3 mb-3 space-y-2 bg-[#0e1b12]">
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Название расы"
+                                    value={race.name}
+                                    onChange={(e) => {
+                                        const updated = [...(details.races || [])];
+                                        updated[idx].name = e.target.value;
+                                        setDetails({ ...details, races: updated });
+                                    }}
+                                />
+                                <textarea
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Описание расы"
+                                    value={race.description || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.races || [])];
+                                        updated[idx].description = e.target.value;
+                                        setDetails({ ...details, races: updated });
+                                    }}
+                                />
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Область обитания"
+                                    value={race.region || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.races || [])];
+                                        updated[idx].region = e.target.value;
+                                        setDetails({ ...details, races: updated });
+                                    }}
+                                />
+                                <textarea
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Черты (через запятую)"
+                                    value={race.traits?.join(', ') || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.races || [])];
+                                        updated[idx].traits = e.target.value.split(',').map(s => s.trim());
+                                        setDetails({ ...details, races: updated });
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <Button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setDetails({
+                                    ...details,
+                                    races: [...(details.races || []), { name: '' }],
+                                });
+                            }}
+                            className="mt-2"
+                        >
+                            + Добавить расу
+                        </Button>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Распределение населения</label>
+                        <textarea
+                            className="w-full px-4 py-2 rounded bg-[#0e1b12] border border-[#c2a774] text-[#f5e9c6]"
+                            placeholder="Например: плотно заселённые побережья, редкое население в горах..."
+                            value={details.populationDistribution || ''}
+                            onChange={(e) => setDetails({ ...details, populationDistribution: e.target.value })}
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-medium">Языки</label>
+                        {(details.languages || []).map((lang, idx) => (
+                            <div key={idx} className="border border-[#c2a774] rounded p-3 mb-3 space-y-2 bg-[#0e1b12]">
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Название языка"
+                                    value={lang.name}
+                                    onChange={(e) => {
+                                        const updated = [...(details.languages || [])];
+                                        updated[idx].name = e.target.value;
+                                        setDetails({ ...details, languages: updated });
+                                    }}
+                                />
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Письменность"
+                                    value={lang.script || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.languages || [])];
+                                        updated[idx].script = e.target.value;
+                                        setDetails({ ...details, languages: updated });
+                                    }}
+                                />
+                                <input
+                                    className="w-full px-3 py-1 rounded bg-transparent border border-[#c2a774] text-[#f5e9c6]"
+                                    placeholder="Где используется (через запятую)"
+                                    value={lang.spokenIn?.join(', ') || ''}
+                                    onChange={(e) => {
+                                        const updated = [...(details.languages || [])];
+                                        updated[idx].spokenIn = e.target.value.split(',').map(s => s.trim());
+                                        setDetails({ ...details, languages: updated });
+                                    }}
+                                />
+                            </div>
+                        ))}
+                        <Button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setDetails({
+                                    ...details,
+                                    languages: [...(details.languages || []), { name: '' }],
+                                });
+                            }}
+                            className="mt-2"
+                        >
+                            + Добавить язык
+                        </Button>
+                    </div>
+                </section>
+            }
+
             <div className="flex justify-end">
                 <Button onClick={handleSubmit} className="font-semibold">
                     {initialWorld ? 'Сохранить' : 'Создать мир'}
