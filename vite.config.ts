@@ -17,7 +17,7 @@ export default defineConfig({
         scope: '/',                      
         display: 'standalone',           
         background_color: '#0e1b12',     
-        theme_color: '#C2A774',         
+        theme_color: '#0e1b12',         
         icons: [
           {
             src: '/web-app-manifest-192x192.png',
