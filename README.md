@@ -1,54 +1,41 @@
-# React + TypeScript + Vite
+# ChronicleCraft
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**ChronicleCraft** — интерактивная система для создания, визуализации и хранения персонажей, связей и хроник в ролевых мирах.  
+Проект объединяет инструменты для авторов, мастеров и сценаристов, помогая структурировать вымышленные миры и истории.
 
-Currently, two official plugins are available:
+**Онлайн-версия:** [chronicle-craft.vercel.app](https://chronicle-craft.vercel.app)  
+*Работает прямо в браузере, без необходимости локальной установки.*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Основные модули
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Модуль | Возможности |
+|--------|--------------|
+| **Персонажи** | Создание, просмотр и редактирование персонажей; аватар, биография, способности |
+| **Связи** | Визуальная карта отношений между персонажами — друзья, враги, семья |
+| **Карта** | Добавление локаций и событий, привязка персонажей к точкам мира |
+| **Хроники** | Сюжетные записи с поддержкой Markdown / визуального редактора, сортировка по времени |
+| **Панель управления** | Фильтры, поиск, сортировка и управление элементами мира |
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+---
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Технологический стек
+- **React + TypeScript** — архитектура приложения  
+- **Tailwind CSS** — адаптивная стилизация  
+- **Vite** — сборка и dev-сервер  
+- **Supabase** — база данных и авторизация  
+- **React Router / Context API** — маршрутизация и состояние
+- **Zustand** — управление состоянием приложения   
+- **PWA-интеграция** — оффлайн-доступ и установка на устройства
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Особенности проекта
+- Адаптивный интерфейс для мобильных устройств  
+- Визуальные карты связей и хроник  
+- Хранение пользовательских данных в облаке (через Supabase)  
+- В разработке: совместная работа и экспорт мира  
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+---
+
+> _ChronicleCraft — место, где вымысел обретает структуру._
