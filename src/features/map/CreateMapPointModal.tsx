@@ -1,9 +1,9 @@
 import { Church, Gem, Landmark, MapIcon, Tent } from 'lucide-react';
-import React, { useState, type JSX } from 'react';
+import { useState, type JSX } from 'react';
 import { Modal } from '../../components/Modal';
 import type { IconType } from '../../types/mapPoint';
 
-interface Props {
+interface CreateMapPointModalProps {
     coords: { x: number; y: number };
     onClose: () => void;
     onSave: (data: { name: string; description: string; iconType: IconType }) => void;
@@ -17,7 +17,7 @@ const iconOptions: { type: IconType; label: string; icon: JSX.Element }[] = [
     { type: 'treasure', label: 'Сокровище', icon: <Gem size={20} /> },
 ];
 
-export const CreateMapPointModal: React.FC<Props> = ({ coords, onClose, onSave }) => {
+export const CreateMapPointModal = ({ coords, onClose, onSave }: CreateMapPointModalProps) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [iconType, setIconType] = useState<IconType>('default');
@@ -57,8 +57,8 @@ export const CreateMapPointModal: React.FC<Props> = ({ coords, onClose, onSave }
                                 type="button"
                                 onClick={() => setIconType(opt.type)}
                                 className={`flex items-center gap-1 px-3 py-2 border rounded transition ${iconType === opt.type
-                                        ? 'border-[#c2a774] bg-[#3a4c3a]'
-                                        : 'border-[#3d4a38] hover:bg-[#3a4c3a]'
+                                    ? 'border-[#c2a774] bg-[#3a4c3a]'
+                                    : 'border-[#3d4a38] hover:bg-[#3a4c3a]'
                                     }`}
                             >
                                 {opt.icon}

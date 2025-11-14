@@ -16,7 +16,7 @@ interface CharacterFormProps {
     onSave: (char: Character) => void;
 }
 
-export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialCharacter, onSave }) => {
+export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterFormProps) => {
     const [avatarMode, setAvatarMode] = useState<'url' | 'upload'>(initialCharacter?.avatar?.startsWith('http') ? 'url' : 'upload');
     const normalizeExtra = (input: unknown): ExtraField[] => {
         if (Array.isArray(input)) return input;
@@ -277,7 +277,7 @@ export const CharacterForm: React.FC<CharacterFormProps> = ({ onFinish, initialC
 
             <div className="flex justify-end">
                 <Button
-                   
+
                     type="submit"
                     className="font-semibold"
                 >

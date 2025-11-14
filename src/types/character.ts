@@ -1,10 +1,10 @@
-export type ExtraField = {
+export interface ExtraField {
     id: string;
     key: string;
     value: string;
 };
 
-export type Character = {
+export interface Character {
     id: string;
     user_id: string;
     name: string;

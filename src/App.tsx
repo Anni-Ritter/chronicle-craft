@@ -5,15 +5,12 @@ import { AuthModal } from './components/AuthModal';
 import { useEffect, useMemo, useState } from 'react';
 import { AppRouter } from './AppRouter';
 import { Footer } from './components/Footer';
-
-
 function useIsStandalone() {
   return useMemo(() => (
     (window.navigator as any).standalone === true ||
     window.matchMedia('(display-mode: standalone)').matches
   ), []);
 }
-
 
 function App() {
   const [authOpen, setAuthOpen] = useState(false);

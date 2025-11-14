@@ -12,7 +12,7 @@ interface ButtonProps {
     variant?: 'default' | 'danger' | 'outline' | 'ghost';
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button = ({
     onClick,
     children,
     icon,
@@ -20,7 +20,7 @@ export const Button: React.FC<ButtonProps> = ({
     title,
     type = 'button',
     variant = 'default',
-}) => {
+}: ButtonProps) => {
     const isIconOnly = !children && !!icon;
 
     const base = 'transition font-lora rounded-xl shadow flex items-center justify-center gap-2';

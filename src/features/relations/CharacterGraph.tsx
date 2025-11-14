@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ReactFlow, {
     Background,
     Controls,
@@ -24,19 +24,19 @@ import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
 import { useDraftRelationshipStore } from '../../store/useDraftRelationshipStore';
 
-interface Props {
+interface CharacterGraphProps {
     characters: Character[];
     relationships: Relationship[];
     onSelectCharacter?: (charId: string) => void;
     allCharacters?: Character[];
 }
 
-export const CharacterGraph: React.FC<Props> = ({
+export const CharacterGraph = ({
     characters,
     relationships,
     onSelectCharacter,
     allCharacters
-}) => {
+}: CharacterGraphProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);

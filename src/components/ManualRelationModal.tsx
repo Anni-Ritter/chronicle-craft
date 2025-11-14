@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { Character } from '../types/character';
 import { Modal } from './Modal';
 import { Combobox } from '@headlessui/react';
 
-interface Props {
+interface ManualRelationModalProps {
     isOpen: boolean;
     characters: Character[];
     onClose: () => void;
@@ -15,12 +15,12 @@ interface Props {
     }) => void;
 }
 
-export const ManualRelationModal: React.FC<Props> = ({
+export const ManualRelationModal = ({
     isOpen,
     characters,
     onClose,
     onCreate,
-}) => {
+}: ManualRelationModalProps) => {
     const [sourceId, setSourceId] = useState('');
     const [targetId, setTargetId] = useState('');
     const [label, setLabel] = useState('');

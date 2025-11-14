@@ -2,6 +2,7 @@ import Github from "../assets/icon/github.svg";
 import Discord from "../assets/icon/discord.svg";
 import Telegram from "../assets/icon/telegram.svg";
 import { InstallPwaButton } from './InstallPwaButton';
+import { Stars } from "lucide-react";
 
 export const Footer = () => {
     return (
@@ -49,7 +50,7 @@ export const Footer = () => {
                 <InstallPwaButton />
             </div>
             <p className="text-center mt-12 text-xs opacity-40">
-                © {new Date().getFullYear()} ChronicleCraft. Сделано с магией ✨
+                © {new Date().getFullYear()} ChronicleCraft. Сделано с магией <Stars className="inline-block" size={12} />
             </p>
         </footer>
     );

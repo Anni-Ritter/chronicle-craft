@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 let deferredPrompt: any = null;
 
-export function InstallPwaButton() {
+export const InstallPwaButton = () => {
     const ref = useRef<HTMLButtonElement>(null);
     const [visible, setVisible] = useState(false);
 

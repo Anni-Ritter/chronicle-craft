@@ -5,7 +5,7 @@ interface DiceStatProps {
     value: number;
 }
 
-export const DiceStat: React.FC<DiceStatProps> = ({ label, value }) => {
+export const DiceStat = ({ label, value }: DiceStatProps) => {
     const [shake, setShake] = useState(false);
 
     useEffect(() => {

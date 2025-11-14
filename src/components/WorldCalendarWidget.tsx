@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from './Modal';
 import { useNavigate } from 'react-router-dom';
 
-interface Props {
+interface WorldCalendarWidgetProps {
     calendar: {
         daysInWeek: number;
         monthsInYear: number;
@@ -23,7 +23,7 @@ interface Props {
     onChange?: (formatted: string) => void;
 }
 
-export const WorldCalendarWidget = ({ calendar }: Props) => {
+export const WorldCalendarWidget = ({ calendar }: WorldCalendarWidgetProps) => {
     const {
         daysInWeek,
         monthsInYear,

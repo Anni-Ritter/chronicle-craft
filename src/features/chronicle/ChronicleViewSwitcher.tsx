@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useChronicleStore } from '../../store/useChronicleStore';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -15,7 +15,7 @@ interface ChronicleViewSwitcherProps {
     searchTerm?: string;
 }
 
-export const ChronicleViewSwitcher: React.FC<ChronicleViewSwitcherProps> = ({ searchTerm }) => {
+export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps) => {
     const supabase = useSupabaseClient();
     const { fetchChronicles, chronicles } = useChronicleStore();
     const { characters, fetchCharacters } = useCharacterStore();

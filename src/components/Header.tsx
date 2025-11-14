@@ -27,7 +27,7 @@ function IOSAddToHomeHint() {
 }
 
 
-export const Header: React.FC<HeaderProps> = ({ onLoginClick }) => {
+export const Header = ({ onLoginClick }: HeaderProps) => {
     const session = useSession()
     const supabase = useSupabaseClient()
     const navigate = useNavigate()

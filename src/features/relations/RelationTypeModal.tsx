@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../../components/Modal';
 import { HeartPlus, Save, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 
-interface Props {
+interface RelationTypeModalProps {
     isOpen: boolean;
     onSelect: (data: { label: string; color: string }) => Promise<void>;
     onClose: () => void;
@@ -13,14 +13,14 @@ interface Props {
     buttonClassName?: string;
 }
 
-export const RelationTypeModal: React.FC<Props> = ({
+export const RelationTypeModal = ({
     isOpen,
     onSelect,
     onClose,
     onDelete,
     initialData,
     modalClassName,
-}) => {
+}: RelationTypeModalProps) => {
     const [label, setLabel] = useState('');
     const [color, setColor] = useState('#4ade80');
 

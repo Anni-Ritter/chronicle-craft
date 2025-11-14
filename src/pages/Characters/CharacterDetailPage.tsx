@@ -15,7 +15,7 @@ import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useDraftRelationshipStore } from "../../store/useDraftRelationshipStore";
 import { formatEventDate } from "../../lib/formatEventDate";
 
-export function CharacterDetailPage() {
+export const CharacterDetailPage = () => {
     const { id } = useParams();
     const allCharacters = useCharacterStore((s) => s.characters);
     const relationships = useRelationshipStore((s) => s.relationships);

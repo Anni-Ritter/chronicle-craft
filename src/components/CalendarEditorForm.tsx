@@ -3,12 +3,12 @@ import { useCalendarStore } from "../store/useCalendarStore";
 import { Button } from "./ChronicleButton";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 
-interface Props {
+interface CalendarEditorFormProps {
     onSave: (calendar: any) => void;
     onCancel: () => void;
 }
 
-export const CalendarEditorForm: React.FC<Props> = ({ onSave }) => {
+export const CalendarEditorForm = ({ onSave }: CalendarEditorFormProps) => {
     const { calendar, updateField } = useCalendarStore();
     const supabase = useSupabaseClient();
     const getRandomColor = () => {

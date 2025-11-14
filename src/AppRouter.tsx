@@ -4,7 +4,7 @@ import { useCharacterStore } from './store/useCharacterStore';
 import { useRelationshipStore } from './store/useRelationshipStore';
 
 import { useEffect } from 'react';
-import CharactersPage from './pages/Characters/Characters';
+import { CharactersPage } from './pages/Characters/Characters';
 import { PublicPage } from './pages/PublicPage';
 import { CharacterGraph } from './features/relations/CharacterGraph';
 import { ChroniclesPage } from './pages/Chronicle/ChroniclesPage';

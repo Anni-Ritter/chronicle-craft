@@ -5,7 +5,7 @@ interface RichTextEditorProps {
     onChange: (html: string) => void;
 }
 
-export const RichTextEditor: React.FC<RichTextEditorProps> = ({ content, onChange }) => {
+export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {

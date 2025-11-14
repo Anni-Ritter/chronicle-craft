@@ -15,13 +15,13 @@ interface SelectProps {
     className?: string;
 }
 
-export const Select: React.FC<SelectProps> = ({
+export const Select = ({
     value,
     options,
     onChange,
     placeholder = "Выбрать...",
     className = "",
-}) => {
+}: SelectProps) => {
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 

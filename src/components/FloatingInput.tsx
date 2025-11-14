@@ -1,4 +1,4 @@
-import React, { useId, useState, type InputHTMLAttributes } from 'react';
+import { useId, useState, type InputHTMLAttributes } from 'react';
 import clsx from 'clsx';
 import { Eye, EyeOff } from 'lucide-react';
 
@@ -7,13 +7,13 @@ interface FloatingInputProps extends InputHTMLAttributes<HTMLInputElement> {
     error?: string;
 }
 
-export const FloatingInput: React.FC<FloatingInputProps> = ({
+export const FloatingInput = ({
     label,
     error,
     className,
     type = 'text',
     ...props
-}) => {
+}: FloatingInputProps) => {
     const id = useId();
     const hasValue = !!props.value || !!props.defaultValue;
     const [showPassword, setShowPassword] = useState(false);

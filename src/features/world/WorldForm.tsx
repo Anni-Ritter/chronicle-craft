@@ -7,12 +7,12 @@ import type { World } from '../../types/world';
 import { useCalendarStore } from '../../store/useCalendarStore';
 import { CalendarEditorForm } from '../../components/CalendarEditorForm';
 
-interface Props {
+interface WorldFormProps {
     initialWorld?: World;
     onFinish?: () => void;
 }
 
-export const WorldForm: React.FC<Props> = ({ initialWorld, onFinish }) => {
+export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [showCalendar, setShowCalendar] = useState(false);

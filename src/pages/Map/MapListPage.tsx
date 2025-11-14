@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSupabaseClient, useSession } from '@supabase/auth-helpers-react';
 import { MapForm } from '../../features/map/MapForm';
 import { useMapStore } from '../../store/useMapStore';
@@ -12,7 +12,7 @@ import { WorldSelector } from '../../components/WorldSelector';
 
 const MAPS_PER_PAGE = 10;
 
-export const MapListPage: React.FC = () => {
+export const MapListPage = () => {
     const supabase = useSupabaseClient();
     const session = useSession();
     const [showForm, setShowForm] = useState(false);

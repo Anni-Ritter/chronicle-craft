@@ -12,7 +12,7 @@ import { CreateMapPointModal } from '../../features/map/CreateMapPointModal';
 import Table from "../../assets/black-wooden-background.png"
 import { Church, Gem, Landmark, MapIcon, Tent } from 'lucide-react';
 
-export const WorldMapPage: React.FC = () => {
+export const WorldMapPage = () => {
     const supabase = useSupabaseClient();
     const session = useSession();
     const { mapId } = useParams();

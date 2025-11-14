@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from '../../components/ChronicleButton';
@@ -7,14 +7,14 @@ import { useWorldStore } from '../../store/useWorldStore';
 import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import type { DBMap } from '../../types/DBMap';
 
-interface Props {
+interface MapFormProps {
     userId: string;
     supabase: SupabaseClient;
     onSuccess: () => void;
     initial?: DBMap;
 }
 
-export const MapForm: React.FC<Props> = ({ userId, supabase, onSuccess, initial }) => {
+export const MapForm = ({ userId, supabase, onSuccess, initial }: MapFormProps) => {
     const [name, setName] = useState(initial?.name || '');
     const [territory, setTerritory] = useState(initial?.territory || '');
     const [file, setFile] = useState<File | null>(null);

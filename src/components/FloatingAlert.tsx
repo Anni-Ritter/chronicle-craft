@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import classNames from 'classnames';
 
@@ -10,13 +9,13 @@ interface IFloatingAlertProps {
     position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
 }
 
-export const FloatingAlert: React.FC<IFloatingAlertProps> = ({
+export const FloatingAlert = ({
     type,
     message,
     onClose,
     className,
     position = 'top-right',
-}) => {
+}: IFloatingAlertProps) => {
     const icon = type === 'success' ? <CheckCircle size={18} /> : <AlertTriangle size={18} />;
 
     const positionClasses = {

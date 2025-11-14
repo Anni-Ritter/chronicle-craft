@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 
-interface Props {
+interface WorldDatePickerProps {
     calendar: {
         currentYear?: number;
         daysInWeek: number;
@@ -14,7 +14,7 @@ interface Props {
     onChange: (formatted: string) => void;
 }
 
-export const WorldDatePicker: React.FC<Props> = ({ calendar, initialDate, onChange }) => {
+export const WorldDatePicker = ({ calendar, initialDate, onChange }: WorldDatePickerProps) => {
     const { daysInWeek, monthsInYear, currentYear = 1, daysInMonth = [], customMonthNames = [], customWeekNames = [] } = calendar;
     const parseInitialDate = (raw?: string) => {
         if (!raw) return { d: 1, m: 0, y: currentYear };

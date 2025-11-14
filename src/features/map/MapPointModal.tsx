@@ -9,12 +9,12 @@ import { Modal } from '../../components/Modal';
 import { Church, Gem, Landmark, MapIcon, Pen, Tent, Trash2 } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 
-interface Props {
+interface MapPointModalProps {
     point: MapPoint;
     onClose: () => void;
 }
 
-export const MapPointModal: React.FC<Props> = ({ point, onClose }) => {
+export const MapPointModal = ({ point, onClose }: MapPointModalProps) => {
     const { mapPoints, updateMapPoint, deleteMapPoint } = useMapStorePoint();
     const characters = useCharacterStore((s) => s.characters);
     const chronicles = useChronicleStore((s) => s.chronicles);

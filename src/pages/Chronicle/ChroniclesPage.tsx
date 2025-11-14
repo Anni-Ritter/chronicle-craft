@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { ChronicleForm } from '../../features/chronicle/ChronicleForm';
 import { ChronicleViewSwitcher } from '../../features/chronicle/ChronicleViewSwitcher';
@@ -7,7 +7,7 @@ import { BookMarked, CirclePlus, Search } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { useWorldStore } from '../../store/useWorldStore';
 
-export const ChroniclesPage: React.FC = () => {
+export const ChroniclesPage = () => {
     const [showForm, setShowForm] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const supabase = useSupabaseClient();

@@ -15,7 +15,7 @@ import { WorldSelector } from '../../components/WorldSelector';
 
 const CHARACTERS_PER_PAGE = 10;
 
-function CharactersPage() {
+export const CharactersPage = () => {
     const session = useSession();
     const supabase = useSupabaseClient();
     const { characters, fetchCharacters, addCharacter, clearCharacters } = useCharacterStore();
@@ -150,5 +150,3 @@ function CharactersPage() {
         </div>
     );
 }
-
-export default CharactersPage;

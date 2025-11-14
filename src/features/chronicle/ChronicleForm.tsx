@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import type { Chronicle } from '../../types/chronicle';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -10,7 +10,7 @@ import { Button } from '../../components/ChronicleButton';
 import { useWorldStore } from '../../store/useWorldStore';
 import { WorldDatePicker } from '../../components/WorldDatePicker';
 
-interface Props {
+interface ChronicleFormProps {
     onFinish: () => void;
     supabase: SupabaseClient;
     initial?: Chronicle;
@@ -52,7 +52,7 @@ function pickEmojiFromMood(rawMood: string): string {
     return `📖 ${rawMood.trim()}`;
 }
 
-export const ChronicleForm: React.FC<Props> = ({ onFinish, supabase, initial }) => {
+export const ChronicleForm = ({ onFinish, supabase, initial }: ChronicleFormProps) => {
     const { characters } = useCharacterStore();
     const { addChronicle, updateChronicle } = useChronicleStore();
 

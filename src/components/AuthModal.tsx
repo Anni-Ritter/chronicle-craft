@@ -9,7 +9,7 @@ interface AuthModalProps {
     onClose: () => void
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     const supabase = useSupabaseClient()
     const showedOnce = useRef(false);
     const [statusMessage, setStatusMessage] = useState<{

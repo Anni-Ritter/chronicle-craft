@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import parse from 'html-react-parser';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
@@ -11,7 +11,7 @@ import { Button } from '../../components/ChronicleButton';
 import { formatWorldDate } from '../../lib/formatWorldDate';
 import { useWorldStore } from '../../store/useWorldStore';
 
-export const ChronicleDetailPage: React.FC = () => {
+export const ChronicleDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const supabase = useSupabaseClient();
