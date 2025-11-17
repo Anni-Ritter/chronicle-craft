@@ -5,6 +5,7 @@ import { InstallPwaButton } from './InstallPwaButton';
 import { Stars } from "lucide-react";
 
 export const Footer = () => {
+    const year = new Date().getFullYear();
     return (
         <footer className="text-[#C2A774] border-t border-[#C2A774] pt-12 pb-6 mt-20 text-[16px] font-lora">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 text-start w-full justify-between">
@@ -18,10 +19,17 @@ export const Footer = () => {
                     </ul>
                 </div>
 
-                <div className="text-center">
-                    <h4 className="text-[#C2A774] text-lg mb-3">О проекте</h4>
-                    <p className="opacity-80 leading-relaxed text-[#D6C5A2]">
-                        ChronicleCraft — система визуализации персонажей, связей и хроник для фэнтези-историй, кампаний и ролевых миров.
+                <div className="space-y-3 text-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#101712]/80 text-[11px] uppercase tracking-[0.18em] text-[#c7bc98]">
+                        <span className="w-1 h-1 rounded-full bg-[#c2a774]" />
+                        <span>о проекте</span>
+                    </div>
+                    <h4 className="text-[#e5d9a5] text-lg font-garamond">
+                        ChronicleCraft
+                    </h4>
+                    <p className="opacity-80 leading-relaxed text-sm text-[#d6c5a2]">
+                        Система визуализации персонажей, связей и хроник для фэнтези-историй,
+                        кампаний и ролевых миров. Храните лор так же красиво, как его придумываете.
                     </p>
                 </div>
 
@@ -50,7 +58,7 @@ export const Footer = () => {
                 <InstallPwaButton />
             </div>
             <p className="text-center mt-12 text-xs opacity-40">
-                © {new Date().getFullYear()} ChronicleCraft. Сделано с магией <Stars className="inline-block" size={12} />
+                © {year} ChronicleCraft. Сделано с магией <Stars className="inline-block" size={12} />
             </p>
         </footer>
     );

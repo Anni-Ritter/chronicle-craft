@@ -15,6 +15,7 @@ interface WorldCalendarWidgetProps {
             month: number;
             description?: string;
             repeatEachYear?: boolean;
+            linkedChronicleId?: string;
         }[];
         customMonthNames?: string[];
         customWeekNames?: string[];
@@ -43,31 +44,35 @@ export const WorldCalendarWidget = ({ calendar }: WorldCalendarWidgetProps) => {
         description?: string;
         linkedChronicleId?: string;
     }>(null);
+
     const navigate = useNavigate();
 
-    const monthNames = useMemo(() => {
-        return Array.from({ length: monthsInYear }, (_, i) => customMonthNames?.[i] || `Месяц ${i + 1}`);
-    }, [customMonthNames, monthsInYear]);
+    const monthNames = useMemo(
+        () =>
+            Array.from({ length: monthsInYear }, (_, i) => customMonthNames?.[i] || `Месяц ${i + 1}`),
+        [customMonthNames, monthsInYear]
+    );
 
-    const dayNames = useMemo(() => {
-        return Array.from({ length: daysInWeek }, (_, i) => customWeekNames?.[i] || `День ${i + 1}`);
-    }, [customWeekNames, daysInWeek]);
+    const dayNames = useMemo(
+        () =>
+            Array.from({ length: daysInWeek }, (_, i) => customWeekNames?.[i] || `День ${i + 1}`),
+        [customWeekNames, daysInWeek]
+    );
 
     const daysInThisMonth = daysInMonth[selectedMonth] ?? 30;
 
     const yearOptions = useMemo(() => {
-        const years = [];
+        const years: number[] = [];
         for (let y = currentYear - 200; y <= currentYear + 100; y++) {
             years.push(y);
         }
         return years;
     }, [currentYear]);
 
-    const keyDatesThisMonth = useMemo(() => {
-        return (calendar.keyDates || []).filter(
-            (d) => d.month === selectedMonth + 1
-        );
-    }, [calendar.keyDates, selectedMonth]);
+    const keyDatesThisMonth = useMemo(
+        () => (calendar.keyDates || []).filter((d) => d.month === selectedMonth + 1),
+        [calendar.keyDates, selectedMonth]
+    );
 
     const activeYearRef = useRef<HTMLLIElement | null>(null);
 
@@ -78,58 +83,79 @@ export const WorldCalendarWidget = ({ calendar }: WorldCalendarWidgetProps) => {
     }, [showYearDropdown]);
 
     return (
-        <div className="border border-[#c2a774] rounded-xl p-4 bg-[#182413] text-[#e5d9a5] font-lora w-full max-sm:max-w-sm">
-            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
+        <div className="w-full max-sm:max-w-sm rounded-2xl bg-[#111712]/95 font-lora text-[#e5d9a5] animate-fade-in-down">
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                 <button
-                    onClick={() => setSelectedMonth((m) => (m === 0 ? monthsInYear - 1 : m - 1))}
-                    className="p-1 hover:bg-[#2f3e29] rounded"
+                    type="button"
+                    onClick={() =>
+                        setSelectedMonth((m) => (m === 0 ? monthsInYear - 1 : m - 1))
+                    }
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#3a4a34] bg-[#171f15] hover:bg-[#253421] text-[#c2a774] transition"
                 >
-                    <ChevronLeft className="w-5 h-5 text-[#c2a774]" />
+                    <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                <h3 className="text-base sm:text-lg font-garamond text-[#e5d9a5] text-center flex-1">
-                    {monthNames[selectedMonth]}{' '}
-                    <div className="relative inline-block text-left">
-                        <button
-                            type="button"
-                            onClick={() => setShowYearDropdown((prev) => !prev)}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[#e5d9a5] font-lora bg-transparent border-none"
-                        >
-                            {selectedYear}
-                            <span className="text-[#c2a774]">▼</span>
-                        </button>
+                <div className="flex flex-col items-center flex-1 min-w-0">
+                    <span className="text-[10px] uppercase tracking-[0.22em] text-[#c7bc98] mb-1">
+                        Календарь мира
+                    </span>
+                    <div className="inline-flex items-center gap-2">
+                        <span className="text-sm sm:text-base font-garamond">
+                            {monthNames[selectedMonth]}
+                        </span>
 
-                        {showYearDropdown && (
-                            <ul className="absolute z-30 mt-2 max-h-48 overflow-y-auto bg-[#0e1b12] border border-[#c2a774] rounded-xl shadow-lg text-[#f5e9c6] right-0 w-24 no-scrollbar">
-                                {yearOptions.map((year) => (
-                                    <li
-                                        key={year}
-                                        ref={year === selectedYear ? activeYearRef : null}
-                                        onClick={() => {
-                                            setSelectedYear(year);
-                                            setShowYearDropdown(false);
-                                        }}
-                                        className={`px-3 py-1 cursor-pointer hover:bg-[#3a4c3a] ${year === selectedYear ? 'bg-[#3a4c3a]' : ''}`}
-                                    >
-                                        {year}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                        <div className="relative inline-block text-left">
+                            <button
+                                type="button"
+                                onClick={() => setShowYearDropdown((prev) => !prev)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a4a34] bg-[#171f15] text-xs sm:text-sm hover:border-[#c2a774aa] hover:bg-[#253421] transition"
+                            >
+                                {selectedYear}
+                                <span className="text-[#c2a774] text-[10px]">▼</span>
+                            </button>
+
+                            {showYearDropdown && (
+                                <ul className="absolute z-30 mt-2 max-h-48 overflow-y-auto bg-[#0e1b12] border border-[#c2a774] rounded-xl shadow-lg text-[#f5e9c6] right-0 w-24 no-scrollbar text-sm">
+                                    {yearOptions.map((year) => (
+                                        <li
+                                            key={year}
+                                            ref={year === selectedYear ? activeYearRef : null}
+                                            onClick={() => {
+                                                setSelectedYear(year);
+                                                setShowYearDropdown(false);
+                                            }}
+                                            className={`px-3 py-1 cursor-pointer hover:bg-[#3a4c3a] ${year === selectedYear ? 'bg-[#3a4c3a]' : ''
+                                                }`}
+                                        >
+                                            {year}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
                     </div>
-                </h3>
+                </div>
 
                 <button
-                    onClick={() => setSelectedMonth((m) => (m === monthsInYear - 1 ? 0 : m + 1))}
-                    className="p-1 hover:bg-[#2f3e29] rounded"
+                    type="button"
+                    onClick={() =>
+                        setSelectedMonth((m) => (m === monthsInYear - 1 ? 0 : m + 1))
+                    }
+                    className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-[#3a4a34] bg-[#171f15] hover:bg-[#253421] text-[#c2a774] transition"
                 >
-                    <ChevronRight className="w-5 h-5 text-[#c2a774]" />
+                    <ChevronRight className="w-4 h-4" />
                 </button>
             </div>
 
-            <div className="grid text-xs sm:text-sm" style={{ gridTemplateColumns: `repeat(${daysInWeek}, 1fr)` }}>
+            <div
+                className="grid text-[10px] sm:text-xs mt-2 gap-[2px]"
+                style={{ gridTemplateColumns: `repeat(${daysInWeek}, 1fr)` }}
+            >
                 {dayNames.map((day, i) => (
-                    <div key={i} className="max-sm:hidden text-center font-medium text-[#e5d9a5]/70 pb-1">
+                    <div
+                        key={i}
+                        className="max-sm:hidden text-center font-medium text-[#e5d9a5]/70 pb-1"
+                    >
                         {day}
                     </div>
                 ))}
@@ -138,43 +164,86 @@ export const WorldCalendarWidget = ({ calendar }: WorldCalendarWidgetProps) => {
                     const day = dayIdx + 1;
                     const keyDate = keyDatesThisMonth.find((d) => d.day === day);
 
+                    const isKey = Boolean(keyDate);
+
                     return (
-                        <div
+                        <button
+                            type="button"
                             key={dayIdx}
-                            className={`relative text-center border rounded p-1 cursor-pointer hover:bg-[#2f3e29] 
-                            ${keyDate ? 'border-[#e5d9a5] bg-[#3a4c3a] font-semibold' : 'border-[#c2a77422]'}`}
-                            onClick={() => keyDate && setSelectedKeyDate(keyDate)}
+                            className={`relative flex items-center justify-center rounded-lg border text-xs sm:text-sm py-1.5 md:py-2 transition-all duration-150
+                                ${isKey
+                                    ? 'border-[#c2a774] bg-[#273824] text-[#f5e9c6] shadow-[0_0_12px_#c2a77455]'
+                                    : 'border-[#3a4a3422] bg-[#141b13] text-[#e5d9a5]/85 hover:border-[#c2a77455] hover:bg-[#1c2817]'
+                                }`}
+                            onClick={() => {
+                                if (keyDate) {
+                                    setSelectedKeyDate(keyDate);
+                                }
+                            }}
                         >
-                            <div>{day}</div>
-                        </div>
+                            <span
+                                className={`relative inline-flex items-center justify-center w-7 h-7 rounded-full 
+                                    ${isKey
+                                        ? 'bg-[#c2a77422] ring-1 ring-[#c2a774aa]'
+                                        : 'bg-transparent'
+                                    }`}
+                            >
+                                {day}
+                                {isKey && (
+                                    <>
+                                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#c2a774] shadow-[0_0_8px_#c2a774]" />
+                                        <span className="absolute inset-0 rounded-full border border-[#c2a77433] animate-ping opacity-60" />
+                                    </>
+                                )}
+                            </span>
+                        </button>
                     );
                 })}
-
-                <Modal isOpen={!!selectedKeyDate} onClose={() => setSelectedKeyDate(null)}>
-                    {selectedKeyDate && (
-                        <div className="space-y-3 px-2 py-1">
-                            <h2 className="text-2xl font-garamond">{selectedKeyDate.name}</h2>
-                            <p className="mb-2 flex items-center gap-2">
-                                <Calendar size={16} />
-                                {selectedKeyDate.day}{' '}
-                                {calendar.customMonthNames?.[selectedKeyDate.month - 1] ?? `Месяц ${selectedKeyDate.month}`}{' '}
-                                {selectedYear}
-                            </p>
-                            {selectedKeyDate.description && (
-                                <p className="text-[#f5e9c6]/80">{selectedKeyDate.description}</p>
-                            )}
-                            {selectedKeyDate.linkedChronicleId && (
-                                <button
-                                    className="text-sm mt-3 px-3 py-1 border border-[#c2a774] rounded hover:bg-[#3a4c3a]"
-                                    onClick={() => navigate(`/chronicles/${selectedKeyDate.linkedChronicleId}`)}
-                                >
-                                    Перейти к хронике →
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </Modal>
             </div>
+
+            <Modal isOpen={!!selectedKeyDate} onClose={() => setSelectedKeyDate(null)}>
+                {selectedKeyDate && (
+                    <div className="w-full bg-[#0e1b12] border border-[#c2a774] rounded-3xl px-5 py-6 text-[#e5d9a5] font-lora shadow-[0_0_30px_#000] space-y-4">
+                        <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#273824] text-[#c2a774]">
+                                ✦
+                            </span>
+                            <span className="break-words">{selectedKeyDate.name}</span>
+                        </h2>
+
+                        <p className="flex items-center gap-2 text-sm md:text-base text-[#c7bc98]">
+                            <Calendar size={16} className="text-[#c2a774]" />
+                            <span>
+                                {selectedKeyDate.day}{' '}
+                                {calendar.customMonthNames?.[selectedKeyDate.month - 1] ??
+                                    `Месяц ${selectedKeyDate.month}`}{' '}
+                                {selectedYear}
+                            </span>
+                        </p>
+
+                        {selectedKeyDate.description && (
+                            <p className="text-sm md:text-[15px] text-[#f5e9c6]/85 leading-relaxed">
+                                {selectedKeyDate.description}
+                            </p>
+                        )}
+
+                        {selectedKeyDate.linkedChronicleId && (
+                            <div className="pt-2">
+                                <button
+                                    type="button"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#c2a774] bg-[#141b13] text-sm md:text-[15px] hover:bg-[#273824] hover:border-[#e5d9a5] transition"
+                                    onClick={() =>
+                                        navigate(`/chronicles/${selectedKeyDate.linkedChronicleId}`)
+                                    }
+                                >
+                                    Открыть связанную хронику
+                                    <span className="text-[#c2a774] text-xs">↗</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

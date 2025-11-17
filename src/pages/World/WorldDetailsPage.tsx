@@ -4,13 +4,14 @@ import { useWorldStore } from '../../store/useWorldStore';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useChronicleStore } from '../../store/useChronicleStore';
 import { useMapStore } from '../../store/useMapStore';
-import { Globe2, BookMarked, MapPinned, Users, Pencil } from 'lucide-react';
+import { Globe2, BookMarked, MapPinned, Users, Pencil, Dot, Sparkles } from 'lucide-react';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { WorldCalendarWidget } from '../../components/WorldCalendarWidget';
 import { WorldForm } from '../../features/world/WorldForm';
 import { Modal } from '../../components/Modal';
 import { formatEventDate } from '../../lib/formatEventDate';
 import { Button } from '../../components/ChronicleButton';
+import { WorldDetailsBlock } from '../../components/WorldDetailsBlock';
 
 export const WorldDetailsPage = () => {
     const { id } = useParams();
@@ -35,36 +36,85 @@ export const WorldDetailsPage = () => {
         fetchMaps(session.user.id, supabase, id);
     }, [id, session?.user?.id]);
 
-    if (!world) return (
-        <div className="text-center text-[#c2a774] font-lora mt-10">
-            Мир не найден 😢
-            <br />
-            <Link to="/" className="underline mt-2 block">← Вернуться</Link>
-        </div>
-    );
+    if (!world) {
+        return (
+            <div className="max-w-2xl mx-auto mt-16 px-4 text-center text-[#e5d9a5] font-lora">
+                <div className="inline-block rounded-3xl border border-[#c2a77455] bg-[#111712]/95 px-6 py-8 shadow-[0_0_40px_#000]">
+                    <p className="text-lg mb-3">Мир не найден 😢</p>
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-1 text-[#c2a774] hover:text-[#e5d9a5] hover:underline text-sm"
+                    >
+                        Вернуться на главную
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="max-w-[1440px] mx-auto p-4 pt-10 space-y-10 font-lora text-[#e5d9a5]">
-            <section className="space-y-4 border-b border-[#c2a774] pb-6">
-                <div className='flex flex-col md:flex-row md:items-center justify-between w-full'>
-                    <h1 className="text-4xl font-garamond flex items-center gap-2 mb-10">
-                        <Globe2 /> {world.name}
-                    </h1>
-                    <Button
-                        onClick={() => setEditModalOpen(true)}
-                        icon={<Pencil size={16} />}
-                        className='text-sm'
-                    >
-                        Редактировать
-                    </Button>
+        <div className="max-w-[1440px] mx-auto px-3 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] space-y-10 relative z-10">
+            <div className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2">
+                <Link to="/" className="text-[#c2a774] hover:underline">Главная</Link>
+                <Dot className="w-4 h-4" />
+                <Link to="/worlds" className="text-[#c2a774] hover:underline">Миры</Link>
+                <Dot className="w-4 h-4" />
+                <span className="text-[#e5d9a5] line-clamp-1">{world.name}</span>
+            </div>
+
+            <section className="relative rounded-3xl border border-[#c2a77455] bg-[#111712]/95 shadow-[0_0_45px_#000] px-5 py-6 md:px-8 md:py-8 space-y-6">
+                <div className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#c2a77422] blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -left-20 w-72 h-72 rounded-full bg-[#c2a77411] blur-3xl" />
+
+                <div className="relative z-10 flex flex-col gap-4 border-b border-[#3a4a34] pb-5">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="space-y-3">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#141f16]/80 text-[11px] md:text-xs uppercase tracking-[0.22em] text-[#c7bc98]">
+                                <Sparkles className="w-3.5 h-3.5 text-[#c2a774]" />
+                                <span>Мир</span>
+                            </div>
+                            <h1 className="text-2xl md:text-4xl font-garamond font-bold flex items-center gap-2 flex-wrap text-[#e5d9a5]">
+                                <Globe2 className="w-7 h-7 text-[#c2a774] shrink-0" />
+                                <span>{world.name}</span>
+                            </h1>
+                        </div>
+
+                        <Button
+                            onClick={() => setEditModalOpen(true)}
+                            icon={<Pencil size={18} />}
+                            className="text-xs md:text-sm h-9 md:h-10 self-start"
+                        >
+                            Редактировать мир
+                        </Button>
+                    </div>
+
+                    {world.description && (
+                        <p className="text-sm md:text-base text-[#c7bc98] max-w-3xl">
+                            {world.description}
+                        </p>
+                    )}
                 </div>
-                <p className="text-[#e5d9a5]/70">{world.description}</p>
+
                 {world.calendar && (
-                    <div>
-                        <WorldCalendarWidget calendar={world.calendar} />
+                    <div className="relative z-10 mt-3">
+                        <h2 className="text-xs md:text-sm uppercase tracking-[0.22em] text-[#c7bc98] mb-3 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#c2a774]" />
+                            Календарь мира
+                        </h2>
+                        <div className="border border-[#3a4a34] rounded-2xl px-3 py-3 md:px-4 md:py-4">
+                            <WorldCalendarWidget calendar={world.calendar} />
+                        </div>
                     </div>
                 )}
+
+                {world.details && (
+                    <div className="mt-10">
+                        <WorldDetailsBlock details={world.details} />
+                    </div>
+                )}
+
             </section>
+
             <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)}>
                 <WorldForm
                     initialWorld={world}
@@ -74,24 +124,61 @@ export const WorldDetailsPage = () => {
                     }}
                 />
             </Modal>
+
             <section className="space-y-4">
-                <h2 className="text-2xl font-garamond flex items-center gap-2">
-                    <Users /> Персонажи
-                </h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
+                        <Users className="w-5 h-5 text-[#c2a774]" />
+                        Персонажи
+                    </h2>
+                    {characters.length > 0 && (
+                        <span className="text-xs md:text-sm text-[#c7bc98]">
+                            Всего: <span className="text-[#e5d9a5]">{characters.length}</span>
+                        </span>
+                    )}
+                </div>
+
                 {characters.length === 0 ? (
-                    <p className="italic text-[#e5d9a5]/50">Нет персонажей</p>
+                    <p className="italic text-[#e5d9a5]/55 text-sm">
+                        В этом мире пока нет персонажей. Самое время кого-то вписать в хроники.
+                    </p>
                 ) : (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {characters.map((c) => (
-                            <li key={c.id} className="bg-[#223120] border border-[#c2a774] rounded-xl p-4 shadow-md hover:shadow-lg transition">
-                                <Link to={`/character/${c.id}`} className="flex items-center gap-4">
-                                    {c.avatar && (
-                                        <img src={c.avatar} alt={c.name} className="w-14 h-14 object-cover rounded-full border border-[#c2a774]" />
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {characters.map((c, index) => (
+                            <li
+                                key={c.id}
+                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_22px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77455] transition transform hover:-translate-y-[2px] animate-fade-in-down"
+                                style={{ animationDelay: `${index * 40}ms` }}
+                            >
+                                <Link
+                                    to={`/character/${c.id}`}
+                                    className="flex items-center gap-4 px-4 py-3"
+                                >
+                                    {c.avatar ? (
+                                        <div className="relative shrink-0">
+                                            <img
+                                                src={c.avatar}
+                                                alt={c.name}
+                                                className="w-14 h-14 object-cover rounded-full border border-[#c2a774aa] shadow-md"
+                                            />
+                                            <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#111712] border border-[#c2a77490] flex items-center justify-center text-[11px] text-[#c2a774]">
+                                                ✦
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="w-14 h-14 rounded-full border border-dashed border-[#3a4a34] flex items-center justify-center text-xs text-[#c7bc98]">
+                                            Нет аватара
+                                        </div>
                                     )}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-[#e5d9a5]">{c.name}</h3>
+
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-base md:text-lg font-semibold text-[#e5d9a5] truncate">
+                                            {c.name}
+                                        </h3>
                                         {c.status && (
-                                            <p className="text-sm text-[#c7bc98] italic">{c.status}</p>
+                                            <p className="text-xs md:text-sm text-[#c7bc98] italic line-clamp-1">
+                                                {c.status}
+                                            </p>
                                         )}
                                     </div>
                                 </Link>
@@ -102,28 +189,73 @@ export const WorldDetailsPage = () => {
             </section>
 
             <section className="space-y-4">
-                <h2 className="text-2xl font-garamond flex items-center gap-2">
-                    <BookMarked /> Хроники
-                </h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
+                        <BookMarked className="w-5 h-5 text-[#c2a774]" />
+                        Хроники
+                    </h2>
+                    {chronicles.length > 0 && (
+                        <span className="text-xs md:text-sm text-[#c7bc98]">
+                            Всего: <span className="text-[#e5d9a5]">{chronicles.length}</span>
+                        </span>
+                    )}
+                </div>
+
                 {chronicles.length === 0 ? (
-                    <p className="italic text-[#e5d9a5]/50">Нет хроник</p>
+                    <p className="italic text-[#e5d9a5]/55 text-sm">
+                        Хроник пока нет — но мир терпеливо ждёт первую запись.
+                    </p>
                 ) : (
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {chronicles.map((chronicle) => {
-                            const moodEmoji = chronicle.mood?.split(' ')[0] || '';
+                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {chronicles.map((chronicle, index) => {
+                            const moodEmoji = chronicle.mood?.split(' ')[0] || '📖';
+                            const preview =
+                                chronicle.content.length > 260
+                                    ? chronicle.content.slice(0, 260) + '…'
+                                    : chronicle.content;
+
                             return (
-                                <li key={chronicle.id} className="bg-[#223120] border border-[#c2a774] rounded-xl p-4 shadow-md hover:shadow-lg transition">
-                                    <Link to={`/chronicles/${chronicle.id}`} className="text-[#e5d9a5] font-semibold flex items-start gap-2 hover:underline">
-                                        <span className="text-xl">{moodEmoji}</span>
-                                        <span>
-                                            {chronicle.title}{' '}
-                                            ({formatEventDate(chronicle.event_date)})
-                                        </span>
+                                <li
+                                    key={chronicle.id}
+                                    className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77444] transition transform hover:-translate-y-[2px] animate-fade-in-down"
+                                    style={{ animationDelay: `${index * 60}ms` }}
+                                >
+                                    <Link to={`/chronicles/${chronicle.id}`} className="block p-4">
+                                        <div className="flex items-start gap-3 mb-2">
+                                            <div className="shrink-0 w-8 h-8 rounded-full bg-[#2a3a2a] flex items-center justify-center text-lg">
+                                                {moodEmoji}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#c7bc98] mb-1">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a4a34] bg-[#111712]/80">
+                                                        <span className="w-1 h-1 rounded-full bg-[#c2a774]" />
+                                                        {formatEventDate(chronicle.event_date)}
+                                                    </span>
+                                                    {chronicle.tags?.length > 0 && (
+                                                        <span className="truncate">
+                                                            {chronicle.tags.slice(0, 3).map((t) => (
+                                                                <span
+                                                                    key={t}
+                                                                    className="mr-1 text-[#c2a774]"
+                                                                >
+                                                                    #{t}
+                                                                </span>
+                                                            ))}
+                                                            {chronicle.tags.length > 3 && '…'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <h3 className="text-base md:text-lg font-semibold text-[#e5d9a5] mb-1 line-clamp-2">
+                                                    {chronicle.title}
+                                                </h3>
+                                            </div>
+                                        </div>
+
+                                        <p
+                                            className="mt-1 text-xs md:text-sm text-[#c7bc98] italic line-clamp-3"
+                                            dangerouslySetInnerHTML={{ __html: preview }}
+                                        />
                                     </Link>
-                                    <div
-                                        dangerouslySetInnerHTML={{ __html: chronicle.content }}
-                                        className="mt-2 text-sm text-[#c7bc98] italic line-clamp-3"
-                                    />
                                 </li>
                             );
                         })}
@@ -132,24 +264,55 @@ export const WorldDetailsPage = () => {
             </section>
 
             <section className="space-y-4">
-                <h2 className="text-2xl font-garamond flex items-center gap-2">
-                    <MapPinned /> Карты
-                </h2>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
+                        <MapPinned className="w-5 h-5 text-[#c2a774]" />
+                        Карты
+                    </h2>
+                    {maps.length > 0 && (
+                        <span className="text-xs md:text-sm text-[#c7bc98]">
+                            Всего: <span className="text-[#e5d9a5]">{maps.length}</span>
+                        </span>
+                    )}
+                </div>
+
                 {maps.length === 0 ? (
-                    <p className="italic text-[#e5d9a5]/50">Нет карт</p>
+                    <p className="italic text-[#e5d9a5]/55 text-sm">
+                        Пока здесь пусто — добавьте первую карту, чтобы мир обрел очертания.
+                    </p>
                 ) : (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {maps.map((map) => (
-                            <li key={map.id} className="bg-[#223120] border border-[#c2a774] rounded-xl p-4 shadow-md hover:shadow-lg transition">
-                                <Link to={`/maps/${map.id}`} className="block space-y-2">
-                                    <img
-                                        src={supabase.storage.from('map').getPublicUrl(map.image_path).data.publicUrl}
-                                        alt={map.name}
-                                        className="w-full h-40 object-cover rounded"
-                                    />
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-[#e5d9a5]">{map.name}</h3>
-                                        <p className="text-sm text-[#c7bc98] italic">{map.territory}</p>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {maps.map((map, index) => (
+                            <li
+                                key={map.id}
+                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77444] transition transform hover:-translate-y-[2px] animate-fade-in-down"
+                                style={{ animationDelay: `${index * 60}ms` }}
+                            >
+                                <Link to={`/maps/${map.id}`} className="block">
+                                    <div className="relative">
+                                        <img
+                                            src={
+                                                supabase.storage
+                                                    .from('map')
+                                                    .getPublicUrl(map.image_path).data.publicUrl
+                                            }
+                                            alt={map.name}
+                                            className="w-full h-40 md:h-48 object-cover rounded-t-2xl"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-[#111712ee] via-transparent to-transparent opacity-80" />
+                                        <span className="absolute bottom-3 left-3 px-3 py-1 rounded-full bg-[#111712dd] border border-[#c2a77488] text-[11px] md:text-xs text-[#e5d9a5]">
+                                            {map.territory || 'Неизведанные земли'}
+                                        </span>
+                                    </div>
+                                    <div className="px-4 py-3">
+                                        <h3 className="text-base md:text-lg font-semibold text-[#e5d9a5]">
+                                            {map.name}
+                                        </h3>
+                                        {map.territory && (
+                                            <p className="text-xs md:text-sm text-[#c7bc98] mt-1 line-clamp-1">
+                                                {map.territory}
+                                            </p>
+                                        )}
                                     </div>
                                 </Link>
                             </li>

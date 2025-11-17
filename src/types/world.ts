@@ -40,27 +40,34 @@ export interface World {
     };
     details?: {
         continents?: string[];
+        continentsText?: string;
         countries?: {
             name: string;
             capital?: string;
             government?: string;
             description?: string;
             alliances?: string[];
+            alliancesText?: string;
             enemies?: string[];
+            enemiesText?: string;
         }[];
         climateZones?: string[];
+        climateZonesText?: string;
         landmarks?: string[]; //знаменитые объекты: горы, башни, руины и т.д.
+        landmarksText?: string;
         races?: {
             name: string;
             description?: string;
             traits?: string[]; //уникальные особенности или способности
             region?: string; //типичные области обитания
+            traitsText?: string;
         }[];
         populationDistribution?: string; //описание плотности и расселения населения
         languages?: {
             name: string;
             script?: string; //тип письменности
             spokenIn?: string[]; //страны или регионы, где используется
+            spokenInText?: string;
         }[];
         pantheon?: { //список богов
             name: string;
@@ -74,12 +81,16 @@ export interface World {
             beliefs: string; //во что верят
             rituals?: string[];
             influence?: string[]; //на какие области или страны влияет
+            ritualsText?: string;
+            influenceText?: string;
         }[];
         myths?: string[];
+        mythsText?: string;
         magicSystem?: {
-            source: string; //источник силы (эфир, духи, ритуалы)
-            types: string[];
-            accessibility: string; //кто может использовать магию
+            source?: string; //источник силы (эфир, духи, ритуалы)
+            types?: string[];
+            typesText?: string;
+            accessibility?: string; //кто может использовать магию
             limitations?: string; //ограничения или цена
         };
         artifacts?: {
@@ -97,21 +108,28 @@ export interface World {
             valueRelative?: string; //по отношению к золоту или другим валютам
         }[];
         laws?: string[]; //ключевые законы мира
+        lawsText?: string;
         organizations?: { //фракции
             name: string;
             type: string; //тип (организация, клан, гильдия, фракция)
             influence?: string; //влияние на общество
         }[];
         planesOfExistence?: string[]; //иные измерения или планы (астральный, преисподняя и т.д.).
+        planesOfExistenceText?: string;
         magicalPhenomena?: string[]; //уникальные магические явления (кометы, искажения)
+        magicalPhenomenaText?: string;
         corruptionZones?: string[]; //области с заражением, тьмой, хаосом.
+        corruptionZonesText?: string;
         themes?: string[]; //центральные темы мира (например: «упадок», «восстание», «тайна»).
+        themesText?: string;
         inspirationSources?: string[]; //культуры, истории или миры, послужившие вдохновением.
+        inspirationSourcesText?: string;
         worldMapImage?: string;
         visualStyle?: {
             architecture?: string; //стиль построек.
             clothing?: string; //стиль одежды.
             colors?: string[]; //основные цвета мира
+            colorsText?: string;
         };
     }
 }

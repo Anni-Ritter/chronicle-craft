@@ -8,11 +8,17 @@ interface AvatarUploaderProps {
     pathPrefix?: string;
 }
 
-export const AvatarUploader = ({ onUpload, initialUrl, bucket = 'avatars', pathPrefix = '', }: AvatarUploaderProps) => {
+export const AvatarUploader = ({
+    onUpload,
+    initialUrl,
+    bucket = "avatars",
+    pathPrefix = "",
+}: AvatarUploaderProps) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [preview, setPreview] = useState<string | null>(initialUrl ?? null);
     const previousUrlRef = useRef<string | null>(initialUrl ?? null);
+
     useEffect(() => {
         setPreview(initialUrl ?? null);
     }, [initialUrl]);
@@ -62,37 +68,47 @@ export const AvatarUploader = ({ onUpload, initialUrl, bucket = 'avatars', pathP
     };
 
     return (
-        <div className="relative w-32 h-32 group cursor-pointer" onClick={handleClick}>
-            {preview ? (
-                <img
-                    src={preview}
-                    alt="Аватар"
-                    className="w-full h-full rounded-full object-cover border border-gray-300"
-                />
-            ) : (
-                <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center border border-gray-300 text-gray-500 text-sm">
-                    Нет аватара
-                </div>
-            )}
+        <div className="inline-flex flex-col items-center gap-2">
+            <div
+                className="relative group cursor-pointer"
+                onClick={handleClick}
+            >
+                {preview ? (
+                    <img
+                        src={preview}
+                        alt="Аватар"
+                        className="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border border-[#c2a774] shadow-[0_0_18px_#000]"
+                    />
+                ) : (
+                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#0b1510] border border-[#3a4a34] flex flex-col items-center justify-center text-[11px] text-[#c7bc98] shadow-[0_0_18px_#000]">
+                        <span className="text-lg mb-1">📷</span>
+                        <span className="leading-tight text-center px-2">
+                            Добавить аватар
+                        </span>
+                    </div>
+                )}
 
-            <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition">
-                📷
-                <span className="text-white text-sm flex items-center gap-1">
-                    Изменить
-                </span>
+                <div className="absolute inset-0 bg-black/55 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                    <span className="text-sm">📷</span>
+                    <span className="text-[11px] text-[#f5e9c6] mt-0.5">
+                        Изменить
+                    </span>
+                </div>
+
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                    disabled={uploading}
+                />
             </div>
 
-            <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={uploading}
-            />
-
             {uploading && (
-                <p className="text-center mt-2 text-xs text-gray-500">Загрузка...</p>
+                <p className="text-center text-[11px] text-[#c7bc98]">
+                    Загрузка...
+                </p>
             )}
         </div>
     );

@@ -19,7 +19,7 @@ import { RelationTypeModal } from './RelationTypeModal';
 import { CustomCurvedEdge } from '../../components/CustomCurvedEdge';
 import { useSession } from '@supabase/auth-helpers-react';
 import { ManualRelationModal } from '../../components/ManualRelationModal';
-import { HeartPlus, Save } from 'lucide-react';
+import { HeartPlus, Save, Sparkles } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
 import { useDraftRelationshipStore } from '../../store/useDraftRelationshipStore';
@@ -63,7 +63,7 @@ export const CharacterGraph = ({
         if (session?.user?.id) {
             fetchPositions(session.user.id, graphType, supabase);
         }
-    }, [session]);
+    }, [session, fetchPositions]);
 
     useEffect(() => {
         const activeCharacterIds = new Set<string>();
@@ -83,35 +83,37 @@ export const CharacterGraph = ({
             id: char.id,
             data: {
                 label: (
-                    <div className="flex flex-col items-center text-xs text-[#e5d9a5]">
+                    <div className="flex flex-col items-center text-[13px] md:text-xl text-[#e5d9a5] font-lora">
                         {char.avatar && (
                             <img
                                 src={char.avatar}
                                 alt={char.name}
-                                className="w-14 h-14 rounded-full object-cover mb-1 border border-[#e5d9a5] shadow-md"
+                                className="w-12 h-12 md:w-14 md:h-14 rounded-full object-cover mb-1 border border-[#c2a774aa] shadow-[0_0_14px_#000]"
                             />
                         )}
-                        <span>{char.name}</span>
+                        <span className="px-2 py-0.5 rounded-full bg-[#0b1510]/70 border border-[#3a4a34] max-w-[120px] text-center truncate">
+                            {char.name}
+                        </span>
                     </div>
                 ),
             },
             position: positions[char.id] ?? { x: 100 + index * 150, y: 100 },
             style: {
-                padding: 10,
-                borderRadius: 16,
-                width: 110,
-                backgroundColor: '#1f2b1f',
-                border: '1px solid #e5d9a5',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                padding: 8,
+                borderRadius: 18,
+                width: 130,
+                background: 'rgba(15, 23, 18, 0.92)',
+                border: '1px solid rgba(194, 167, 116, 0.65)',
+                boxShadow: '0 0 24px rgba(0,0,0,0.8)',
             },
         }));
 
         setNodes(updated);
-    }, [draftRelationships, characters, allCharacters, positions]);
+    }, [draftRelationships, characters, allCharacters, positions, setNodes]);
 
     useEffect(() => {
         setDraftRelationships(relationships);
-    }, [relationships]);
+    }, [relationships, setDraftRelationships]);
 
     useEffect(() => {
         const grouped = draftRelationships.reduce((acc, rel) => {
@@ -136,8 +138,8 @@ export const CharacterGraph = ({
                     type: 'custom',
                     animated: true,
                     style: {
-                        stroke: rel.color || '#a0c48c',
-                        strokeWidth: 3,
+                        stroke: rel.color || '#c2a774',
+                        strokeWidth: 2.5,
                     },
                     data: {
                         curvature,
@@ -149,7 +151,7 @@ export const CharacterGraph = ({
         });
 
         setEdges(updatedEdges);
-    }, [draftRelationships]);
+    }, [draftRelationships, setEdges]);
 
     const onConnect = (connection: Connection) => {
         setPendingConnection(connection);
@@ -235,54 +237,88 @@ export const CharacterGraph = ({
 
     return (
         <>
-            <div className="relative h-[600px] mt-5 sm:h-[80vh] w-full overflow-hidden rounded-xl border border-[#e5d9a5] bg-[#1a2218] touch-none">
-                <div className="flex flex-row gap-2 pl-5 md:pl-5 mt-8 w-full">
-                    <Button
-                        onClick={() => setManualModalOpen(true)}
-                        icon={<HeartPlus className='max-sm:w-4 max-sm:h-4' />}
-                        className="bg-[#2e4632] text-[#e5d9a5] hover:bg-[#3a5c3f] transition"
-                    >
-                        <span className='max-sm:text-sm'>Вручную</span>
-                    </Button>
-                    <Button
-                        onClick={handleSave}
-                        icon={<Save className='max-sm:w-4 max-sm:h-4' />}
-                        className="bg-[#e5d9a5] text-[#1f2b1f] hover:bg-[#f0eac4] transition"
-                    >
-                        <span className='max-sm:text-sm'>Сохранить связи</span>
-                    </Button>
-                </div>
-                <div className="h-[90%] max-sm:h-[80%]">
-                    <ReactFlow
-                        fitView
-                        panOnScroll
-                        zoomOnScroll
-                        zoomOnPinch
-                        panOnDrag
-                        nodes={nodes}
-                        edges={edges}
-                        onNodesChange={onNodesChange}
-                        onEdgesChange={onEdgesChange}
-                        onConnect={onConnect}
-                        onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
-                        onEdgeClick={(_, edge) => {
-                            setSelectedEdge(edge);
-                            setEditModalOpen(true);
-                        }}
-                        onNodeDragStop={(_, node) => {
-                            setPosition(node.id, node.position);
-                            setNodes((nds) =>
-                                nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-                            );
-                        }}
-                        edgeTypes={{ custom: CustomCurvedEdge }}
-                    >
-                        {window.innerWidth > 640 && (
-                            <MiniMap nodeColor="#e5d9a5" maskColor="rgba(26,34,24,0.9)" />
-                        )}
-                        <Controls showInteractive={false} style={{ background: '#2e4632', color: '#e5d9a5' }} />
-                        <Background gap={16} color="#2e4632" />
-                    </ReactFlow>
+            <div className="relative mt-6 h-[600px] sm:h-[78vh] w-full overflow-hidden rounded-3xl border border-[#3a4a34] bg-[#050806]/90 shadow-[0_0_40px_#000]">
+                <div className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_10%_0%,#c2a77426,transparent_55%),radial-gradient(circle_at_90%_100%,#8ec08e22,transparent_55%)]" />
+
+                <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex max-sm:gap-4 md:items-center max-sm:flex-col md:justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-[#3a4a34]/80 bg-gradient-to-r from-[#0b1510ee] via-[#111712ee] to-[#0b1510ee]">
+                        <div className="flex flex-col gap-0.5">
+                            <div className="inline-flex items-center gap-1.5 text-[18px] uppercase tracking-[0.18em] text-[#c7bc98] font-lora">
+                                <span className="w-1 h-1 rounded-full bg-[#c2a774]" />
+                                <span>Граф связей</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[16px] text-[#c7bc98]/90">
+                                <Sparkles size={14} className="text-[#c2a774]" />
+                                <span>Перетаскивайте персонажей и соединяйте их линиями</span>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-2 sm:gap-3">
+                            <Button
+                                onClick={() => setManualModalOpen(true)}
+                                icon={<HeartPlus className="max-sm:w-4 max-sm:h-4" />}
+                                className="bg-[#223120] border border-[#3a4a34] text-[#e5d9a5] hover:bg-[#2c3a2b] hover:border-[#c2a774aa] transition text-xs sm:text-sm px-3 py-2 rounded-xl"
+                            >
+                                <span className="max-sm:text-xs">Вручную</span>
+                            </Button>
+                            <Button
+                                onClick={handleSave}
+                                icon={<Save className="max-sm:w-4 max-sm:h-4" />}
+                                className="bg-gradient-to-r from-[#c2a774] to-[#e5d9a5] text-[#1f2b1f] hover:from-[#e5d9a5] hover:to-[#fffbe6] border border-[#c2a774] shadow-[0_0_16px_#c2a77455] transition text-xs sm:text-sm px-3 py-2 rounded-xl"
+                            >
+                                <span className="max-sm:text-xs">Сохранить связи</span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1">
+                        <ReactFlow
+                            fitView
+                            panOnScroll
+                            zoomOnScroll
+                            zoomOnPinch
+                            panOnDrag
+                            nodes={nodes}
+                            edges={edges}
+                            onNodesChange={onNodesChange}
+                            onEdgesChange={onEdgesChange}
+                            onConnect={onConnect}
+                            onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
+                            onEdgeClick={(_, edge) => {
+                                setSelectedEdge(edge);
+                                setEditModalOpen(true);
+                            }}
+                            onNodeDragStop={(_, node) => {
+                                setPosition(node.id, node.position);
+                                setNodes((nds) =>
+                                    nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
+                                );
+                            }}
+                            edgeTypes={{ custom: CustomCurvedEdge }}
+                        >
+                            {window.innerWidth > 640 && (
+                                <MiniMap
+                                    nodeColor="#c2a774"
+                                    maskColor="rgba(5,8,6,0.96)"
+                                    style={{
+                                        background: '#050806',
+                                        borderRadius: 12,
+                                        overflow: 'hidden',
+                                    }}
+                                />
+                            )}
+                            <Controls
+                                showInteractive={false}
+                                style={{
+                                    background: '#111712',
+                                    borderRadius: 999,
+                                    border: '1px solid #3a4a34',
+                                    color: '#e5d9a5',
+                                }}
+                            />
+                            <Background gap={18} color="#283528" />
+                        </ReactFlow>
+                    </div>
                 </div>
 
                 {selectedEdge && editModalOpen && (
@@ -298,8 +334,8 @@ export const CharacterGraph = ({
                             label: selectedEdge.label?.toString() || '',
                             color: selectedEdge.style?.stroke || '#888',
                         }}
-                        modalClassName="bg-[#1f2b1f] text-[#e5d9a5] border border-[#e5d9a5] rounded-xl p-6 shadow-xl"
-                        buttonClassName="bg-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded hover:bg-[#f0eac4]"
+                        modalClassName="bg-[#111712] text-[#e5d9a5] border border-[#c2a77488] rounded-2xl p-6 shadow-[0_0_30px_#000]"
+                        buttonClassName="bg-gradient-to-r from-[#c2a774] to-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded-xl hover:from-[#e5d9a5] hover:to-[#fffbe6]"
                     />
                 )}
 
@@ -311,8 +347,8 @@ export const CharacterGraph = ({
                             setShowModal(false);
                             setPendingConnection(null);
                         }}
-                        modalClassName="bg-[#1f2b1f] text-[#e5d9a5] border border-[#e5d9a5] rounded-xl p-6 shadow-xl"
-                        buttonClassName="bg-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded hover:bg-[#f0eac4]"
+                        modalClassName="bg-[#111712] text-[#e5d9a5] border border-[#c2a77488] rounded-2xl p-6 shadow-[0_0_30px_#000]"
+                        buttonClassName="bg-gradient-to-r from-[#c2a774] to-[#e5d9a5] text-[#1f2b1f] font-medium px-4 py-2 rounded-xl hover:from-[#e5d9a5] hover:to-[#fffbe6]"
                     />
                 )}
 
@@ -337,11 +373,26 @@ export const CharacterGraph = ({
                             console.error('Ошибка при сохранении связи:', error);
                             setStatusMessage({ type: 'error', text: 'Ошибка при сохранении связи' });
                         }
-                        { session && await savePosition(sourceId, positions[sourceId] ?? { x: 100, y: 100 }, session.user.id, graphType, supabase); }
-                        { session && await savePosition(targetId, positions[targetId] ?? { x: 200, y: 100 }, session.user.id, graphType, supabase); }
+                        if (session) {
+                            await savePosition(
+                                sourceId,
+                                positions[sourceId] ?? { x: 100, y: 100 },
+                                session.user.id,
+                                graphType,
+                                supabase
+                            );
+                            await savePosition(
+                                targetId,
+                                positions[targetId] ?? { x: 200, y: 100 },
+                                session.user.id,
+                                graphType,
+                                supabase
+                            );
+                        }
                     }}
                 />
             </div>
+
             {statusMessage && (
                 <FloatingAlert
                     type={statusMessage.type}
