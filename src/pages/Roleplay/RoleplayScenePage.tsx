@@ -544,7 +544,7 @@ export const RoleplayScenePage = () => {
                         : undefined
                 }
             >
-                {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/72" />}
+                {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/85" />}
                 <div
                     ref={messagesContainerRef}
                     onScroll={updateNearChatBottom}
