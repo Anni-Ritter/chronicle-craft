@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { ArrowLeft, ChevronDown, ChevronUp, Search, Settings, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Clock, Search, Settings, X } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { useRoleplayStore } from '../../store/useRoleplayStore';
 import { useWorldStore } from '../../store/useWorldStore';
@@ -11,6 +11,8 @@ import { SceneMessageItem } from '../../features/roleplay/SceneMessageItem';
 import { SceneComposer } from '../../features/roleplay/SceneComposer';
 import { RoleplaySceneForm } from '../../features/roleplay/RoleplaySceneForm';
 import type { RoleplayMessageType, RoleplayScene, RoleplaySpaceCharacterView } from '../../types/roleplay';
+
+const DEFAULT_CHAT_TIME_DISPLAY = { show: true, withSeconds: true };
 
 export const RoleplayScenePage = () => {
     const { spaceId, sceneId } = useParams<{ spaceId: string; sceneId: string }>();
@@ -86,6 +88,9 @@ export const RoleplayScenePage = () => {
     useSceneMessagesRealtime(sceneId ?? null, refreshMessages);
 
     const sceneFontStorageKey = sceneId ? `cc:roleplay-scene-chat-font:${sceneId}` : '';
+    const sceneChatTimeStorageKey = sceneId ? `cc:roleplay-scene-chat-time:${sceneId}` : '';
+
+    const [chatTimeDisplay, setChatTimeDisplay] = useState(DEFAULT_CHAT_TIME_DISPLAY);
 
     useEffect(() => {
         if (!sceneFontStorageKey) {
@@ -104,6 +109,41 @@ export const RoleplayScenePage = () => {
             setChatFontScale(1);
         }
     }, [sceneFontStorageKey]);
+
+    useEffect(() => {
+        if (!sceneChatTimeStorageKey) {
+            setChatTimeDisplay(DEFAULT_CHAT_TIME_DISPLAY);
+            return;
+        }
+        try {
+            const raw = localStorage.getItem(sceneChatTimeStorageKey);
+            if (!raw) {
+                setChatTimeDisplay(DEFAULT_CHAT_TIME_DISPLAY);
+                return;
+            }
+            const p = JSON.parse(raw) as { show?: unknown; withSeconds?: unknown };
+            setChatTimeDisplay({
+                show: typeof p.show === 'boolean' ? p.show : DEFAULT_CHAT_TIME_DISPLAY.show,
+                withSeconds:
+                    typeof p.withSeconds === 'boolean' ? p.withSeconds : DEFAULT_CHAT_TIME_DISPLAY.withSeconds,
+            });
+        } catch {
+            setChatTimeDisplay(DEFAULT_CHAT_TIME_DISPLAY);
+        }
+    }, [sceneChatTimeStorageKey]);
+
+    const persistChatTimeDisplay = useCallback(
+        (next: { show: boolean; withSeconds: boolean }) => {
+            setChatTimeDisplay(next);
+            if (!sceneChatTimeStorageKey) return;
+            try {
+                localStorage.setItem(sceneChatTimeStorageKey, JSON.stringify(next));
+            } catch {
+                /* ignore */
+            }
+        },
+        [sceneChatTimeStorageKey],
+    );
 
     const handleChatFontScaleChange = (next: number) => {
         const clamped = Math.min(1.45, Math.max(0.75, next));
@@ -407,6 +447,50 @@ export const RoleplayScenePage = () => {
                         </div>
                     </section>
 
+                    <section className="mb-6 space-y-3 rounded-xl border border-[#2f3a34] bg-[#0d120f]/90 p-3">
+                        <h3 className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
+                            <Clock className="h-4 w-4 text-[#c2a774]" aria-hidden />
+                            Время у сообщений
+                        </h3>
+                        <p className="text-xs text-[#9fa68a]">
+                            Только на этом устройстве, без сохранения на сервер.
+                        </p>
+                        <label className="flex cursor-pointer items-center justify-between gap-3 text-sm text-[#e5d9a5]">
+                            <span>Показывать время у сообщений</span>
+                            <input
+                                type="checkbox"
+                                checked={chatTimeDisplay.show}
+                                onChange={(e) => {
+                                    const on = e.target.checked;
+                                    persistChatTimeDisplay({
+                                        show: on,
+                                        withSeconds: on ? chatTimeDisplay.withSeconds : false,
+                                    });
+                                }}
+                                className="h-4 w-4 shrink-0 rounded border-[#3a4a34] bg-[#0e1b12] accent-[#c2a774]"
+                            />
+                        </label>
+                        <label
+                            className={`flex cursor-pointer items-center justify-between gap-3 text-sm ${
+                                chatTimeDisplay.show ? 'text-[#e5d9a5]' : 'cursor-not-allowed text-[#6b7568]'
+                            }`}
+                        >
+                            <span>Показывать секунды во времени</span>
+                            <input
+                                type="checkbox"
+                                checked={chatTimeDisplay.withSeconds}
+                                disabled={!chatTimeDisplay.show}
+                                onChange={(e) =>
+                                    persistChatTimeDisplay({
+                                        show: chatTimeDisplay.show,
+                                        withSeconds: e.target.checked,
+                                    })
+                                }
+                                className="h-4 w-4 shrink-0 rounded border-[#3a4a34] bg-[#0e1b12] accent-[#c2a774] disabled:opacity-40"
+                            />
+                        </label>
+                    </section>
+
                     <section>
                         <h3 className="mb-3 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
                             Параметры сцены
@@ -483,6 +567,8 @@ export const RoleplayScenePage = () => {
                             key={item.message.id}
                             messageDomId={`scene-msg-${item.message.id}`}
                             highlightQuery={sceneSearchOpen && messageSearchQuery.trim() ? messageSearchQuery : null}
+                            showMessageTime={chatTimeDisplay.show}
+                            messageTimeWithSeconds={chatTimeDisplay.withSeconds}
                             fontScale={chatFontScale}
                             item={item}
                             onReply={setReplyToMessageId}

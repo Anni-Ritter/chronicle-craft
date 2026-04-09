@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import type { SceneMessageView } from '../../types/roleplay';
+import { formatSceneMessageTimestamp, type SceneMessageView } from '../../types/roleplay';
 
 interface SceneMessageItemProps {
     item: SceneMessageView;
@@ -16,6 +16,10 @@ interface SceneMessageItemProps {
     messageDomId?: string;
     /** Подсветка вхождений в тексте (регистронезависимо) */
     highlightQuery?: string | null;
+    /** Настройки сцены: показывать строку времени */
+    showMessageTime?: boolean;
+    /** Показывать секунды в строке времени */
+    messageTimeWithSeconds?: boolean;
 }
 
 const typeLabels: Record<SceneMessageView['message']['type'], string> = {
@@ -83,6 +87,8 @@ export const SceneMessageItem = ({
     fontScale = 1,
     messageDomId,
     highlightQuery = null,
+    showMessageTime = true,
+    messageTimeWithSeconds = true,
 }: SceneMessageItemProps) => {
     const rootRef = useRef<HTMLElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
@@ -211,11 +217,11 @@ export const SceneMessageItem = ({
             )}
             <div
                 className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
-                style={{ marginBottom: `${8 * s}px`, gap: `${8 * s}px` }}
+                style={{ gap: `${6 * s}px` }}
             >
                 <p
                     className={`truncate font-semibold ${isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'}`}
-                    style={{ fontSize: `${12 * fontScale}px` }}
+                    style={{ fontSize: `${10 * fontScale}px` }}
                 >
                     {highlightText(authorName, highlightQuery)}
                 </p>
@@ -234,7 +240,7 @@ export const SceneMessageItem = ({
                     </span>
                 )}
             </div>
-            <p className="whitespace-pre-wrap leading-relaxed" style={{ fontSize: `${15 * fontScale}px` }}>
+            <p className="whitespace-pre-wrap leading-tight" style={{ fontSize: `${15 * fontScale}px` }}>
                 {speechPrefix}
                 {segments.map((segment, idx) => {
                     if (segment.type === 'action') {
@@ -254,10 +260,12 @@ export const SceneMessageItem = ({
                     return <span key={idx}>{highlightText(segment.text, highlightQuery)}</span>;
                 })}
             </p>
-            <p className="text-right opacity-75" style={{ fontSize: `${11 * fontScale}px`, marginTop: `${8 * s}px` }}>
-                {new Date(item.message.created_at).toLocaleString()}
-                {item.message.edited ? ' · изменено' : ''}
-            </p>
+            {showMessageTime ? (
+                <p className="text-right opacity-75" style={{ fontSize: `${9 * fontScale}px`, marginTop: `${4 * s}px` }}>
+                    {formatSceneMessageTimestamp(item.message.created_at, messageTimeWithSeconds)}
+                    {item.message.edited ? ' · изменено' : ''}
+                </p>
+            ) : null}
                     </div>
                 </div>
             </div>

@@ -579,21 +579,22 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
         if (input.background_image !== null) payload.background_image = input.background_image;
         payload.settings = input.settings ?? {};
 
-        const { data, error } = await supabase
-            .from('roleplay_scenes')
-            .insert([payload])
-            .select('*')
-            .single();
-        if (error || !data) {
+        const { data, error } = await supabase.from('roleplay_scenes').insert([payload]).select('*');
+        if (error) {
             const details = [error?.message, error?.details, error?.hint]
                 .filter(Boolean)
                 .join(' | ');
             set({ error: details || 'Не удалось создать сцену' });
             return null;
         }
+        const row = data?.[0];
+        if (!row) {
+            set({ error: 'Не удалось создать сцену (пустой ответ)' });
+            return null;
+        }
 
         await get().getRoleplayScenesBySpace(spaceId, supabase);
-        return data as RoleplayScene;
+        return row as RoleplayScene;
     },
 
     updateRoleplayScene: async (sceneId, input, supabase) => {
@@ -613,10 +614,9 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             .from('roleplay_scenes')
             .update(payload)
             .eq('id', sceneId)
-            .select('*')
-            .single();
+            .select('*');
 
-        if (error || !data) {
+        if (error) {
             const details = [error?.message, error?.details, error?.hint]
                 .filter(Boolean)
                 .join(' | ');
@@ -624,9 +624,18 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             return null;
         }
 
-        const spaceId = (data as RoleplayScene).space_id;
+        const row = data?.[0];
+        if (!row) {
+            set({
+                error:
+                    'Сцена не обновлена: нет строки в ответе (проверьте RLS: нужны права на UPDATE и чтение строки после сохранения).',
+            });
+            return null;
+        }
+
+        const spaceId = (row as RoleplayScene).space_id;
         await get().getRoleplayScenesBySpace(spaceId, supabase);
-        return data as RoleplayScene;
+        return row as RoleplayScene;
     },
 
     deleteRoleplayScene: async (sceneId, spaceId, supabase) => {

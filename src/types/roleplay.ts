@@ -128,3 +128,14 @@ export interface SceneMessageView {
     emotion: CharacterEmotion | null;
     replyTo: Pick<SceneMessage, 'id' | 'content' | 'character_id' | 'type'> | null;
 }
+
+export function formatSceneMessageTimestamp(iso: string, withSeconds: boolean): string {
+    return new Date(iso).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        ...(withSeconds ? { second: 'numeric' as const } : {}),
+    });
+}
