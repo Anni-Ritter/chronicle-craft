@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { ArrowLeft, Settings } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp, Search, Settings, X } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { useRoleplayStore } from '../../store/useRoleplayStore';
 import { useWorldStore } from '../../store/useWorldStore';
@@ -27,8 +27,22 @@ export const RoleplayScenePage = () => {
     const [settingsLoading, setSettingsLoading] = useState(false);
     const [chatFontScale, setChatFontScale] = useState(1);
     const [sendError, setSendError] = useState<string | null>(null);
+    const [messageSearchQuery, setMessageSearchQuery] = useState('');
+    const [sceneSearchOpen, setSceneSearchOpen] = useState(false);
+    const [searchMatchIndex, setSearchMatchIndex] = useState(0);
+    const searchInputRef = useRef<HTMLInputElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const didInitialScrollRef = useRef(false);
+    const [isNearChatBottom, setIsNearChatBottom] = useState(true);
+
+    const SCROLL_BOTTOM_THRESHOLD_PX = 96;
+
+    const updateNearChatBottom = useCallback(() => {
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setIsNearChatBottom(gap <= SCROLL_BOTTOM_THRESHOLD_PX);
+    }, []);
 
     const {
         spaceCharactersBySpace,
@@ -129,6 +143,23 @@ export const RoleplayScenePage = () => {
         () => (sceneId ? sceneMessagesByScene[sceneId] ?? [] : []),
         [sceneId, sceneMessagesByScene]
     );
+
+    const filteredMessages = useMemo(() => {
+        if (!sceneSearchOpen) return messages;
+        const q = messageSearchQuery.trim().toLowerCase();
+        if (!q) return messages;
+        return messages.filter((item) => {
+            const haystack = [
+                item.message.content,
+                item.character?.name ?? '',
+                item.author?.username ?? '',
+            ]
+                .join(' ')
+                .toLowerCase();
+            return haystack.includes(q);
+        });
+    }, [messages, messageSearchQuery, sceneSearchOpen]);
+
     const ownCharacterIds = useMemo(
         () =>
             new Set(
@@ -145,7 +176,47 @@ export const RoleplayScenePage = () => {
 
     useEffect(() => {
         didInitialScrollRef.current = false;
+        setMessageSearchQuery('');
+        setSceneSearchOpen(false);
+        setSearchMatchIndex(0);
+        setIsNearChatBottom(true);
     }, [sceneId]);
+
+    useEffect(() => {
+        setSearchMatchIndex(0);
+    }, [messageSearchQuery]);
+
+    useEffect(() => {
+        if (filteredMessages.length === 0) return;
+        setSearchMatchIndex((i) => Math.min(i, filteredMessages.length - 1));
+    }, [filteredMessages.length]);
+
+    useEffect(() => {
+        if (!sceneSearchOpen) return;
+        requestAnimationFrame(() => searchInputRef.current?.focus());
+    }, [sceneSearchOpen]);
+
+    const activeSearchMessageId = useMemo(() => {
+        if (!sceneSearchOpen || !messageSearchQuery.trim() || filteredMessages.length === 0) return null;
+        return filteredMessages[searchMatchIndex]?.message.id ?? null;
+    }, [sceneSearchOpen, messageSearchQuery, filteredMessages, searchMatchIndex]);
+
+    useEffect(() => {
+        if (!sceneSearchOpen || !messageSearchQuery.trim() || !activeSearchMessageId) return;
+        const t = window.requestAnimationFrame(() => {
+            document
+                .getElementById(`scene-msg-${activeSearchMessageId}`)
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+        return () => cancelAnimationFrame(t);
+    }, [sceneSearchOpen, messageSearchQuery, activeSearchMessageId]);
+
+    useEffect(() => {
+        const id = window.requestAnimationFrame(() => {
+            updateNearChatBottom();
+        });
+        return () => cancelAnimationFrame(id);
+    }, [messages.length, filteredMessages.length, chatFontScale, updateNearChatBottom]);
 
     useEffect(() => {
         const el = messagesContainerRef.current;
@@ -153,6 +224,10 @@ export const RoleplayScenePage = () => {
         const scrollToBottom = () => {
             el.scrollTop = el.scrollHeight;
         };
+
+        if (sceneSearchOpen && messageSearchQuery.trim()) {
+            return;
+        }
 
         // На первом рендере сцены скроллим без анимации, чтобы не остаться вверху.
         if (!didInitialScrollRef.current) {
@@ -165,7 +240,13 @@ export const RoleplayScenePage = () => {
 
         // На новых сообщениях держим вид на последнем сообщении.
         requestAnimationFrame(scrollToBottom);
-    }, [messages, sceneId]);
+    }, [messages, sceneId, sceneSearchOpen, messageSearchQuery]);
+
+    const closeSceneSearch = useCallback(() => {
+        setSceneSearchOpen(false);
+        setMessageSearchQuery('');
+        setSearchMatchIndex(0);
+    }, []);
 
     if (!spaceId || !sceneId) return null;
 
@@ -218,30 +299,85 @@ export const RoleplayScenePage = () => {
 
     return (
         <div className="mx-auto mt-0 flex h-[calc(var(--app-vh,1vh)*100)] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:h-[100dvh] md:px-4">
-            <header className="px-1 pt-2">
-                <div className="flex min-w-0 items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => navigate(`/roleplay/${spaceId}`)}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
-                        aria-label="Назад"
-                        title="Назад"
-                    >
-                        <ArrowLeft size={18} />
-                    </button>
-                    <h1 className="min-w-0 flex-1 truncate text-2xl font-garamond text-[#f4ecd0] md:text-3xl">
-                        {sceneTitle}
-                    </h1>
-                    <button
-                        type="button"
-                        onClick={openSceneSettings}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
-                        aria-label="Настройки сцены"
-                        title="Настройки сцены"
-                    >
-                        <Settings size={18} />
-                    </button>
-                </div>
+            <header className="relative z-[5] px-1 pt-2">
+                {sceneSearchOpen ? (
+                    <div className="flex min-w-0 items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={closeSceneSearch}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                            aria-label="Закрыть поиск"
+                            title="Закрыть поиск"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <div className="relative min-w-0 flex-1">
+                            <Search
+                                className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[#c2a774]"
+                                size={18}
+                                aria-hidden
+                            />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                autoComplete="off"
+                                value={messageSearchQuery}
+                                onChange={(e) => setMessageSearchQuery(e.target.value)}
+                                placeholder="Поиск по сообщениям..."
+                                className="w-full rounded-full border border-[#c2a774]/40 bg-[#101712] py-2 pl-10 pr-10 text-sm text-[#e5d9a5] placeholder:text-[#6b7568] focus:border-[#c2a774] focus:outline-none"
+                                aria-label="Поиск по сообщениям"
+                            />
+                            {messageSearchQuery ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setMessageSearchQuery('')}
+                                    className="absolute right-2 top-1/2 z-[1] -translate-y-1/2 rounded-full p-1 text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                                    aria-label="Очистить строку"
+                                >
+                                    <X size={18} />
+                                </button>
+                            ) : null}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex min-w-0 items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => navigate(`/roleplay/${spaceId}`)}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                            aria-label="Назад"
+                            title="Назад"
+                        >
+                            <ArrowLeft size={18} />
+                        </button>
+                        <h1 className="min-w-0 flex-1 truncate text-2xl font-garamond text-[#f4ecd0] md:text-3xl">
+                            {sceneTitle}
+                        </h1>
+                        <button
+                            type="button"
+                            onClick={() => setSceneSearchOpen(true)}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                            aria-label="Поиск по сообщениям"
+                            title="Поиск"
+                        >
+                            <Search size={18} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openSceneSettings}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                            aria-label="Настройки сцены"
+                            title="Настройки сцены"
+                        >
+                            <Settings size={18} />
+                        </button>
+                    </div>
+                )}
+                {sceneSearchOpen && messageSearchQuery.trim() && messages.length > 0 ? (
+                    <p className="mt-1 text-center text-[11px] text-[#7f8a7b]">
+                        Найдено: {filteredMessages.length} из {messages.length}
+                    </p>
+                ) : null}
             </header>
 
             <Modal isOpen={sceneSettingsOpen} onClose={() => setSceneSettingsOpen(false)}>
@@ -324,6 +460,7 @@ export const RoleplayScenePage = () => {
                 {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/72" />}
                 <div
                     ref={messagesContainerRef}
+                    onScroll={updateNearChatBottom}
                     className="relative z-[1] mb-1 flex min-h-0 flex-1 flex-col overflow-y-auto"
                     style={{
                         gap: `${8 * chatFontScale}px`,
@@ -336,9 +473,16 @@ export const RoleplayScenePage = () => {
                             В этой сцене пока нет сообщений.
                         </div>
                     )}
-                    {messages.map((item) => (
+                    {sceneSearchOpen && messageSearchQuery.trim() && messages.length > 0 && filteredMessages.length === 0 && (
+                        <div className="p-3 text-center text-[#c7bc98]">
+                            По запросу «{messageSearchQuery.trim()}» ничего не найдено.
+                        </div>
+                    )}
+                    {filteredMessages.map((item) => (
                         <SceneMessageItem
                             key={item.message.id}
+                            messageDomId={`scene-msg-${item.message.id}`}
+                            highlightQuery={sceneSearchOpen && messageSearchQuery.trim() ? messageSearchQuery : null}
                             fontScale={chatFontScale}
                             item={item}
                             onReply={setReplyToMessageId}
@@ -357,10 +501,62 @@ export const RoleplayScenePage = () => {
                     ))}
                 </div>
 
-                <div
-                    className="sticky bottom-0 z-[2] mt-auto border-t border-[#2f3a34]/80 bg-[#0a0f0c]/92 backdrop-blur-[2px]"
-                    style={{ paddingTop: `${6 * chatFontScale}px` }}
-                >
+                <div className="relative z-[3] mt-auto">
+                    {messages.length > 0 && !isNearChatBottom ? (
+                        <div
+                            className={`pointer-events-none absolute bottom-full z-[5] mb-2 ${
+                                sceneSearchOpen && messageSearchQuery.trim() && filteredMessages.length > 0
+                                    ? 'right-12'
+                                    : 'right-2'
+                            }`}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const el = messagesContainerRef.current;
+                                    if (!el) return;
+                                    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                                }}
+                                className="pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                                aria-label="Прокрутить к последнему сообщению"
+                                title="В самый низ"
+                            >
+                                <ChevronDown size={20} />
+                            </button>
+                        </div>
+                    ) : null}
+                    {sceneSearchOpen && messageSearchQuery.trim() && filteredMessages.length > 0 ? (
+                        <div className="pointer-events-none absolute bottom-full right-1 z-[5] mb-1 flex flex-col gap-1">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSearchMatchIndex(
+                                        (i) => (i - 1 + filteredMessages.length) % filteredMessages.length
+                                    )
+                                }
+                                className="pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                                aria-label="Предыдущее совпадение"
+                                title="Выше"
+                            >
+                                <ChevronUp size={20} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSearchMatchIndex((i) => (i + 1) % filteredMessages.length)
+                                }
+                                className="pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                                aria-label="Следующее совпадение"
+                                title="Ниже"
+                            >
+                                <ChevronDown size={20} />
+                            </button>
+                        </div>
+                    ) : null}
+                    <div
+                        className="sticky bottom-0 z-[2] border-t border-[#2f3a34]/80 bg-[#0a0f0c]/92 backdrop-blur-[2px]"
+                        style={{ paddingTop: `${6 * chatFontScale}px` }}
+                    >
                     {sendError && (
                         <p
                             className="px-1 text-[#e7b0b0]"
@@ -484,6 +680,7 @@ export const RoleplayScenePage = () => {
                             await refreshMessages();
                         }}
                     />
+                    </div>
                 </div>
             </section>
         </div>

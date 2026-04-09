@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { SceneMessageView } from '../../types/roleplay';
@@ -12,6 +12,10 @@ interface SceneMessageItemProps {
     onDelete: (messageId: string) => Promise<void>;
     /** Масштаб текста сообщений (1 = по умолчанию) */
     fontScale?: number;
+    /** id на корневом элементе (для прокрутки к сообщению при поиске) */
+    messageDomId?: string;
+    /** Подсветка вхождений в тексте (регистронезависимо) */
+    highlightQuery?: string | null;
 }
 
 const typeLabels: Record<SceneMessageView['message']['type'], string> = {
@@ -19,6 +23,31 @@ const typeLabels: Record<SceneMessageView['message']['type'], string> = {
     action: 'Действие',
     narration: 'Описание',
     system: 'Системное',
+};
+
+const highlightText = (text: string, rawQuery: string | null | undefined): ReactNode => {
+    const q = rawQuery?.trim();
+    if (!q) return text;
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(re);
+    if (parts.length === 1) return text;
+    return (
+        <>
+            {parts.map((part, i) =>
+                i % 2 === 1 ? (
+                    <mark
+                        key={i}
+                        className="rounded-sm bg-[#c2a774]/40 px-0.5 text-inherit [box-decoration-break:clone]"
+                    >
+                        {part}
+                    </mark>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
 };
 
 const parseFormattedSegments = (content: string) => {
@@ -52,6 +81,8 @@ export const SceneMessageItem = ({
     canManage,
     onDelete,
     fontScale = 1,
+    messageDomId,
+    highlightQuery = null,
 }: SceneMessageItemProps) => {
     const rootRef = useRef<HTMLElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
@@ -86,6 +117,7 @@ export const SceneMessageItem = ({
 
     return (
         <article
+            id={messageDomId}
             ref={rootRef}
             className={`relative flex ${isOwn ? 'justify-end' : 'justify-start'}`}
             style={{ paddingTop: `${4 * s}px` }}
@@ -185,7 +217,7 @@ export const SceneMessageItem = ({
                     className={`truncate font-semibold ${isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'}`}
                     style={{ fontSize: `${12 * fontScale}px` }}
                 >
-                    {authorName}
+                    {highlightText(authorName, highlightQuery)}
                 </p>
                 {item.message.type === 'system' && (
                     <span
@@ -208,18 +240,18 @@ export const SceneMessageItem = ({
                     if (segment.type === 'action') {
                         return (
                             <span key={idx} className="italic text-[#d5ebdd]">
-                                {segment.text}
+                                {highlightText(segment.text, highlightQuery)}
                             </span>
                         );
                     }
                     if (segment.type === 'narration') {
                         return (
                             <span key={idx} className="text-[#dde0f8]">
-                                {segment.text}
+                                {highlightText(segment.text, highlightQuery)}
                             </span>
                         );
                     }
-                    return <span key={idx}>{segment.text}</span>;
+                    return <span key={idx}>{highlightText(segment.text, highlightQuery)}</span>;
                 })}
             </p>
             <p className="text-right opacity-75" style={{ fontSize: `${11 * fontScale}px`, marginTop: `${8 * s}px` }}>
