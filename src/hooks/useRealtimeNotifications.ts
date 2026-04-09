@@ -1,6 +1,76 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+const NOTIFICATIONS_STORAGE_KEY = 'cc:notifications:feed';
+const NOTIFICATIONS_EVENT_NAME = 'cc:notifications:feed:updated';
+const FEED_LIMIT = 30;
+
+export type NotificationFeedType = 'world_invite' | 'roleplay_invite' | 'scene_message';
+
+export type NotificationFeedItem = {
+    id: string;
+    type: NotificationFeedType;
+    title: string;
+    body: string;
+    createdAt: string;
+};
+
+const readNotificationFeed = (): NotificationFeedItem[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const raw = window.localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw) as NotificationFeedItem[];
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+    } catch {
+        return [];
+    }
+};
+
+const writeNotificationFeed = (items: NotificationFeedItem[]) => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(NOTIFICATIONS_EVENT_NAME, { detail: items }));
+};
+
+const addToNotificationFeed = (item: Omit<NotificationFeedItem, 'id' | 'createdAt'>) => {
+    const nowIso = new Date().toISOString();
+    const feed = readNotificationFeed();
+    const last = feed[0];
+    // Protect from realtime+poll duplicate notifications in a short window.
+    const isDuplicate =
+        last &&
+        last.type === item.type &&
+        last.title === item.title &&
+        last.body === item.body &&
+        Date.now() - new Date(last.createdAt).getTime() < 15000;
+    if (isDuplicate) return;
+
+    const next: NotificationFeedItem = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        createdAt: nowIso,
+        ...item,
+    };
+    writeNotificationFeed([next, ...feed].slice(0, FEED_LIMIT));
+};
+
+export const getNotificationFeed = (): NotificationFeedItem[] => readNotificationFeed();
+
+export const clearNotificationFeed = () => {
+    writeNotificationFeed([]);
+};
+
+export const subscribeNotificationFeed = (listener: (items: NotificationFeedItem[]) => void) => {
+    if (typeof window === 'undefined') return () => undefined;
+    const handler = (event: Event) => {
+        const customEvent = event as CustomEvent<NotificationFeedItem[]>;
+        listener(customEvent.detail ?? []);
+    };
+    window.addEventListener(NOTIFICATIONS_EVENT_NAME, handler);
+    return () => window.removeEventListener(NOTIFICATIONS_EVENT_NAME, handler);
+};
+
 export const getNotificationPermissionState = (): NotificationPermission | 'unsupported' => {
     if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
     return Notification.permission;
@@ -94,6 +164,11 @@ export const useRealtimeNotifications = (
                 async (payload) => {
                     const row = payload.new as { status?: string } | null;
                     if (row?.status === 'invited') {
+                        addToNotificationFeed({
+                            type: 'world_invite',
+                            title: 'Новое приглашение в мир',
+                            body: 'Вас пригласили в совместный мир.',
+                        });
                         await showNotification('Новое приглашение в мир', 'Вас пригласили в совместный мир.');
                     }
                 }
@@ -113,6 +188,11 @@ export const useRealtimeNotifications = (
                 async (payload) => {
                     const row = payload.new as { status?: string } | null;
                     if (row?.status === 'invited') {
+                        addToNotificationFeed({
+                            type: 'roleplay_invite',
+                            title: 'Приглашение в ролевое пространство',
+                            body: 'Вас пригласили в новое пространство.',
+                        });
                         await showNotification('Приглашение в ролевое пространство', 'Вас пригласили в новое пространство.');
                     }
                 }
@@ -131,6 +211,11 @@ export const useRealtimeNotifications = (
                 async (payload) => {
                     const row = payload.new as { user_id?: string } | null;
                     if (!row?.user_id || row.user_id === activeUserId) return;
+                    addToNotificationFeed({
+                        type: 'scene_message',
+                        title: 'Новое сообщение в сцене',
+                        body: 'В одной из ваших сцен появилось новое сообщение.',
+                    });
                     await showNotification('Новое сообщение в сцене', 'В одной из ваших сцен появилось новое сообщение.');
                 }
             )
@@ -180,15 +265,30 @@ export const useRealtimeNotifications = (
             const sceneCount = sceneRes.count ?? 0;
 
             if (prevWorldInviteCount !== null && worldCount > prevWorldInviteCount) {
+                addToNotificationFeed({
+                    type: 'world_invite',
+                    title: 'Новое приглашение в мир',
+                    body: 'Вас пригласили в совместный мир.',
+                });
                 await showNotification('Новое приглашение в мир', 'Вас пригласили в совместный мир.');
             }
             if (prevRoleplayInviteCount !== null && roleplayCount > prevRoleplayInviteCount) {
+                addToNotificationFeed({
+                    type: 'roleplay_invite',
+                    title: 'Приглашение в ролевое пространство',
+                    body: 'Вас пригласили в новое пространство.',
+                });
                 await showNotification(
                     'Приглашение в ролевое пространство',
                     'Вас пригласили в новое пространство.'
                 );
             }
             if (prevSceneMessageCount !== null && sceneCount > prevSceneMessageCount) {
+                addToNotificationFeed({
+                    type: 'scene_message',
+                    title: 'Новое сообщение в сцене',
+                    body: 'В одной из ваших сцен появилось новое сообщение.',
+                });
                 await showNotification(
                     'Новое сообщение в сцене',
                     'В одной из ваших сцен появилось новое сообщение.'

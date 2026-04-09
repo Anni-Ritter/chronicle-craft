@@ -7,8 +7,12 @@ import { Button } from '../components/ChronicleButton';
 import { Bell, LogOut, Pen, Sparkles, Trash2 } from 'lucide-react';
 import { FloatingAlert } from '../components/FloatingAlert';
 import {
+    clearNotificationFeed,
+    getNotificationFeed,
     getNotificationPermissionState,
     requestNotificationPermission,
+    subscribeNotificationFeed,
+    type NotificationFeedItem,
 } from '../hooks/useRealtimeNotifications';
 
 export const ProfilePage = () => {
@@ -24,6 +28,7 @@ export const ProfilePage = () => {
     const [showPasswordEdit, setShowPasswordEdit] = useState(false);
     const [emailError, setEmailError] = useState<string | null>(null);
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
+    const [notificationFeed, setNotificationFeed] = useState<NotificationFeedItem[]>([]);
     const [statusMessage, setStatusMessage] = useState<{
         text: string;
         type: 'success' | 'error';
@@ -59,6 +64,8 @@ export const ProfilePage = () => {
 
     useEffect(() => {
         setNotificationPermission(getNotificationPermissionState());
+        setNotificationFeed(getNotificationFeed());
+        return subscribeNotificationFeed(setNotificationFeed);
     }, []);
 
     const updateProfile = async () => {
@@ -125,6 +132,12 @@ export const ProfilePage = () => {
             return;
         }
         setStatusMessage({ text: 'Не удалось включить уведомления на этом устройстве', type: 'error' });
+    };
+
+    const typeLabelMap: Record<NotificationFeedItem['type'], string> = {
+        world_invite: 'Приглашение в мир',
+        roleplay_invite: 'Приглашение в ролевую',
+        scene_message: 'Сообщение в сцене',
     };
 
     if (!user) {
@@ -367,6 +380,40 @@ export const ProfilePage = () => {
                                     >
                                         Включить
                                     </Button>
+                                )}
+                            </div>
+
+                            <div className="mt-3 rounded-lg border border-[#2a342f] bg-[#0b130f]/70 p-2.5">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <p className="text-xs uppercase tracking-[0.14em] text-[#c7bc98]">Последние уведомления</p>
+                                    {notificationFeed.length > 0 && (
+                                        <Button
+                                            variant="ghost"
+                                            className="text-[11px] px-2 py-1"
+                                            onClick={() => {
+                                                clearNotificationFeed();
+                                                setNotificationFeed([]);
+                                            }}
+                                        >
+                                            Очистить
+                                        </Button>
+                                    )}
+                                </div>
+                                {notificationFeed.length === 0 ? (
+                                    <p className="text-xs text-[#9cac98]">Пока пусто</p>
+                                ) : (
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                        {notificationFeed.slice(0, 8).map((item) => (
+                                            <div key={item.id} className="rounded-md border border-[#26312c] bg-[#0a120e] px-2 py-1.5">
+                                                <p className="text-[11px] text-[#d8c693]">{typeLabelMap[item.type]}</p>
+                                                <p className="text-xs text-[#e7ddb5]">{item.title}</p>
+                                                <p className="text-[11px] text-[#9cac98]">{item.body}</p>
+                                                <p className="mt-0.5 text-[10px] text-[#7f8a7b]">
+                                                    {new Date(item.createdAt).toLocaleString('ru-RU')}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
