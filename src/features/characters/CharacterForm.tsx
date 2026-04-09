@@ -369,7 +369,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
             </section>
 
             <section className="bg-[#141f16]/90 rounded-2xl border border-[#3a4a34] p-4 md:p-5 shadow-[0_0_25px_#00000066]">
-                <div className="flex justify-between items-center mb-4 gap-3 flex-wrap">
+                <div className="flex justify-between items-center mb-1 gap-3 flex-wrap">
                     <h3 className="text-lg md:text-xl font-garamond text-[#e5d9a5]">
                         Атрибуты
                     </h3>
@@ -381,6 +381,9 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
                         🎲 Бросить всё
                     </Button>
                 </div>
+                <p className="mb-4 text-xs text-[#c7bc98]">
+                    Введите значения вручную (0–12) или нажмите «Бросить всё» для случайных 1–12 по каждому.
+                </p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
                     {Object.entries({
                         strength: "Сила",
@@ -392,8 +395,18 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
                     }).map(([key, label]) => (
                         <DiceStat
                             key={key}
+                            inputId={`character-attr-${key}`}
                             label={label}
                             value={attributes[key as keyof Character["attributes"]]}
+                            editable
+                            min={0}
+                            max={12}
+                            onChange={(n) =>
+                                setAttributes((prev) => ({
+                                    ...prev,
+                                    [key]: n,
+                                }))
+                            }
                         />
                     ))}
                 </div>

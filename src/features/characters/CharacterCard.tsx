@@ -11,9 +11,11 @@ import { Button } from "../../components/ChronicleButton";
 
 interface CharacterCardProps {
     character: Character;
+    /** Только просмотр: без редактирования и удаления (чужие персонажи и т.п.) */
+    readOnly?: boolean;
 }
 
-export const CharacterCard = ({ character }: CharacterCardProps) => {
+export const CharacterCard = ({ character, readOnly = false }: CharacterCardProps) => {
     const navigate = useNavigate();
     const removeCharacter = useCharacterStore((s) => s.removeCharacter);
     const supabase = useSupabaseClient();
@@ -88,11 +90,12 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                     <div className="flex-1 flex flex-col gap-2">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                             <div className="flex flex-col gap-1">
-                                <div className="flex flex-row justify-between">
+                                <div className={`flex flex-row ${readOnly ? '' : 'justify-between'}`}>
                                     <h2 className="text-lg sm:text-xl md:text-2xl font-garamond font-semibold text-[#e5d9a5] 
                                                group-hover:drop-shadow-[0_0_4px_#e5d9a5aa]">
                                         {character.name}
                                     </h2>
+                                    {!readOnly ? (
                                     <div ref={mobileMenuRef} className="relative md:hidden">
                                         <button
                                             onClick={(e) => {
@@ -140,6 +143,7 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                             </div>
                                         )}
                                     </div>
+                                    ) : null}
                                 </div>
                                 {bioPreview && (
                                     <p className="sm:hidden text-[13px] text-[#c7bc98] font-lora line-clamp-3">
@@ -163,6 +167,7 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                         {totalAttributes}
                                     </span>
                                 </div>
+                                {!readOnly ? (
                                 <div ref={desktopMenuRef} className="relative max-sm:hidden">
                                     <button
                                         onClick={(e) => {
@@ -210,6 +215,7 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                         </div>
                                     )}
                                 </div>
+                                ) : null}
                             </div>
                         </div>
 

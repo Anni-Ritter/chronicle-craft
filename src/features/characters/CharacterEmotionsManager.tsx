@@ -7,9 +7,11 @@ import { useRoleplayStore } from '../../store/useRoleplayStore';
 
 interface CharacterEmotionsManagerProps {
     characterId: string;
+    /** Чужой персонаж: только просмотр списка эмоций */
+    readOnly?: boolean;
 }
 
-export const CharacterEmotionsManager = ({ characterId }: CharacterEmotionsManagerProps) => {
+export const CharacterEmotionsManager = ({ characterId, readOnly = false }: CharacterEmotionsManagerProps) => {
     const supabase = useSupabaseClient();
     const [name, setName] = useState('');
     const [imageUrl, setImageUrl] = useState<string>('');
@@ -33,6 +35,7 @@ export const CharacterEmotionsManager = ({ characterId }: CharacterEmotionsManag
         <section className="rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 p-4 sm:p-5 space-y-4">
             <h2 className="text-lg md:text-xl font-garamond font-bold text-[#e5d9a5]">Сеты эмоций</h2>
 
+            {!readOnly ? (
             <div className="space-y-2 rounded-xl border border-[#2f3a34] bg-[#0f1712] p-3">
                 <input
                     value={name}
@@ -81,6 +84,7 @@ export const CharacterEmotionsManager = ({ characterId }: CharacterEmotionsManag
                     Добавить эмоцию
                 </Button>
             </div>
+            ) : null}
 
             <div className="grid gap-2 sm:grid-cols-2">
                 {emotions.map((emotion) => (
@@ -90,6 +94,7 @@ export const CharacterEmotionsManager = ({ characterId }: CharacterEmotionsManag
                                 <p className="text-[#f3e7c8] font-semibold">{emotion.name}</p>
                                 <p className="text-xs text-[#c7bc98]">{emotion.is_default ? 'По умолчанию' : 'Обычная'}</p>
                             </div>
+                            {!readOnly ? (
                             <button
                                 type="button"
                                 onClick={async () => {
@@ -100,6 +105,7 @@ export const CharacterEmotionsManager = ({ characterId }: CharacterEmotionsManag
                             >
                                 <Trash2 size={16} />
                             </button>
+                            ) : null}
                         </div>
                         {emotion.image_url && (
                             <img src={emotion.image_url} alt={emotion.name} className="mt-2 h-24 w-full rounded-lg object-cover" />

@@ -29,13 +29,16 @@ interface CharacterGraphProps {
     relationships: Relationship[];
     onSelectCharacter?: (charId: string) => void;
     allCharacters?: Character[];
+    /** Только просмотр: без правок связей, перетаскивания и сохранения */
+    readOnly?: boolean;
 }
 
 export const CharacterGraph = ({
     characters,
     relationships,
     onSelectCharacter,
-    allCharacters
+    allCharacters,
+    readOnly = false,
 }: CharacterGraphProps) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -59,6 +62,8 @@ export const CharacterGraph = ({
         setDraftRelationships,
     } = useDraftRelationshipStore();
 
+    const relsForGraph = readOnly ? relationships : draftRelationships;
+
     useEffect(() => {
         if (session?.user?.id) {
             fetchPositions(session.user.id, graphType, supabase);
@@ -66,9 +71,14 @@ export const CharacterGraph = ({
     }, [session, fetchPositions]);
 
     useEffect(() => {
+        if (readOnly) return;
+        setDraftRelationships(relationships);
+    }, [readOnly, relationships, setDraftRelationships]);
+
+    useEffect(() => {
         const activeCharacterIds = new Set<string>();
 
-        draftRelationships.forEach((rel) => {
+        relsForGraph.forEach((rel) => {
             activeCharacterIds.add(rel.source_id);
             activeCharacterIds.add(rel.target_id);
         });
@@ -109,14 +119,10 @@ export const CharacterGraph = ({
         }));
 
         setNodes(updated);
-    }, [draftRelationships, characters, allCharacters, positions, setNodes]);
+    }, [relsForGraph, characters, allCharacters, positions, setNodes]);
 
     useEffect(() => {
-        setDraftRelationships(relationships);
-    }, [relationships, setDraftRelationships]);
-
-    useEffect(() => {
-        const grouped = draftRelationships.reduce((acc, rel) => {
+        const grouped = relsForGraph.reduce((acc, rel) => {
             const key = [rel.source_id, rel.target_id].sort().join('-');
             acc[key] = acc[key] || [];
             acc[key].push(rel);
@@ -151,9 +157,10 @@ export const CharacterGraph = ({
         });
 
         setEdges(updatedEdges);
-    }, [draftRelationships, setEdges]);
+    }, [relsForGraph, setEdges]);
 
     const onConnect = (connection: Connection) => {
+        if (readOnly) return;
         setPendingConnection(connection);
         setShowModal(true);
     };
@@ -194,7 +201,7 @@ export const CharacterGraph = ({
     };
 
     const handleSave = async () => {
-        if (!session?.user?.id) return;
+        if (readOnly || !session?.user?.id) return;
 
         const existingIds = relationships.map((r) => r.id);
         const toAdd = draftRelationships.filter((r) => !existingIds.includes(r.id));
@@ -249,10 +256,15 @@ export const CharacterGraph = ({
                             </div>
                             <div className="flex items-center gap-1 text-[16px] text-[#c7bc98]/90">
                                 <Sparkles size={14} className="text-[#c2a774]" />
-                                <span>Перетаскивайте персонажей и соединяйте их линиями</span>
+                                <span>
+                                    {readOnly
+                                        ? 'Только просмотр'
+                                        : 'Перетаскивайте персонажей и соединяйте их линиями'}
+                                </span>
                             </div>
                         </div>
 
+                        {!readOnly ? (
                         <div className="flex flex-col md:flex-row gap-2 sm:gap-3">
                             <Button
                                 onClick={() => setManualModalOpen(true)}
@@ -269,6 +281,7 @@ export const CharacterGraph = ({
                                 <span className="max-sm:text-xs">Сохранить связи</span>
                             </Button>
                         </div>
+                        ) : null}
                     </div>
 
                     <div className="flex-1">
@@ -280,20 +293,33 @@ export const CharacterGraph = ({
                             panOnDrag
                             nodes={nodes}
                             edges={edges}
+                            nodesDraggable={!readOnly}
+                            nodesConnectable={!readOnly}
+                            edgesUpdatable={!readOnly}
                             onNodesChange={onNodesChange}
                             onEdgesChange={onEdgesChange}
                             onConnect={onConnect}
                             onNodeClick={(_, node) => onSelectCharacter?.(node.id)}
-                            onEdgeClick={(_, edge) => {
-                                setSelectedEdge(edge);
-                                setEditModalOpen(true);
-                            }}
-                            onNodeDragStop={(_, node) => {
-                                setPosition(node.id, node.position);
-                                setNodes((nds) =>
-                                    nds.map((n) => (n.id === node.id ? { ...n, position: node.position } : n))
-                                );
-                            }}
+                            onEdgeClick={
+                                readOnly
+                                    ? undefined
+                                    : (_, edge) => {
+                                          setSelectedEdge(edge);
+                                          setEditModalOpen(true);
+                                      }
+                            }
+                            onNodeDragStop={
+                                readOnly
+                                    ? undefined
+                                    : (_, node) => {
+                                          setPosition(node.id, node.position);
+                                          setNodes((nds) =>
+                                              nds.map((n) =>
+                                                  n.id === node.id ? { ...n, position: node.position } : n
+                                              )
+                                          );
+                                      }
+                            }
                             edgeTypes={{ custom: CustomCurvedEdge }}
                         >
                             {window.innerWidth > 640 && (
@@ -352,6 +378,7 @@ export const CharacterGraph = ({
                     />
                 )}
 
+                {!readOnly ? (
                 <ManualRelationModal
                     isOpen={manualModalOpen}
                     characters={allCharacters || []}
@@ -391,6 +418,7 @@ export const CharacterGraph = ({
                         }
                     }}
                 />
+                ) : null}
             </div>
 
             {statusMessage && (

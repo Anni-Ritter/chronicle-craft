@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
     Radar,
     RadarChart,
@@ -13,11 +13,11 @@ import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
 import { useChronicleStore } from "../../store/useChronicleStore";
 import {
+    ArrowLeft,
     BicepsFlexed,
     BookCopy,
     BrainCircuit,
     Dna,
-    Dot,
     Earth,
     House,
     LibraryBig,
@@ -36,36 +36,73 @@ import { Button } from "../../components/ChronicleButton";
 import { Modal } from "../../components/Modal";
 import { CharacterForm } from "../../features/characters/CharacterForm";
 import { CharacterEmotionsManager } from "../../features/characters/CharacterEmotionsManager";
-import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useDraftRelationshipStore } from "../../store/useDraftRelationshipStore";
 import { formatEventDate } from "../../lib/formatEventDate";
 import { motion } from "framer-motion";
+import type { Character } from "../../types/character";
 
 export const CharacterDetailPage = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const allCharacters = useCharacterStore((s) => s.characters);
     const relationships = useRelationshipStore((s) => s.relationships);
     const chronicles = useChronicleStore((s) => s.chronicles);
-    const character = allCharacters.find((c) => c.id === id);
+    const characterFromStore = allCharacters.find((c) => c.id === id);
+    const [remoteCharacter, setRemoteCharacter] = useState<Character | null>(null);
+    const [remoteFetchDone, setRemoteFetchDone] = useState(false);
+    const character = characterFromStore ?? remoteCharacter;
     const [activeTab, setActiveTab] = useState<'info' | 'graph'>('info');
     const [isEditing, setIsEditing] = useState(false);
     const [isAvatarPreviewOpen, setIsAvatarPreviewOpen] = useState(false);
     const { updateCharacter } = useCharacterStore();
     const supabase = useSupabaseClient();
+    const session = useSession();
     const { setDraftRelationships } = useDraftRelationshipStore();
+    const isOwner = !!(session?.user?.id && character?.user_id === session.user.id);
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [id]);
 
     useEffect(() => {
-        if (character) {
-            const filtered = relationships.filter(
-                (r) => r.source_id === character.id || r.target_id === character.id
-            );
-            setDraftRelationships(filtered);
+        if (!id) {
+            setRemoteCharacter(null);
+            setRemoteFetchDone(true);
+            return;
         }
-    }, [character, relationships, setDraftRelationships]);
+        if (characterFromStore) {
+            setRemoteCharacter(null);
+            setRemoteFetchDone(true);
+            return;
+        }
+
+        setRemoteFetchDone(false);
+        let cancelled = false;
+        void supabase
+            .from("characters")
+            .select("*")
+            .eq("id", id)
+            .maybeSingle()
+            .then(({ data, error }) => {
+                if (cancelled) return;
+                if (data && !error) setRemoteCharacter(data as Character);
+                else setRemoteCharacter(null);
+                setRemoteFetchDone(true);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [id, characterFromStore, supabase]);
+
+    useEffect(() => {
+        if (!character || !session?.user?.id) return;
+        if (character.user_id !== session.user.id) return;
+        const filtered = relationships.filter(
+            (r) => r.source_id === character.id || r.target_id === character.id
+        );
+        setDraftRelationships(filtered);
+    }, [character, relationships, setDraftRelationships, session?.user?.id]);
 
     const characterId = character?.id ?? "";
 
@@ -114,6 +151,13 @@ export const CharacterDetailPage = () => {
     const otherCharacters = useMemo(() => allCharacters, [allCharacters]);
 
     if (!character) {
+        if (!remoteFetchDone) {
+            return (
+                <div className="flex min-h-[40vh] items-center justify-center font-lora text-[#c7bc98]">
+                    Загрузка…
+                </div>
+            );
+        }
         return (
             <div className="p-8 text-center text-[#e5d9a5] font-lora">
                 <h1 className="text-2xl font-bold text-red-400 mb-2">Персонаж не найден</h1>
@@ -131,23 +175,14 @@ export const CharacterDetailPage = () => {
         <div className="max-w-[1440px] mx-auto px-2 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] overflow-x-hidden">
             <div className="space-y-8">
                 <div className="space-y-4">
-                    <nav className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2">
-                        <Link to="/" className="text-[#c2a774] hover:underline">
-                            Главная
-                        </Link>
-                        <span className="mx-1">
-                            <Dot className="w-4 h-4" />
-                        </span>
-                        <Link to="/characters" className="text-[#c2a774] hover:underline">
-                            Персонажи
-                        </Link>
-                        <span className="mx-1">
-                            <Dot className="w-4 h-4" />
-                        </span>
-                        <span className="text-[#e5d9a5] font-semibold line-clamp-1">
-                            {character.name}
-                        </span>
-                    </nav>
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="mb-1 inline-flex items-center gap-2 rounded-lg border border-transparent px-1 py-1.5 text-sm text-[#c2a774] transition hover:border-[#c2a77444] hover:bg-[#0e1b12]/80"
+                    >
+                        <ArrowLeft className="h-4 w-4 shrink-0" />
+                        Назад
+                    </button>
 
                     <div className="inline-flex w-full max-w-md gap-1 rounded-full border border-[#c2a77444] bg-[#0e1b12] p-1 lg:max-w-none">
                         <Button
@@ -218,6 +253,14 @@ export const CharacterDetailPage = () => {
                                             <h1 className="text-2xl sm:text-3xl md:text-4xl font-garamond font-bold text-[#e5d9a5] leading-snug">
                                                 {character.name}
                                             </h1>
+                                            {character.user_id ? (
+                                                <Link
+                                                    to={`/player/${character.user_id}/characters`}
+                                                    className="inline-block text-sm text-[#c2a774] hover:underline"
+                                                >
+                                                    Персонажи автора
+                                                </Link>
+                                            ) : null}
                                             {character.status && (
                                                 <p className="flex items-center gap-2 text-sm text-[#c7bc98]">
                                                     <Pin size={14} className="text-[#c2a774]" />
@@ -225,14 +268,16 @@ export const CharacterDetailPage = () => {
                                                 </p>
                                             )}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsEditing(true)}
-                                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-start text-[#c7bc98] transition hover:text-[#e5d9a5]"
-                                            aria-label="Редактировать"
-                                        >
-                                            <Pencil size={18} />
-                                        </button>
+                                        {isOwner ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsEditing(true)}
+                                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-start text-[#c7bc98] transition hover:text-[#e5d9a5]"
+                                                aria-label="Редактировать"
+                                            >
+                                                <Pencil size={18} />
+                                            </button>
+                                        ) : null}
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
@@ -384,7 +429,7 @@ export const CharacterDetailPage = () => {
                             </section>
                         )}
 
-                        <CharacterEmotionsManager characterId={character.id} />
+                        <CharacterEmotionsManager characterId={character.id} readOnly={!isOwner} />
                     </motion.div>
                 )}
 
@@ -394,11 +439,12 @@ export const CharacterDetailPage = () => {
                         relationships={relatedRelationships}
                         onSelectCharacter={handleSelectCharacter}
                         allCharacters={otherCharacters}
+                        readOnly={!isOwner}
                     />
                 )}
             </div>
 
-            <Modal isOpen={isEditing} onClose={() => setIsEditing(false)}>
+            <Modal isOpen={isOwner && isEditing} onClose={() => setIsEditing(false)}>
                 <CharacterForm
                     initialCharacter={character}
                     onFinish={() => setIsEditing(false)}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import {
@@ -10,12 +11,12 @@ import {
 function resolveSpaceCharacterByMentionName(
     rawName: string,
     spaceCharacters: RoleplaySpaceCharacterView[],
-): { name: string; avatar: string | null } | null {
+): { name: string; avatar: string | null; userId: string } | null {
     const needle = rawName.trim().toLowerCase();
     if (!needle) return null;
     const hit = spaceCharacters.find((x) => x.character.name.toLowerCase() === needle);
     if (!hit) return null;
-    return { name: hit.character.name, avatar: hit.character.avatar };
+    return { name: hit.character.name, avatar: hit.character.avatar, userId: hit.character.user_id };
 }
 
 interface SceneMessageItemProps {
@@ -217,6 +218,7 @@ export const SceneMessageItem = ({
     messageTimeWithSeconds = true,
     spaceCharacters = [],
 }: SceneMessageItemProps) => {
+    const navigate = useNavigate();
     const rootRef = useRef<HTMLElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const avatar = item.emotion?.image_url || item.character?.avatar || item.author?.avatar_url;
@@ -272,17 +274,27 @@ export const SceneMessageItem = ({
     useEffect(() => {
         if (!isActionsOpen) return;
 
-        const onDocClick = (event: MouseEvent) => {
-            const target = event.target as Node;
-            const isInsideMessage = !!rootRef.current?.contains(target);
-            const isInsideMenu = !!menuRef.current?.contains(target);
-            if (!isInsideMessage && !isInsideMenu) {
+        /** Клик/тап вне пузыря сообщения (и вне меню) — закрываем меню действий. Capture, чтобы сработать до stopPropagation у потомков. */
+        const onPointerDownCapture = (event: PointerEvent) => {
+            const t = event.target;
+            if (t == null || !(t instanceof Node)) {
                 setIsActionsOpen(false);
+                return;
             }
+            const el = t instanceof Element ? t : (t as ChildNode).parentElement;
+            if (!el) {
+                setIsActionsOpen(false);
+                return;
+            }
+            if (menuRef.current?.contains(el)) return;
+            const hitBubble = el.closest('[data-scene-msg-hit]');
+            if (hitBubble && rootRef.current?.contains(hitBubble)) return;
+            setIsActionsOpen(false);
         };
-        document.addEventListener('mousedown', onDocClick);
+
+        document.addEventListener('pointerdown', onPointerDownCapture, true);
         return () => {
-            document.removeEventListener('mousedown', onDocClick);
+            document.removeEventListener('pointerdown', onPointerDownCapture, true);
         };
     }, [isActionsOpen]);
 
@@ -319,24 +331,69 @@ export const SceneMessageItem = ({
     const firstContentRunIndex = fallbackRun.findIndex((r) => r.kind === 'content');
     const leadWithAction = fallbackRun[0]?.kind === 'action';
 
+    const openMenuFromEvent = (e: React.MouseEvent<HTMLElement>) => {
+        e.stopPropagation();
+        openMessageMenu(e.clientX, e.clientY);
+    };
+    const openMenuFromKeyboard = (e: React.KeyboardEvent<HTMLElement>) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        const el = e.currentTarget;
+        const rect = el.getBoundingClientRect();
+        openMessageMenu(rect.left + rect.width / 2, rect.top + 8);
+    };
+    const bubbleInteractiveClass =
+        'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c2a774]/45';
+
+    const messageAuthorUserId = item.character?.user_id || item.message.user_id || null;
+
+    const goPlayerCharacters = (e: React.MouseEvent, userId: string | null | undefined) => {
+        e.stopPropagation();
+        const u = userId?.trim();
+        if (u) navigate(`/player/${u}/characters`);
+    };
+
+    const renderAuthorAvatar = (
+        userId: string | null,
+        src: string | null | undefined,
+        opts: { alignSelfEnd?: boolean },
+    ) => {
+        const align = opts.alignSelfEnd ? 'self-end' : '';
+        const face = src ? (
+            <img
+                src={src}
+                alt=""
+                className={`shrink-0 rounded-full object-cover ${align}`}
+                style={{ width: avatarSize, height: avatarSize }}
+            />
+        ) : (
+            <div
+                className={`flex shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a] ${align}`}
+                style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
+            >
+                ?
+            </div>
+        );
+        if (!userId?.trim()) return face;
+        return (
+            <button
+                type="button"
+                title="Персонажи игрока"
+                className={`rounded-full border-0 bg-transparent p-0 shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c2a774]/45 ${align}`}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => goPlayerCharacters(e, userId)}
+            >
+                {face}
+            </button>
+        );
+    };
+
     return (
         <article
             id={messageDomId}
             ref={rootRef}
             className="relative w-full min-w-0"
             style={{ paddingTop: `${4 * s}px` }}
-            role="button"
-            tabIndex={0}
-            onClick={(e) => openMessageMenu(e.clientX, e.clientY)}
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    if (rootRef.current) {
-                        const rect = rootRef.current.getBoundingClientRect();
-                        openMessageMenu(rect.left + rect.width / 2, rect.top + 8);
-                    }
-                }
-            }}
         >
             <div className="flex w-full min-w-0 flex-col" style={{ gap: `${6 * s}px` }}>
                 {leadWithAction ? (
@@ -347,21 +404,7 @@ export const SceneMessageItem = ({
                             className={`flex max-w-[88%] items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                             style={{ gap: `${8 * s}px` }}
                         >
-                            {avatar ? (
-                                <img
-                                    src={avatar}
-                                    alt=""
-                                    className="shrink-0 rounded-full object-cover"
-                                    style={{ width: avatarSize, height: avatarSize }}
-                                />
-                            ) : (
-                                <div
-                                    className="flex shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
-                                    style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
-                                >
-                                    ?
-                                </div>
-                            )}
+                            {renderAuthorAvatar(messageAuthorUserId, avatar, {})}
                             <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
                                 {item.replyTo ? (
                                     <div
@@ -380,14 +423,28 @@ export const SceneMessageItem = ({
                                     className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                                     style={{ gap: `${6 * s}px` }}
                                 >
-                                    <p
-                                        className={`m-0 truncate font-semibold ${
-                                            isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
-                                        }`}
-                                        style={{ fontSize: `${10 * fontScale}px` }}
-                                    >
-                                        {highlightText(authorName, highlightQuery)}
-                                    </p>
+                                    {messageAuthorUserId ? (
+                                        <button
+                                            type="button"
+                                            title="Персонажи игрока"
+                                            className={`m-0 max-w-full truncate border-0 bg-transparent p-0 text-left font-semibold shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c2a774]/45 ${
+                                                isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
+                                            }`}
+                                            style={{ fontSize: `${10 * fontScale}px`, cursor: 'pointer' }}
+                                            onClick={(e) => goPlayerCharacters(e, messageAuthorUserId)}
+                                        >
+                                            {highlightText(authorName, highlightQuery)}
+                                        </button>
+                                    ) : (
+                                        <p
+                                            className={`m-0 truncate font-semibold ${
+                                                isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
+                                            }`}
+                                            style={{ fontSize: `${10 * fontScale}px` }}
+                                        >
+                                            {highlightText(authorName, highlightQuery)}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -398,8 +455,13 @@ export const SceneMessageItem = ({
                         return (
                             <div key={`a-${ri}`} className="flex w-full min-w-0 justify-center py-0.5">
                                 <div
-                                    className="max-w-[min(92%,520px)] rounded-full border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-center text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px]"
+                                    role="button"
+                                    tabIndex={0}
+                                    data-scene-msg-hit=""
+                                    className={`max-w-[min(92%,520px)] rounded-full border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-center text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px] ${bubbleInteractiveClass}`}
                                     style={{ fontSize: `${14 * fontScale}px`, lineHeight: 1.35 }}
+                                    onClick={openMenuFromEvent}
+                                    onKeyDown={openMenuFromKeyboard}
                                 >
                                     <span className="whitespace-pre-wrap leading-snug">
                                         {highlightText(run.text, highlightQuery)}
@@ -417,6 +479,7 @@ export const SceneMessageItem = ({
                         : null;
                     const inlineSpeakerName = resolvedInlineSpeaker?.name ?? run.inlineSpeaker ?? '';
                     const inlineSpeakerAvatar = resolvedInlineSpeaker?.avatar ?? null;
+                    const inlineSpeakerUserId = resolvedInlineSpeaker?.userId ?? null;
 
                     const renderContentBubbles = (
                         unitList: Extract<MessageUnit, { kind: 'content' }>[],
@@ -427,7 +490,16 @@ export const SceneMessageItem = ({
                             const prependSpeech = item.message.type === 'speech' && chunkIx === 0;
 
                             return (
-                                <div key={`c-${runIndex}-${uidx}`} className={bubbleClass} style={bubbleStyle}>
+                                <div
+                                    key={`c-${runIndex}-${uidx}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    data-scene-msg-hit=""
+                                    className={`${bubbleClass} ${bubbleInteractiveClass}`}
+                                    style={bubbleStyle}
+                                    onClick={openMenuFromEvent}
+                                    onKeyDown={openMenuFromKeyboard}
+                                >
                                     <p
                                         className="m-0 leading-snug"
                                         style={{
@@ -471,25 +543,9 @@ export const SceneMessageItem = ({
                                     className={`flex max-w-[88%] min-w-0 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                                     style={{ gap: `${8 * s}px` }}
                                 >
-                                    {inlineSpeakerAvatar ? (
-                                        <img
-                                            src={inlineSpeakerAvatar}
-                                            alt=""
-                                            className="shrink-0 self-end rounded-full object-cover"
-                                            style={{ width: avatarSize, height: avatarSize }}
-                                        />
-                                    ) : (
-                                        <div
-                                            className="flex shrink-0 self-end items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
-                                            style={{
-                                                width: avatarSize,
-                                                height: avatarSize,
-                                                fontSize: `${12 * s}px`,
-                                            }}
-                                        >
-                                            ?
-                                        </div>
-                                    )}
+                                    {renderAuthorAvatar(inlineSpeakerUserId, inlineSpeakerAvatar, {
+                                        alignSelfEnd: true,
+                                    })}
                                     <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
                                         {isFirstContentRun && item.replyTo ? (
                                             <div
@@ -508,16 +564,32 @@ export const SceneMessageItem = ({
                                             className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                                             style={{ gap: `${6 * s}px` }}
                                         >
-                                            <p
-                                                className={`m-0 truncate font-semibold ${
-                                                    isOwn
-                                                        ? 'text-right text-[#d8d1b2]'
-                                                        : 'text-left text-[#c7bc98]'
-                                                }`}
-                                                style={{ fontSize: `${10 * fontScale}px` }}
-                                            >
-                                                {highlightText(inlineSpeakerName, highlightQuery)}
-                                            </p>
+                                            {inlineSpeakerUserId ? (
+                                                <button
+                                                    type="button"
+                                                    title="Персонажи игрока"
+                                                    className={`m-0 max-w-full truncate border-0 bg-transparent p-0 text-left font-semibold shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c2a774]/45 ${
+                                                        isOwn
+                                                            ? 'text-right text-[#d8d1b2]'
+                                                            : 'text-left text-[#c7bc98]'
+                                                    }`}
+                                                    style={{ fontSize: `${10 * fontScale}px`, cursor: 'pointer' }}
+                                                    onClick={(e) => goPlayerCharacters(e, inlineSpeakerUserId)}
+                                                >
+                                                    {highlightText(inlineSpeakerName, highlightQuery)}
+                                                </button>
+                                            ) : (
+                                                <p
+                                                    className={`m-0 truncate font-semibold ${
+                                                        isOwn
+                                                            ? 'text-right text-[#d8d1b2]'
+                                                            : 'text-left text-[#c7bc98]'
+                                                    }`}
+                                                    style={{ fontSize: `${10 * fontScale}px` }}
+                                                >
+                                                    {highlightText(inlineSpeakerName, highlightQuery)}
+                                                </p>
+                                            )}
                                         </div>
                                         {renderContentBubbles(run.chunks, ri)}
                                     </div>
@@ -536,21 +608,7 @@ export const SceneMessageItem = ({
                                 style={{ gap: `${8 * s}px` }}
                             >
                                 {useAvatarImage ? (
-                                    avatar ? (
-                                        <img
-                                            src={avatar}
-                                            alt=""
-                                            className="shrink-0 self-end rounded-full object-cover"
-                                            style={{ width: avatarSize, height: avatarSize }}
-                                        />
-                                    ) : (
-                                        <div
-                                            className="flex shrink-0 self-end items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
-                                            style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
-                                        >
-                                            ?
-                                        </div>
-                                    )
+                                    renderAuthorAvatar(messageAuthorUserId, avatar, { alignSelfEnd: true })
                                 ) : (
                                     <div className="shrink-0 self-end" style={{ width: avatarSize }} aria-hidden />
                                 )}
@@ -573,14 +631,30 @@ export const SceneMessageItem = ({
                                             className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                                             style={{ gap: `${6 * s}px` }}
                                         >
-                                            <p
-                                                className={`m-0 truncate font-semibold ${
-                                                    isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
-                                                }`}
-                                                style={{ fontSize: `${10 * fontScale}px` }}
-                                            >
-                                                {highlightText(authorName, highlightQuery)}
-                                            </p>
+                                            {messageAuthorUserId ? (
+                                                <button
+                                                    type="button"
+                                                    title="Персонажи игрока"
+                                                    className={`m-0 max-w-full truncate border-0 bg-transparent p-0 text-left font-semibold shadow-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c2a774]/45 ${
+                                                        isOwn
+                                                            ? 'text-right text-[#d8d1b2]'
+                                                            : 'text-left text-[#c7bc98]'
+                                                    }`}
+                                                    style={{ fontSize: `${10 * fontScale}px`, cursor: 'pointer' }}
+                                                    onClick={(e) => goPlayerCharacters(e, messageAuthorUserId)}
+                                                >
+                                                    {highlightText(authorName, highlightQuery)}
+                                                </button>
+                                            ) : (
+                                                <p
+                                                    className={`m-0 truncate font-semibold ${
+                                                        isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
+                                                    }`}
+                                                    style={{ fontSize: `${10 * fontScale}px` }}
+                                                >
+                                                    {highlightText(authorName, highlightQuery)}
+                                                </p>
+                                            )}
                                         </div>
                                     ) : null}
                                     {renderContentBubbles(run.chunks, ri)}

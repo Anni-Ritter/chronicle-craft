@@ -459,28 +459,82 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             return [];
         }
 
-        let charactersQuery = supabase
-            .from('characters')
-            .select('id, user_id, name, avatar, created_at, world_id')
-            .order('name', { ascending: true });
-
         const effectiveWorldId = worldIdOverride !== undefined ? worldIdOverride : (spaceRow?.world_id ?? null);
 
-        if (effectiveWorldId) {
-            charactersQuery = charactersQuery.eq('world_id', effectiveWorldId);
-        }
+        type CharRow = {
+            id: string;
+            user_id: string;
+            name: string;
+            avatar: string | null;
+            created_at: string | null;
+            world_id: string | null;
+        };
 
-        const { data: charactersData, error: charactersError } = await charactersQuery;
-        if (charactersError) {
-            set({ error: charactersError.message });
+        const byId = new Map<string, CharRow>();
+
+        const mergeRows = (rows: CharRow[] | null) => {
+            for (const row of rows ?? []) {
+                if (row?.id) byId.set(row.id, row);
+            }
+        };
+
+        const { data: linkRows, error: linkError } = await supabase
+            .from('roleplay_space_characters')
+            .select('character_id')
+            .eq('space_id', spaceId);
+
+        if (linkError) {
+            set({ error: linkError.message });
             return [];
         }
 
+        const linkedIds = Array.from(
+            new Set((linkRows ?? []).map((row) => row.character_id).filter(Boolean)),
+        ) as string[];
+
+        if (linkedIds.length > 0) {
+            const { data: linkedChars, error: linkedErr } = await supabase
+                .from('characters')
+                .select('id, user_id, name, avatar, created_at, world_id')
+                .in('id', linkedIds);
+            if (linkedErr) {
+                set({ error: linkedErr.message });
+                return [];
+            }
+            mergeRows(linkedChars as CharRow[]);
+        }
+
+        if (effectiveWorldId) {
+            const { data: worldChars, error: worldErr } = await supabase
+                .from('characters')
+                .select('id, user_id, name, avatar, created_at, world_id')
+                .eq('world_id', effectiveWorldId);
+            if (worldErr) {
+                set({ error: worldErr.message });
+                return [];
+            }
+            mergeRows(worldChars as CharRow[]);
+        } else {
+            const { data: allChars, error: allErr } = await supabase
+                .from('characters')
+                .select('id, user_id, name, avatar, created_at, world_id')
+                .order('name', { ascending: true });
+            if (allErr) {
+                set({ error: allErr.message });
+                return [];
+            }
+            mergeRows(allChars as CharRow[]);
+        }
+
+        const charactersData = Array.from(byId.values()).sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }),
+        );
+
         const ownerIds = Array.from(new Set((charactersData ?? []).map((character) => character.user_id)));
-        const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .in('id', ownerIds);
+        const { data: profilesData } =
+            ownerIds.length > 0
+                ? await supabase.from('profiles').select('id, username, avatar_url').in('id', ownerIds)
+                : { data: [] as { id: string; username: string; avatar_url: string | null }[] };
         const profilesMap = new Map((profilesData ?? []).map((profile) => [profile.id, profile]));
 
         const characters = (charactersData ?? []).map((rowCharacter) => {

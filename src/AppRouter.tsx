@@ -1,4 +1,4 @@
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation, Navigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useRelationshipStore } from './store/useRelationshipStore';
@@ -14,6 +14,7 @@ import { ChronicleDetailPage } from './pages/Chronicle/ChronicleDetailPage';
 import { MapListPage } from './pages/Map/MapListPage';
 import { WorldMapPage } from './pages/Map/WorldMapPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { PlayerCharactersPage } from './pages/PlayerCharactersPage';
 import { WorldsPage } from './pages/World/WorldsPage';
 import { WorldDetailsPage } from './pages/World/WorldDetailsPage';
 import { RoleplaySpacesPage } from './pages/Roleplay/RoleplaySpacesPage';
@@ -23,6 +24,12 @@ import { RoleplayScenePage } from './pages/Roleplay/RoleplayScenePage';
 interface AppRouterProps {
     onLoginClick: () => void;
 }
+
+const LegacyUserProfileRedirect = () => {
+    const { userId } = useParams<{ userId: string }>();
+    if (!userId) return <Navigate to="/" replace />;
+    return <Navigate to={`/player/${userId}/characters`} replace />;
+};
 
 const pageVariants: Variants = {
     initial: { opacity: 0, y: 18 },
@@ -86,6 +93,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
                     <Route path="/maps" element={<MapListPage />} />
                     <Route path="/maps/:mapId" element={<WorldMapPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/user/:userId" element={<LegacyUserProfileRedirect />} />
+                    <Route path="/player/:userId/characters" element={<PlayerCharactersPage />} />
                     <Route path="/worlds" element={<WorldsPage />} />
                     <Route path="/worlds/:id" element={<WorldDetailsPage />} />
                     <Route path="/roleplay" element={<RoleplaySpacesPage />} />
