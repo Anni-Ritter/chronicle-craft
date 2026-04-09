@@ -533,7 +533,7 @@ export const RoleplayScenePage = () => {
             </Modal>
 
             <section
-                className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#2f3a34] bg-[#0d120f]/85 p-2 md:p-2.5"
+                className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#2f3a34] bg-[#0d120f]/80 p-2 md:p-2.5"
                 style={
                     sceneBackgroundImage
                         ? {
@@ -544,7 +544,7 @@ export const RoleplayScenePage = () => {
                         : undefined
                 }
             >
-                {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/85" />}
+                {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/77" />}
                 <div
                     ref={messagesContainerRef}
                     onScroll={updateNearChatBottom}
