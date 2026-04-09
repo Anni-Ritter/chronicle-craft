@@ -116,6 +116,12 @@ interface RoleplayState {
         action: 'accept' | 'decline',
         supabase: SupabaseClient
     ) => Promise<boolean>;
+    updateRoleplayMemberRole: (
+        spaceId: string,
+        targetUserId: string,
+        role: RoleplayMemberRole,
+        supabase: SupabaseClient
+    ) => Promise<boolean>;
     createRoleplaySpace: (input: CreateRoleplaySpaceInput, userId: string, supabase: SupabaseClient) => Promise<RoleplaySpace | null>;
     updateRoleplaySpace: (spaceId: string, input: Partial<CreateRoleplaySpaceInput>, supabase: SupabaseClient) => Promise<RoleplaySpace | null>;
     deleteRoleplaySpace: (spaceId: string, userId: string, supabase: SupabaseClient) => Promise<boolean>;
@@ -291,6 +297,20 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             set({ error: error.message });
             return false;
         }
+        return true;
+    },
+
+    updateRoleplayMemberRole: async (spaceId, targetUserId, role, supabase) => {
+        const { error } = await supabase
+            .from('roleplay_space_members')
+            .update({ role })
+            .eq('space_id', spaceId)
+            .eq('user_id', targetUserId);
+        if (error) {
+            set({ error: error.message });
+            return false;
+        }
+        await get().getRoleplaySpaceMembers(spaceId, supabase);
         return true;
     },
 

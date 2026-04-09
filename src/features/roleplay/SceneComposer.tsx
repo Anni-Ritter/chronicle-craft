@@ -93,7 +93,7 @@ export const SceneComposer = ({
             <button
                 type="button"
                 onClick={() => setIsHelpOpen(true)}
-                className={`absolute right-14 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0] ${
+                className={`absolute right-14 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0] ${
                     replyToMessageId ? 'top-10' : 'top-3'
                 }`}
                 aria-label="Подсказка по формату"
@@ -109,7 +109,7 @@ export const SceneComposer = ({
                     </button>
                 </div>
             )}
-            <div className="mt-1 flex items-end gap-2">
+            <div className="relative mt-1 flex items-end gap-2">
                 <textarea
                     ref={textareaRef}
                     value={content}
@@ -154,9 +154,8 @@ export const SceneComposer = ({
                 >
                     <span className="hidden md:inline">{isSending ? 'Отправка...' : 'Отправить'}</span>
                 </Button>
-            </div>
-            {(mentionState?.suggestions.length ?? 0) > 0 && (
-                <div className="mt-1 rounded-lg bg-[#0d130f]/95 p-1">
+                {(mentionState?.suggestions.length ?? 0) > 0 && (
+                <div className="absolute bottom-full left-0 right-0 z-20 mb-2 rounded-lg border border-[#2f3a34] bg-[#0d130f] p-1 shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
                     <p className="px-2 py-1 text-[11px] text-[#9fa68a]">Подсказки персонажей</p>
                     <div className="max-h-40 overflow-y-auto">
                         {mentionState!.suggestions.map((item, index) => (
@@ -178,7 +177,8 @@ export const SceneComposer = ({
                         ))}
                     </div>
                 </div>
-            )}
+                )}
+            </div>
             <Modal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)}>
                 <div className="space-y-4">
                     <h3 className="text-2xl font-garamond text-[#e5d9a5]">Подсказка по формату</h3>

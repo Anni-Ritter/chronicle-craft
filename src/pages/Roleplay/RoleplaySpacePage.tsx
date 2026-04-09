@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { ArrowLeft, CirclePlus, DoorOpen, Pencil, Trash2, UserPlus, Users } from 'lucide-react';
+import { ArrowLeft, CirclePlus, DoorOpen, EllipsisVertical, Pencil, Trash2, Users } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
@@ -26,6 +26,9 @@ export const RoleplaySpacePage = () => {
     const [isDeleteSceneModalOpen, setDeleteSceneModalOpen] = useState(false);
     const [isDeleteSpaceModalOpen, setDeleteSpaceModalOpen] = useState(false);
     const [isInviteModalOpen, setInviteModalOpen] = useState(false);
+    const [isHeaderMenuOpen, setHeaderMenuOpen] = useState(false);
+    const [isMembersModalOpen, setMembersModalOpen] = useState(false);
+    const [roleUpdatingUserId, setRoleUpdatingUserId] = useState<string | null>(null);
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteSubmitting, setInviteSubmitting] = useState(false);
@@ -41,6 +44,7 @@ export const RoleplaySpacePage = () => {
         getRoleplaySpaceMembers,
         getRoleplaySpaceCharacters,
         inviteUserToRoleplaySpace,
+        updateRoleplayMemberRole,
         getRoleplayScenesBySpace,
         createRoleplayScene,
         updateRoleplayScene,
@@ -96,58 +100,67 @@ export const RoleplaySpacePage = () => {
                             >
                                 <ArrowLeft size={18} />
                             </button>
-                            <h1 className="text-3xl md:text-4xl font-garamond text-[#f4ecd0]">{spaceTitle}</h1>
+                            <button
+                                type="button"
+                                onClick={() => setMembersModalOpen(true)}
+                                className="text-left"
+                            >
+                                <h1 className="text-3xl md:text-4xl font-garamond text-[#f4ecd0]">{spaceTitle}</h1>
+                            </button>
                         </div>
                         <p className="mt-2 text-[#c7bc98]">{spaceDescription || 'Без описания'}</p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="relative">
                         <button
                             type="button"
-                            onClick={() => setEditSpaceModalOpen(true)}
-                            className="rounded-lg border border-[#3a4a34] p-2 text-[#c7bc98] hover:border-[#c2a774] hover:text-[#e5d9a5]"
-                            aria-label="Редактировать пространство"
+                            onClick={() => setHeaderMenuOpen((v) => !v)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#2f3a34] text-[#c7bc98] hover:border-[#c2a77466] hover:text-[#e5d9a5]"
+                            aria-label="Меню пространства"
                         >
-                            <Pencil size={16} />
+                            <EllipsisVertical size={16} />
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setDeleteSpaceModalOpen(true)}
-                            className="rounded-lg border border-[#513434] p-2 text-[#e29a9a] hover:border-[#d76f6f] hover:text-[#ffd0d0]"
-                            aria-label="Удалить пространство"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl border border-[#2f3a34] bg-[#111712]/85 p-3">
-                    <div className="mb-3 flex items-center justify-between gap-2">
-                        <h2 className="flex items-center gap-2 whitespace-nowrap text-xl md:text-2xl font-garamond text-[#e5d9a5]">
-                            <Users className="h-5 w-5 text-[#c2a774]" /> Участники
-                        </h2>
-                        <Button
-                            variant="outline"
-                            icon={<UserPlus size={16} />}
-                            className="!text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
-                            onClick={() => setInviteModalOpen(true)}
-                        >
-                            Пригласить
-                        </Button>
-                    </div>
-                    <div className="space-y-2">
-                        {members.map((member) => (
-                            <div key={member.member.id} className="rounded-lg border border-[#2d3a2f] bg-[#151f16]/85 p-2.5 text-sm">
-                                <p className="text-[#f3e7c8]">{member.profile?.username || member.member.user_id}</p>
-                                <p className="text-[#c7bc98]">{member.member.role} · {member.member.status}</p>
+                        {isHeaderMenuOpen && (
+                            <div className="absolute right-0 top-10 z-20 min-w-[220px] rounded-lg border border-[#2f3a34] bg-[#0d130f] p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.45)]">
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                                    onClick={() => {
+                                        setInviteModalOpen(true);
+                                        setHeaderMenuOpen(false);
+                                    }}
+                                >
+                                    <Users size={16} />
+                                    <span>Пригласить участника</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                                    onClick={() => {
+                                        setEditSpaceModalOpen(true);
+                                        setHeaderMenuOpen(false);
+                                    }}
+                                >
+                                    <Pencil size={16} />
+                                    <span>Редактировать</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#e7b0b0] transition hover:bg-[#d76f6f]/10 hover:text-[#ffd0d0]"
+                                    onClick={() => {
+                                        setDeleteSpaceModalOpen(true);
+                                        setHeaderMenuOpen(false);
+                                    }}
+                                >
+                                    <Trash2 size={16} />
+                                    <span>Удалить</span>
+                                </button>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
             </section>
 
-            <section className="rounded-xl border border-[#2f3a34] bg-[#111712]/85 p-3">
+            <section className="rounded-lg border border-[#2d3a2f]/60 bg-[#111712]/55 p-2.5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                     <h2 className="whitespace-nowrap text-xl md:text-2xl font-garamond text-[#e5d9a5]">Сцены</h2>
                     <Button
@@ -160,14 +173,14 @@ export const RoleplaySpacePage = () => {
                 </div>
                 <div className="space-y-2">
                     {scenes.length === 0 && (
-                        <div className="rounded-lg border border-dashed border-[#3a4a34] bg-[#151f16]/80 p-3 text-[#c7bc98]">
+                        <div className="py-2 text-[#c7bc98]">
                             Сцен пока нет.
                         </div>
                     )}
                     {scenes.map((scene) => (
                         <div
                             key={scene.id}
-                            className="w-full rounded-lg border border-[#2d3a2f] bg-[#151f16]/85 p-2.5 text-left hover:border-[#c2a77488]"
+                            className="w-full border-t border-[#2d3a2f]/50 py-2.5 text-left transition hover:bg-[#ffffff08]"
                             role="button"
                             tabIndex={0}
                             onClick={() => navigate(`/roleplay/${spaceId}/scenes/${scene.id}`)}
@@ -223,7 +236,7 @@ export const RoleplaySpacePage = () => {
                                 </div>
                             </div>
                             {scene.background_image && (
-                                <img src={scene.background_image} alt="" className="mt-2 h-24 w-full rounded-lg object-cover" />
+                                <img src={scene.background_image} alt="" className="mt-2 h-20 w-full rounded-md object-cover opacity-90" />
                             )}
                         </div>
                     ))}
@@ -377,6 +390,49 @@ export const RoleplaySpacePage = () => {
                     >
                         {inviteSubmitting ? 'Отправка...' : 'Отправить приглашение'}
                     </Button>
+                </div>
+            </Modal>
+            <Modal isOpen={isMembersModalOpen} onClose={() => setMembersModalOpen(false)}>
+                <div className="space-y-4">
+                    <h3 className="text-2xl font-garamond text-[#e5d9a5]">Участники пространства</h3>
+                    <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                        {members.map((member) => {
+                            const name = member.profile?.username || member.member.user_id;
+                            const avatar = member.profile?.avatar_url;
+                            const isOwner = member.member.role === 'owner';
+                            const isUpdating = roleUpdatingUserId === member.member.user_id;
+                            return (
+                                <div key={member.member.id} className="flex items-center gap-3 rounded-lg border border-[#2d3a2f]/60 bg-[#101712] p-2.5">
+                                    {avatar ? (
+                                        <img src={avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a231d] text-xs text-[#9fa68a]">
+                                            ?
+                                        </div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[#f3e7c8]">{name}</p>
+                                        <p className="text-xs text-[#c7bc98]">{member.member.status}</p>
+                                    </div>
+                                    <select
+                                        value={member.member.role}
+                                        disabled={isOwner || isUpdating}
+                                        onChange={async (e) => {
+                                            const nextRole = e.target.value as 'owner' | 'member';
+                                            if (nextRole === member.member.role) return;
+                                            setRoleUpdatingUserId(member.member.user_id);
+                                            await updateRoleplayMemberRole(spaceId, member.member.user_id, nextRole, supabase);
+                                            setRoleUpdatingUserId(null);
+                                        }}
+                                        className="rounded-md border border-[#3a4a34] bg-[#0e1b12]/80 px-2 py-1 text-sm text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none disabled:opacity-50"
+                                    >
+                                        <option value="owner">owner</option>
+                                        <option value="member">member</option>
+                                    </select>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             </Modal>
             {statusMessage && (
