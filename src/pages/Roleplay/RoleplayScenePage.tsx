@@ -243,6 +243,7 @@ export const RoleplayScenePage = () => {
                             // либо к явно указанному @персонажу (если это ваш персонаж).
                             const effectiveCharacterId = parsed.characterId ?? current?.message.character_id ?? null;
                             let emotionId: string | null = null;
+                            let emotionMeta: Record<string, unknown> = {};
                             if (effectiveCharacterId && parsed.emotionName) {
                                 const emotions = await getCharacterEmotions(effectiveCharacterId, supabase);
                                 const normalizedEmotionName = normalizeEmotion(parsed.emotionName);
@@ -250,6 +251,17 @@ export const RoleplayScenePage = () => {
                                     (emotion) => normalizeEmotion(emotion.name) === normalizedEmotionName
                                 );
                                 emotionId = matchedEmotion?.id ?? null;
+                                if (matchedEmotion) {
+                                    emotionMeta = {
+                                        emotion_snapshot: {
+                                            id: matchedEmotion.id,
+                                            character_id: matchedEmotion.character_id,
+                                            name: matchedEmotion.name,
+                                            image_url: matchedEmotion.image_url,
+                                            thumbnail_url: matchedEmotion.thumbnail_url,
+                                        },
+                                    };
+                                }
                             }
 
                             await updateSceneMessage(
@@ -258,7 +270,7 @@ export const RoleplayScenePage = () => {
                                     content: parsed.content,
                                     edited: true,
                                     emotion_id: emotionId,
-                                    metadata: {},
+                                    metadata: emotionMeta,
                                 },
                                 supabase
                             );
@@ -275,6 +287,7 @@ export const RoleplayScenePage = () => {
                             }
                             const messageType = detectMessageType(parsed.content, !!parsed.characterId);
                             let emotionId: string | null = null;
+                            let emotionMeta: Record<string, unknown> = {};
                             if (parsed.characterId && parsed.emotionName) {
                                 const emotions = await getCharacterEmotions(parsed.characterId, supabase);
                                 const normalizeEmotion = (value: string) =>
@@ -287,6 +300,17 @@ export const RoleplayScenePage = () => {
                                     (emotion) => normalizeEmotion(emotion.name) === normalizedEmotionName
                                 );
                                 emotionId = matchedEmotion?.id ?? null;
+                                if (matchedEmotion) {
+                                    emotionMeta = {
+                                        emotion_snapshot: {
+                                            id: matchedEmotion.id,
+                                            character_id: matchedEmotion.character_id,
+                                            name: matchedEmotion.name,
+                                            image_url: matchedEmotion.image_url,
+                                            thumbnail_url: matchedEmotion.thumbnail_url,
+                                        },
+                                    };
+                                }
                             }
                             await createSceneMessage(
                                 {
@@ -297,7 +321,7 @@ export const RoleplayScenePage = () => {
                                     type: messageType,
                                     content: parsed.content,
                                     reply_to_message_id,
-                                    metadata: {},
+                                    metadata: emotionMeta,
                                 },
                                 supabase
                             );

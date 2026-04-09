@@ -765,6 +765,15 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             const rowProfile = profilesMap.get(row.user_id) ?? null;
             const rowCharacter = row.character_id ? charactersMap.get(row.character_id) ?? null : null;
             const rowEmotion = row.emotion_id ? emotionsMap.get(row.emotion_id) ?? null : null;
+            const emotionSnapshot = (row.metadata as Record<string, unknown> | null)?.emotion_snapshot as
+                | {
+                      id?: string;
+                      character_id?: string;
+                      name?: string;
+                      image_url?: string | null;
+                      thumbnail_url?: string | null;
+                  }
+                | undefined;
             return {
             message: {
                 id: row.id,
@@ -806,7 +815,18 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
                     is_default: !!rowEmotion.is_default,
                     created_at: rowEmotion.created_at,
                 }
-                : null,
+                : emotionSnapshot?.id
+                    ? {
+                        id: emotionSnapshot.id,
+                        character_id: emotionSnapshot.character_id ?? row.character_id ?? '',
+                        name: emotionSnapshot.name ?? 'Эмоция',
+                        image_url: emotionSnapshot.image_url ?? null,
+                        thumbnail_url: emotionSnapshot.thumbnail_url ?? null,
+                        sort_order: 0,
+                        is_default: false,
+                        created_at: row.created_at,
+                    }
+                    : null,
         };
         });
 
