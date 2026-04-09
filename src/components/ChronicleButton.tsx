@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 import classNames from 'classnames';
 import { twMerge } from 'tailwind-merge';
 
@@ -7,6 +7,7 @@ interface ButtonProps {
     children?: ReactNode;
     icon?: ReactNode;
     className?: string;
+    style?: CSSProperties;
     title?: string;
     type?: 'button' | 'submit' | 'reset';
     variant?: 'default' | 'danger' | 'outline' | 'ghost';
@@ -17,6 +18,7 @@ export const Button = ({
     children,
     icon,
     className,
+    style,
     title,
     type = 'button',
     variant = 'default',
@@ -52,6 +54,7 @@ export const Button = ({
             type={type}
             title={title}
             onClick={onClick}
+            style={style}
             className={twMerge(classNames(
                 base,
                 isIconOnly ? iconVariants[variant] : withTextVariants[variant],

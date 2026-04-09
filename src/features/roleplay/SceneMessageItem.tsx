@@ -10,6 +10,8 @@ interface SceneMessageItemProps {
     isOwn: boolean;
     canManage: boolean;
     onDelete: (messageId: string) => Promise<void>;
+    /** Масштаб текста сообщений (1 = по умолчанию) */
+    fontScale?: number;
 }
 
 const typeLabels: Record<SceneMessageView['message']['type'], string> = {
@@ -42,13 +44,26 @@ const parseFormattedSegments = (content: string) => {
     });
 };
 
-export const SceneMessageItem = ({ item, onReply, onStartEdit, isOwn, canManage, onDelete }: SceneMessageItemProps) => {
+export const SceneMessageItem = ({
+    item,
+    onReply,
+    onStartEdit,
+    isOwn,
+    canManage,
+    onDelete,
+    fontScale = 1,
+}: SceneMessageItemProps) => {
     const rootRef = useRef<HTMLElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const avatar = item.emotion?.image_url || item.character?.avatar || item.author?.avatar_url;
     const authorName = item.character?.name || item.author?.username || 'Система';
     const segments = parseFormattedSegments(item.message.content);
     const speechPrefix = item.message.type === 'speech' ? '- ' : '';
+    const s = fontScale;
+    const bubblePadX = 12 * s;
+    const bubblePadY = 10 * s;
+    const bubbleRadius = Math.min(18, Math.max(10, Math.round(12 * s)));
+    const avatarSize = Math.min(44, Math.max(26, Math.round(32 * s)));
     const [isActionsOpen, setIsActionsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -70,23 +85,45 @@ export const SceneMessageItem = ({ item, onReply, onStartEdit, isOwn, canManage,
     }, [isActionsOpen]);
 
     return (
-        <article ref={rootRef} className={`relative flex ${isOwn ? 'justify-end' : 'justify-start'} pt-1`}>
-            <div className={`flex max-w-[88%] items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+        <article
+            ref={rootRef}
+            className={`relative flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+            style={{ paddingTop: `${4 * s}px` }}
+        >
+            <div
+                className={`flex max-w-[88%] items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                style={{ gap: `${8 * s}px` }}
+            >
                 {avatar ? (
-                    <img src={avatar} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
+                    <img
+                        src={avatar}
+                        alt=""
+                        className="shrink-0 rounded-full object-cover"
+                        style={{ width: avatarSize, height: avatarSize }}
+                    />
                 ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-xs text-[#9fa68a]">
+                    <div
+                        className="flex shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
+                        style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
+                    >
                         ?
                     </div>
                 )}
 
                 <div className="min-w-0">
                     <div
-                        className={`rounded-xl border px-3 py-2.5 text-[#f1e7c6] ${
+                        className={`border text-[#f1e7c6] ${
                             isOwn
                                 ? 'border-[#3a4a34] bg-[#1a2619] shadow-[0_6px_20px_rgba(0,0,0,0.25)]'
                                 : 'border-[#2d3a34] bg-[#0f1511] shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
                         }`}
+                        style={{
+                            paddingLeft: bubblePadX,
+                            paddingRight: bubblePadX,
+                            paddingTop: bubblePadY,
+                            paddingBottom: bubblePadY,
+                            borderRadius: `${bubbleRadius}px`,
+                        }}
                         role="button"
                         tabIndex={0}
                         onClick={(e) => {
@@ -127,21 +164,45 @@ export const SceneMessageItem = ({ item, onReply, onStartEdit, isOwn, canManage,
                         }}
                     >
             {item.replyTo && (
-                <div className="mb-2 border-l-2 border-[#5b5b5b] pl-2 text-xs text-[#c7bc98]">
+                <div
+                    className="border-[#5b5b5b] text-[#c7bc98]"
+                    style={{
+                        fontSize: `${12 * fontScale}px`,
+                        marginBottom: `${8 * s}px`,
+                        paddingLeft: `${8 * s}px`,
+                        borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                        borderLeftStyle: 'solid',
+                    }}
+                >
                     Ответ на: {item.replyTo.content.slice(0, 80)}
                 </div>
             )}
-            <div className={`mb-2 flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
-                <p className={`truncate text-xs font-semibold ${isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'}`}>
+            <div
+                className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                style={{ marginBottom: `${8 * s}px`, gap: `${8 * s}px` }}
+            >
+                <p
+                    className={`truncate font-semibold ${isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'}`}
+                    style={{ fontSize: `${12 * fontScale}px` }}
+                >
                     {authorName}
                 </p>
                 {item.message.type === 'system' && (
-                    <span className="rounded-full border border-[#5a5a5a] bg-black/20 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#c7bc98]">
+                    <span
+                        className="rounded-full border border-[#5a5a5a] bg-black/20 uppercase tracking-wide text-[#c7bc98]"
+                        style={{
+                            fontSize: `${10 * fontScale}px`,
+                            paddingLeft: `${8 * s}px`,
+                            paddingRight: `${8 * s}px`,
+                            paddingTop: `${4 * s}px`,
+                            paddingBottom: `${4 * s}px`,
+                        }}
+                    >
                         {typeLabels[item.message.type]}
                     </span>
                 )}
             </div>
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
+            <p className="whitespace-pre-wrap leading-relaxed" style={{ fontSize: `${15 * fontScale}px` }}>
                 {speechPrefix}
                 {segments.map((segment, idx) => {
                     if (segment.type === 'action') {
@@ -161,7 +222,7 @@ export const SceneMessageItem = ({ item, onReply, onStartEdit, isOwn, canManage,
                     return <span key={idx}>{segment.text}</span>;
                 })}
             </p>
-            <p className="mt-2 text-right text-[11px] opacity-75">
+            <p className="text-right opacity-75" style={{ fontSize: `${11 * fontScale}px`, marginTop: `${8 * s}px` }}>
                 {new Date(item.message.created_at).toLocaleString()}
                 {item.message.edited ? ' · изменено' : ''}
             </p>

@@ -16,6 +16,8 @@ interface SceneComposerProps {
     editInitialContent: string;
     onCancelEdit: () => void;
     onSaveEdit: (messageId: string, content: string) => Promise<void>;
+    /** Масштаб шрифта в поле ввода (как в сообщениях) */
+    fontScale?: number;
 }
 
 export const SceneComposer = ({
@@ -27,6 +29,7 @@ export const SceneComposer = ({
     editInitialContent,
     onCancelEdit,
     onSaveEdit,
+    fontScale = 1,
 }: SceneComposerProps) => {
     const [content, setContent] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -36,6 +39,7 @@ export const SceneComposer = ({
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const canSubmit = content.trim().length > 0;
     const isEditMode = !!editMessageId;
+    const s = fontScale;
 
     useEffect(() => {
         if (editMessageId) {
@@ -112,7 +116,11 @@ export const SceneComposer = ({
     };
 
     return (
-        <form onSubmit={handleSubmit} className="relative rounded-xl bg-[#0a0f0c]/70 p-2.5">
+        <form
+            onSubmit={handleSubmit}
+            className="relative rounded-xl bg-[#0a0f0c]/70"
+            style={{ padding: `${10 * s}px` }}
+        >
             <button
                 type="button"
                 onClick={() => setIsHelpOpen(true)}
@@ -125,7 +133,16 @@ export const SceneComposer = ({
                 <CircleHelp size={20} />
             </button>
             {replyToMessageId && (
-                <div className="mb-2 flex items-center justify-between border-l-2 border-[#555] pl-3 text-xs text-[#c7bc98]">
+                <div
+                    className="flex items-center justify-between border-[#555] text-[#c7bc98]"
+                    style={{
+                        marginBottom: `${8 * s}px`,
+                        paddingLeft: `${12 * s}px`,
+                        borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                        borderLeftStyle: 'solid',
+                        fontSize: `${12 * s}px`,
+                    }}
+                >
                     <span>Ответ на сообщение</span>
                     <button type="button" onClick={onClearReply} className="text-[#f1e7c6]">
                         Очистить
@@ -133,14 +150,23 @@ export const SceneComposer = ({
                 </div>
             )}
             {isEditMode && (
-                <div className="mb-2 flex items-center justify-between border-l-2 border-[#c2a774] pl-3 text-xs text-[#e5d9a5]">
+                <div
+                    className="flex items-center justify-between border-[#c2a774] text-[#e5d9a5]"
+                    style={{
+                        marginBottom: `${8 * s}px`,
+                        paddingLeft: `${12 * s}px`,
+                        borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                        borderLeftStyle: 'solid',
+                        fontSize: `${12 * s}px`,
+                    }}
+                >
                     <span>Редактирование сообщения</span>
                     <button type="button" onClick={onCancelEdit} className="text-[#f1e7c6]">
                         Отмена
                     </button>
                 </div>
             )}
-            <div className="relative mt-1 flex items-end gap-2">
+            <div className="relative flex items-end" style={{ marginTop: `${4 * s}px`, gap: `${8 * s}px` }}>
                 <textarea
                     ref={textareaRef}
                     value={content}
@@ -176,33 +202,51 @@ export const SceneComposer = ({
                         }
                     }}
                     rows={3}
-                    className="w-full rounded-lg bg-[#0e1410] pl-3 pr-12 py-2 text-[#e5d9a5] outline-none ring-1 ring-[#2f3a34] focus:ring-[#c2a774]"
+                    className="w-full rounded-lg bg-[#0e1410] text-[#e5d9a5] outline-none ring-1 ring-[#2f3a34] focus:ring-[#c2a774]"
+                    style={{
+                        fontSize: `${14 * fontScale}px`,
+                        paddingLeft: `${12 * s}px`,
+                        paddingRight: `${Math.round(48 * s)}px`,
+                        paddingTop: `${8 * s}px`,
+                        paddingBottom: `${8 * s}px`,
+                        borderRadius: `${Math.min(14, Math.max(8, Math.round(8 * s)))}px`,
+                    }}
                 />
                 <Button
                     type="submit"
                     className="h-10 w-10 !min-w-10 !px-0 !gap-0 md:w-auto md:!px-3 md:!gap-2"
                     icon={<Send size={16} />}
                 >
-                    <span className="hidden md:inline">{isEditMode ? (isSending ? 'Сохранение...' : 'Сохранить') : (isSending ? 'Отправка...' : 'Отправить')}</span>
+                    <span className="hidden md:inline">
+                        {isEditMode ? (isSending ? 'Сохранение...' : 'Сохранить') : isSending ? 'Отправка...' : 'Отправить'}
+                    </span>
                 </Button>
                 {(mentionState?.suggestions.length ?? 0) > 0 && (
-                <div className="absolute bottom-full left-0 right-0 z-20 mb-2 rounded-lg border border-[#2f3a34] bg-[#0d130f] p-1 shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
-                    <p className="px-2 py-1 text-[11px] text-[#9fa68a]">Подсказки персонажей</p>
+                <div
+                    className="absolute bottom-full left-0 right-0 z-20 rounded-lg border border-[#2f3a34] bg-[#0d130f] shadow-[0_10px_24px_rgba(0,0,0,0.35)]"
+                    style={{ marginBottom: `${8 * s}px`, padding: `${4 * s}px` }}
+                >
+                    <p className="text-[#9fa68a]" style={{ padding: `${4 * s}px ${8 * s}px`, fontSize: `${11 * s}px` }}>
+                        Подсказки персонажей
+                    </p>
                     <div className="max-h-40 overflow-y-auto">
                         {mentionState!.suggestions.map((item, index) => (
                             <button
                                 key={item.character.id}
                                 type="button"
                                 onClick={() => applySuggestion(item.character.name)}
-                                className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                                className={`flex w-full items-center justify-between rounded-lg text-left transition ${
                                     index === activeSuggestionIndex
                                         ? 'bg-[#2a3a2e] text-[#f4ecd0]'
                                         : 'text-[#d3c89f] hover:bg-[#1a241d]'
                                 }`}
+                                style={{ padding: `${6 * s}px ${8 * s}px`, fontSize: `${14 * s}px` }}
                             >
                                 <span>{item.character.name}</span>
                                 {item.owner?.username && (
-                                    <span className="text-xs text-[#9fa68a]">@{item.owner.username}</span>
+                                    <span className="text-[#9fa68a]" style={{ fontSize: `${12 * s}px` }}>
+                                        @{item.owner.username}
+                                    </span>
                                 )}
                             </button>
                         ))}

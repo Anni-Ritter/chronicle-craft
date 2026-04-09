@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
+import { Modal } from '../../components/Modal';
 import { useRoleplayStore } from '../../store/useRoleplayStore';
+import { useWorldStore } from '../../store/useWorldStore';
+import { useChronicleStore } from '../../store/useChronicleStore';
 import { useSceneMessagesRealtime } from '../../hooks/useSceneMessagesRealtime';
 import { SceneMessageItem } from '../../features/roleplay/SceneMessageItem';
 import { SceneComposer } from '../../features/roleplay/SceneComposer';
-import type { RoleplayMessageType, RoleplaySpaceCharacterView } from '../../types/roleplay';
+import { RoleplaySceneForm } from '../../features/roleplay/RoleplaySceneForm';
+import type { RoleplayMessageType, RoleplayScene, RoleplaySpaceCharacterView } from '../../types/roleplay';
 
 export const RoleplayScenePage = () => {
     const { spaceId, sceneId } = useParams<{ spaceId: string; sceneId: string }>();
@@ -18,6 +22,10 @@ export const RoleplayScenePage = () => {
     const [editingInitialContent, setEditingInitialContent] = useState('');
     const [sceneBackgroundImage, setSceneBackgroundImage] = useState<string | null>(null);
     const [sceneTitle, setSceneTitle] = useState('Сцена');
+    const [sceneSettingsOpen, setSceneSettingsOpen] = useState(false);
+    const [sceneForEdit, setSceneForEdit] = useState<RoleplayScene | null>(null);
+    const [settingsLoading, setSettingsLoading] = useState(false);
+    const [chatFontScale, setChatFontScale] = useState(1);
     const [sendError, setSendError] = useState<string | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const didInitialScrollRef = useRef(false);
@@ -31,7 +39,11 @@ export const RoleplayScenePage = () => {
         createSceneMessage,
         updateSceneMessage,
         deleteSceneMessage,
+        updateRoleplayScene,
+        getRoleplaySpaceById,
     } = useRoleplayStore();
+    const { worlds, fetchWorlds } = useWorldStore();
+    const { chronicles, fetchChronicles } = useChronicleStore();
 
     const refreshMessages = useCallback(() => {
         if (!sceneId) return;
@@ -58,6 +70,56 @@ export const RoleplayScenePage = () => {
     }, [sceneId, spaceId, supabase, getRoleplaySpaceCharacters]);
 
     useSceneMessagesRealtime(sceneId ?? null, refreshMessages);
+
+    const sceneFontStorageKey = sceneId ? `cc:roleplay-scene-chat-font:${sceneId}` : '';
+
+    useEffect(() => {
+        if (!sceneFontStorageKey) {
+            setChatFontScale(1);
+            return;
+        }
+        try {
+            const raw = localStorage.getItem(sceneFontStorageKey);
+            const parsed = raw ? parseFloat(raw) : 1;
+            if (!Number.isFinite(parsed)) {
+                setChatFontScale(1);
+            } else {
+                setChatFontScale(Math.min(1.45, Math.max(0.75, parsed)));
+            }
+        } catch {
+            setChatFontScale(1);
+        }
+    }, [sceneFontStorageKey]);
+
+    const handleChatFontScaleChange = (next: number) => {
+        const clamped = Math.min(1.45, Math.max(0.75, next));
+        setChatFontScale(clamped);
+        if (sceneFontStorageKey) {
+            localStorage.setItem(sceneFontStorageKey, String(clamped));
+        }
+    };
+
+    const openSceneSettings = async () => {
+        if (!sceneId || !spaceId) return;
+        setSettingsLoading(true);
+        setSceneSettingsOpen(true);
+        try {
+            const [{ data: sceneRow }, space] = await Promise.all([
+                supabase.from('roleplay_scenes').select('*').eq('id', sceneId).maybeSingle(),
+                getRoleplaySpaceById(spaceId, supabase),
+            ]);
+            setSceneForEdit((sceneRow ?? null) as RoleplayScene | null);
+            const uid = session?.user?.id;
+            if (uid) await fetchWorlds(uid, supabase);
+            if (space?.world_id) {
+                await fetchChronicles(supabase, space.world_id);
+            } else {
+                await fetchChronicles(supabase);
+            }
+        } finally {
+            setSettingsLoading(false);
+        }
+    };
 
     const spaceCharacters = useMemo(
         () => (spaceId ? spaceCharactersBySpace[spaceId] ?? [] : []),
@@ -157,19 +219,95 @@ export const RoleplayScenePage = () => {
     return (
         <div className="mx-auto mt-0 flex h-[calc(var(--app-vh,1vh)*100)] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:h-[100dvh] md:px-4">
             <header className="px-1 pt-2">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
                     <button
                         type="button"
                         onClick={() => navigate(`/roleplay/${spaceId}`)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
                         aria-label="Назад"
                         title="Назад"
                     >
                         <ArrowLeft size={18} />
                     </button>
-                    <h1 className="text-2xl md:text-3xl font-garamond text-[#f4ecd0]">{sceneTitle}</h1>
+                    <h1 className="min-w-0 flex-1 truncate text-2xl font-garamond text-[#f4ecd0] md:text-3xl">
+                        {sceneTitle}
+                    </h1>
+                    <button
+                        type="button"
+                        onClick={openSceneSettings}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#2f3a34] bg-[#101712] text-[#c7bc98] transition hover:border-[#c2a77466] hover:text-[#f4ecd0]"
+                        aria-label="Настройки сцены"
+                        title="Настройки сцены"
+                    >
+                        <Settings size={18} />
+                    </button>
                 </div>
             </header>
+
+            <Modal isOpen={sceneSettingsOpen} onClose={() => setSceneSettingsOpen(false)}>
+                <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto p-1 text-[#e5d9a5]">
+                    <h2 className="mb-4 text-xl font-garamond text-[#f4ecd0] md:text-2xl">Настройки сцены</h2>
+
+                    <section className="mb-6 rounded-xl border border-[#2f3a34] bg-[#0d120f]/90 p-3">
+                        <h3 className="mb-2 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
+                            Размер шрифта в чате
+                        </h3>
+                        <p className="mb-3 text-xs text-[#9fa68a]">
+                            Крупнее или мельче текст сообщений и поля ввода. Сохраняется для этой сцены на устройстве.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input
+                                type="range"
+                                min={75}
+                                max={145}
+                                step={5}
+                                value={Math.round(chatFontScale * 100)}
+                                onChange={(e) => handleChatFontScaleChange(Number(e.target.value) / 100)}
+                                className="min-w-0 flex-1 accent-[#c2a774]"
+                            />
+                            <span className="w-12 shrink-0 text-sm tabular-nums text-[#d8c693]">
+                                {Math.round(chatFontScale * 100)}%
+                            </span>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 className="mb-3 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
+                            Параметры сцены
+                        </h3>
+                        {settingsLoading || !sceneForEdit ? (
+                            <p className="text-sm text-[#9fa68a]">Загрузка...</p>
+                        ) : (
+                            <RoleplaySceneForm
+                                worlds={worlds}
+                                chronicles={chronicles}
+                                titleText="Редактировать сцену"
+                                submitText="Сохранить"
+                                initialValues={{
+                                    title: sceneForEdit.title,
+                                    description: sceneForEdit.description,
+                                    world_id: sceneForEdit.world_id,
+                                    chronicle_id: sceneForEdit.chronicle_id,
+                                    background_image: sceneForEdit.background_image,
+                                    status: sceneForEdit.status,
+                                    settings: sceneForEdit.settings,
+                                }}
+                                onCancel={() => setSceneSettingsOpen(false)}
+                                onSubmit={async (values) => {
+                                    const updated = await updateRoleplayScene(sceneForEdit.id, values, supabase);
+                                    if (updated) {
+                                        setSceneTitle(updated.title || 'Сцена');
+                                        setSceneBackgroundImage(updated.background_image ?? null);
+                                        setSceneForEdit(updated);
+                                        await getRoleplaySpaceCharacters(spaceId, supabase, updated.world_id ?? null);
+                                        setSceneSettingsOpen(false);
+                                    }
+                                }}
+                            />
+                        )}
+                    </section>
+                </div>
+            </Modal>
 
             <section
                 className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#2f3a34] bg-[#0d120f]/85 p-2 md:p-2.5"
@@ -184,7 +322,15 @@ export const RoleplayScenePage = () => {
                 }
             >
                 {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/72" />}
-                <div ref={messagesContainerRef} className="relative z-[1] mb-1 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 pb-2">
+                <div
+                    ref={messagesContainerRef}
+                    className="relative z-[1] mb-1 flex min-h-0 flex-1 flex-col overflow-y-auto"
+                    style={{
+                        gap: `${8 * chatFontScale}px`,
+                        paddingRight: `${4 * chatFontScale}px`,
+                        paddingBottom: `${8 * chatFontScale}px`,
+                    }}
+                >
                     {messages.length === 0 && (
                         <div className="p-3 text-center text-[#c7bc98]">
                             В этой сцене пока нет сообщений.
@@ -193,6 +339,7 @@ export const RoleplayScenePage = () => {
                     {messages.map((item) => (
                         <SceneMessageItem
                             key={item.message.id}
+                            fontScale={chatFontScale}
                             item={item}
                             onReply={setReplyToMessageId}
                             onStartEdit={(messageId, content) => {
@@ -210,11 +357,20 @@ export const RoleplayScenePage = () => {
                     ))}
                 </div>
 
-                <div className="sticky bottom-0 z-[2] mt-auto border-t border-[#2f3a34]/80 bg-[#0a0f0c]/92 pt-1.5 backdrop-blur-[2px]">
+                <div
+                    className="sticky bottom-0 z-[2] mt-auto border-t border-[#2f3a34]/80 bg-[#0a0f0c]/92 backdrop-blur-[2px]"
+                    style={{ paddingTop: `${6 * chatFontScale}px` }}
+                >
                     {sendError && (
-                        <p className="mb-1 px-1 text-xs text-[#e7b0b0]">{sendError}</p>
+                        <p
+                            className="px-1 text-[#e7b0b0]"
+                            style={{ marginBottom: `${4 * chatFontScale}px`, fontSize: `${12 * chatFontScale}px` }}
+                        >
+                            {sendError}
+                        </p>
                     )}
                     <SceneComposer
+                        fontScale={chatFontScale}
                         availableCharacters={ownSpaceCharacters}
                         replyToMessageId={replyToMessageId}
                         onClearReply={() => setReplyToMessageId(null)}
