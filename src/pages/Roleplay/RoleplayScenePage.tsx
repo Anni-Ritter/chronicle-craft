@@ -13,6 +13,9 @@ import { RoleplaySceneForm } from '../../features/roleplay/RoleplaySceneForm';
 import type { RoleplayMessageType, RoleplayScene, RoleplaySpaceCharacterView } from '../../types/roleplay';
 
 const DEFAULT_CHAT_TIME_DISPLAY = { show: true, withSeconds: true };
+/** Непрозрачность тёмного слоя поверх фоновой картинки (0–100), по умолчанию как раньше (~77%). */
+const DEFAULT_SCENE_BG_DIM_PERCENT = 77;
+const SCENE_BG_OVERLAY_RGB = '6, 10, 8';
 
 export const RoleplayScenePage = () => {
     const { spaceId, sceneId } = useParams<{ spaceId: string; sceneId: string }>();
@@ -89,8 +92,10 @@ export const RoleplayScenePage = () => {
 
     const sceneFontStorageKey = sceneId ? `cc:roleplay-scene-chat-font:${sceneId}` : '';
     const sceneChatTimeStorageKey = sceneId ? `cc:roleplay-scene-chat-time:${sceneId}` : '';
+    const sceneBgDimStorageKey = sceneId ? `cc:roleplay-scene-bg-dim:${sceneId}` : '';
 
     const [chatTimeDisplay, setChatTimeDisplay] = useState(DEFAULT_CHAT_TIME_DISPLAY);
+    const [sceneBackgroundDimPercent, setSceneBackgroundDimPercent] = useState(DEFAULT_SCENE_BG_DIM_PERCENT);
 
     useEffect(() => {
         if (!sceneFontStorageKey) {
@@ -131,6 +136,38 @@ export const RoleplayScenePage = () => {
             setChatTimeDisplay(DEFAULT_CHAT_TIME_DISPLAY);
         }
     }, [sceneChatTimeStorageKey]);
+
+    useEffect(() => {
+        if (!sceneBgDimStorageKey) {
+            setSceneBackgroundDimPercent(DEFAULT_SCENE_BG_DIM_PERCENT);
+            return;
+        }
+        try {
+            const raw = localStorage.getItem(sceneBgDimStorageKey);
+            const parsed = raw != null && raw !== '' ? parseFloat(raw) : DEFAULT_SCENE_BG_DIM_PERCENT;
+            if (!Number.isFinite(parsed)) {
+                setSceneBackgroundDimPercent(DEFAULT_SCENE_BG_DIM_PERCENT);
+            } else {
+                setSceneBackgroundDimPercent(Math.min(100, Math.max(0, Math.round(parsed))));
+            }
+        } catch {
+            setSceneBackgroundDimPercent(DEFAULT_SCENE_BG_DIM_PERCENT);
+        }
+    }, [sceneBgDimStorageKey]);
+
+    const persistSceneBackgroundDim = useCallback(
+        (nextPercent: number) => {
+            const clamped = Math.min(100, Math.max(0, Math.round(nextPercent)));
+            setSceneBackgroundDimPercent(clamped);
+            if (!sceneBgDimStorageKey) return;
+            try {
+                localStorage.setItem(sceneBgDimStorageKey, String(clamped));
+            } catch {
+                /* ignore */
+            }
+        },
+        [sceneBgDimStorageKey],
+    );
 
     const persistChatTimeDisplay = useCallback(
         (next: { show: boolean; withSeconds: boolean }) => {
@@ -450,6 +487,35 @@ export const RoleplayScenePage = () => {
                         </div>
                     </section>
 
+                    <section className="mb-6 rounded-xl border border-[#2f3a34] bg-[#0d120f]/90 p-3">
+                        <h3 className="mb-2 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
+                            Затемнение фона
+                        </h3>
+                        <p className="mb-3 text-xs text-[#9fa68a]">
+                            Настройка слоя поверх фонового изображения чата. Сохраняется для этой сцены на устройстве.
+                            {!sceneBackgroundImage ? (
+                                <span className="mt-1 block text-[#8a9278]">
+                                    Сейчас фон не задан — ползунок сработает после добавления картинки в параметрах сцены ниже.
+                                </span>
+                            ) : null}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={1}
+                                value={sceneBackgroundDimPercent}
+                                onChange={(e) => persistSceneBackgroundDim(Number(e.target.value))}
+                                className="min-w-0 flex-1 accent-[#c2a774]"
+                                aria-label="Степень затемнения фона"
+                            />
+                            <span className="w-12 shrink-0 text-sm tabular-nums text-[#d8c693]">
+                                {sceneBackgroundDimPercent}%
+                            </span>
+                        </div>
+                    </section>
+
                     <section className="mb-6 space-y-3 rounded-xl border border-[#2f3a34] bg-[#0d120f]/90 p-3">
                         <h3 className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[#c7bc98]">
                             <Clock className="h-4 w-4 text-[#c2a774]" aria-hidden />
@@ -544,7 +610,14 @@ export const RoleplayScenePage = () => {
                         : undefined
                 }
             >
-                {sceneBackgroundImage && <div className="pointer-events-none absolute inset-0 bg-[#060a08]/77" />}
+                {sceneBackgroundImage ? (
+                    <div
+                        className="pointer-events-none absolute inset-0"
+                        style={{
+                            backgroundColor: `rgba(${SCENE_BG_OVERLAY_RGB}, ${sceneBackgroundDimPercent / 100})`,
+                        }}
+                    />
+                ) : null}
                 <div
                     ref={messagesContainerRef}
                     onScroll={updateNearChatBottom}
