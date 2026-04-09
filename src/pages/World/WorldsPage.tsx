@@ -4,7 +4,7 @@ import { useWorldStore } from '../../store/useWorldStore';
 import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import { Button } from '../../components/ChronicleButton';
 import { Modal } from '../../components/Modal';
-import { Globe2, Pencil, PlusCircle, Trash2, Sparkles } from 'lucide-react';
+import { Globe2, Pencil, PlusCircle, Trash2, Sparkles, MailPlus } from 'lucide-react';
 import type { World } from '../../types/world';
 import { WorldForm } from '../../features/world/WorldForm';
 import { useNavigate } from 'react-router-dom';
@@ -23,7 +23,7 @@ const listVariants: Variants = {
 export const WorldsPage = () => {
     const session = useSession();
     const supabase = useSupabaseClient();
-    const { worlds, fetchWorlds, removeWorld } = useWorldStore();
+    const { worlds, invitedWorlds, fetchWorlds, respondToWorldInvite, removeWorld } = useWorldStore();
     const { selectedWorldId } = useWorldSelectionStore();
     const navigate = useNavigate();
 
@@ -35,7 +35,32 @@ export const WorldsPage = () => {
         if (session?.user?.id) {
             fetchWorlds(session.user.id, supabase);
         }
-    }, [session]);
+    }, [session, fetchWorlds, supabase]);
+
+    useEffect(() => {
+        const uid = session?.user?.id;
+        if (!uid) return;
+
+        const refresh = () => fetchWorlds(uid, supabase);
+        const channel = supabase
+            .channel(`world-members-${uid}`)
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'world_members', filter: `user_id=eq.${uid}` },
+                refresh
+            )
+            .subscribe();
+
+        const onVisibility = () => {
+            if (!document.hidden) refresh();
+        };
+        document.addEventListener('visibilitychange', onVisibility);
+
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            supabase.removeChannel(channel);
+        };
+    }, [session?.user?.id, fetchWorlds, supabase]);
 
     const handleEdit = (e: React.MouseEvent, world: World) => {
         e.stopPropagation();
@@ -50,9 +75,9 @@ export const WorldsPage = () => {
     };
 
     return (
-        <div className="max-w-[1440px] mx-auto mt-10 px-2 md:px-4 space-y-8 md:space-y-10">
-            <div className="flex flex-col gap-3 border-b border-[#c2a774]/70 pb-4 md:flex-row md:items-end md:justify-between">
-                <div className="space-y-2">
+        <div className="max-w-[1440px] mx-auto mt-10 w-full overflow-x-hidden px-2 md:px-4 space-y-8 md:space-y-10">
+            <div className="flex w-full min-w-0 flex-col gap-3 border-b border-[#c2a774]/70 pb-4 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0 space-y-2">
                     <h2 className="text-3xl md:text-4xl flex items-center gap-2 font-garamond text-[#e5d9a5]">
                         <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1b261a] border border-[#c2a77466] shadow-[0_0_18px_#000] text-[#c2a774]">
                             <Globe2 className="w-5 h-5" />
@@ -77,6 +102,52 @@ export const WorldsPage = () => {
             </div>
 
             <AnimatePresence mode="wait">
+            {invitedWorlds.length > 0 && (
+                <motion.div
+                    className="rounded-2xl border border-[#3a4a34] bg-[#101712]/70 p-4"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <h3 className="mb-3 flex items-center gap-2 text-lg font-garamond text-[#e5d9a5]">
+                        <MailPlus size={18} className="text-[#c2a774]" />
+                        Приглашения в миры
+                    </h3>
+                    <div className="space-y-2">
+                        {invitedWorlds.map((world) => (
+                            <div key={world.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#2f3a34] bg-[#0e1410] p-3">
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[#f1e7c6]">{world.name}</p>
+                                    <p className="text-xs text-[#c7bc98]">Вас пригласили в совместный мир</p>
+                                </div>
+                                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+                                    <Button
+                                        className="!text-xs !px-3 !py-1.5 !w-full sm:!w-auto"
+                                        onClick={async () => {
+                                            const uid = session?.user?.id;
+                                            if (!uid) return;
+                                            await respondToWorldInvite(world.id, uid, 'accept', supabase);
+                                        }}
+                                    >
+                                        Принять
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        className="!text-xs !px-3 !py-1.5 !w-full sm:!w-auto"
+                                        onClick={async () => {
+                                            const uid = session?.user?.id;
+                                            if (!uid) return;
+                                            await respondToWorldInvite(world.id, uid, 'decline', supabase);
+                                        }}
+                                    >
+                                        Отклонить
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+
             {worlds.length === 0 ? (
                 <motion.div
                     key="empty"
@@ -115,7 +186,7 @@ export const WorldsPage = () => {
             ) : (
                 <motion.ul
                     key="list"
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-[#e5d9a5] font-lora"
+                    className="grid w-full min-w-0 grid-cols-1 gap-6 text-[#e5d9a5] font-lora sm:grid-cols-2 lg:grid-cols-3"
                     variants={listVariants}
                     initial="hidden"
                     animate="visible"
@@ -133,7 +204,7 @@ export const WorldsPage = () => {
                                     navigate(`/worlds/${world.id}`);
                                 }}
                                 className={`
-                                    group relative overflow-hidden rounded-2xl border border-[#3a4a34] 
+                                    group relative w-full min-w-0 overflow-hidden rounded-2xl border border-[#3a4a34] 
                                     bg-gradient-to-br from-[#161f16] via-[#1f2b1f] to-[#131a13]
                                     shadow-[0_0_24px_rgba(0,0,0,0.8)]
                                     cursor-pointer
@@ -146,9 +217,9 @@ export const WorldsPage = () => {
 
                                 <div className="relative z-10 p-4 sm:p-5 flex flex-col h-full gap-4">
                                     <div className="flex items-start justify-between gap-3">
-                                        <div className="space-y-2 pr-2">
+                                        <div className="min-w-0 space-y-2 pr-2">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="text-xl sm:text-2xl font-semibold font-lora group-hover:drop-shadow-[0_0_6px_#e5d9a5aa]">
+                                                <h3 className="min-w-0 truncate text-xl font-semibold font-lora group-hover:drop-shadow-[0_0_6px_#e5d9a5aa] sm:text-2xl">
                                                     {world.name}
                                                 </h3>
                                                 {isActive && (

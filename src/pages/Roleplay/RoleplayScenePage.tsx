@@ -14,7 +14,11 @@ export const RoleplayScenePage = () => {
     const session = useSession();
     const supabase = useSupabaseClient();
     const [replyToMessageId, setReplyToMessageId] = useState<string | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editingInitialContent, setEditingInitialContent] = useState('');
     const [sceneBackgroundImage, setSceneBackgroundImage] = useState<string | null>(null);
+    const [sceneTitle, setSceneTitle] = useState('Сцена');
+    const [sendError, setSendError] = useState<string | null>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const didInitialScrollRef = useRef(false);
 
@@ -23,6 +27,7 @@ export const RoleplayScenePage = () => {
         sceneMessagesByScene,
         getRoleplaySpaceCharacters,
         getSceneMessages,
+        getCharacterEmotions,
         createSceneMessage,
         updateSceneMessage,
         deleteSceneMessage,
@@ -42,10 +47,11 @@ export const RoleplayScenePage = () => {
         if (!sceneId || !spaceId) return;
         supabase
             .from('roleplay_scenes')
-            .select('background_image, world_id')
+            .select('title, background_image, world_id')
             .eq('id', sceneId)
             .maybeSingle()
             .then(({ data }) => {
+                setSceneTitle(data?.title || 'Сцена');
                 setSceneBackgroundImage(data?.background_image ?? null);
                 getRoleplaySpaceCharacters(spaceId, supabase, data?.world_id ?? null);
             });
@@ -60,6 +66,19 @@ export const RoleplayScenePage = () => {
     const messages = useMemo(
         () => (sceneId ? sceneMessagesByScene[sceneId] ?? [] : []),
         [sceneId, sceneMessagesByScene]
+    );
+    const ownCharacterIds = useMemo(
+        () =>
+            new Set(
+                spaceCharacters
+                    .filter((item) => item.character.user_id === session?.user?.id)
+                    .map((item) => item.character.id)
+            ),
+        [spaceCharacters, session?.user?.id]
+    );
+    const ownSpaceCharacters = useMemo(
+        () => spaceCharacters.filter((item) => item.character.user_id === session?.user?.id),
+        [spaceCharacters, session?.user?.id]
     );
 
     useEffect(() => {
@@ -93,21 +112,35 @@ export const RoleplayScenePage = () => {
         if (mentionWithColonMatch) {
             const mentionedName = mentionWithColonMatch[1].trim().toLowerCase();
             const character = characters.find((c) => c.character.name.toLowerCase() === mentionedName);
-            const content = raw.replace(/^\s*@([^:]+)\s*:\s*/, '').trim();
+            const baseContent = raw.replace(/^\s*@([^:]+)\s*:\s*/, '').trim();
+            const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
+            const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
             return {
                 characterId: character?.character.id ?? null,
+                emotionName: emotionMatch?.[1]?.trim() ?? null,
                 content,
             };
         }
 
         const mentionMatch = raw.match(/^\s*@([^\s:]+)\s*:?\s*/);
-        if (!mentionMatch) return { characterId: null as string | null, content: raw.trim() };
+        if (!mentionMatch) {
+            const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
+            const contentWithoutEmotion = raw.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
+            return {
+                characterId: null as string | null,
+                emotionName: emotionMatch?.[1]?.trim() ?? null,
+                content: contentWithoutEmotion,
+            };
+        }
 
         const mentionedName = mentionMatch[1].toLowerCase();
         const character = characters.find((c) => c.character.name.toLowerCase() === mentionedName);
-        const content = raw.replace(/^\s*@([^\s:]+)\s*:?\s*/, '').trim();
+        const baseContent = raw.replace(/^\s*@([^\s:]+)\s*:?\s*/, '').trim();
+        const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
+        const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
         return {
             characterId: character?.character.id ?? null,
+            emotionName: emotionMatch?.[1]?.trim() ?? null,
             content,
         };
     };
@@ -134,7 +167,7 @@ export const RoleplayScenePage = () => {
                     >
                         <ArrowLeft size={18} />
                     </button>
-                    <h1 className="text-2xl md:text-3xl font-garamond text-[#f4ecd0]">Сцена ролевой</h1>
+                    <h1 className="text-2xl md:text-3xl font-garamond text-[#f4ecd0]">{sceneTitle}</h1>
                 </div>
             </header>
 
@@ -162,20 +195,13 @@ export const RoleplayScenePage = () => {
                             key={item.message.id}
                             item={item}
                             onReply={setReplyToMessageId}
+                            onStartEdit={(messageId, content) => {
+                                setReplyToMessageId(null);
+                                setEditingMessageId(messageId);
+                                setEditingInitialContent(content);
+                            }}
                             isOwn={item.message.user_id === session?.user?.id}
                             canManage={item.message.user_id === session?.user?.id}
-                            onEdit={async (messageId, nextContent) => {
-                                await updateSceneMessage(
-                                    messageId,
-                                    {
-                                        content: nextContent,
-                                        edited: true,
-                                        metadata: {},
-                                    },
-                                    supabase
-                                );
-                                await refreshMessages();
-                            }}
                             onDelete={async (messageId) => {
                                 await deleteSceneMessage(messageId, supabase);
                                 await refreshMessages();
@@ -185,21 +211,89 @@ export const RoleplayScenePage = () => {
                 </div>
 
                 <div className="sticky bottom-0 z-[2] mt-auto border-t border-[#2f3a34]/80 bg-[#0a0f0c]/92 pt-1.5 backdrop-blur-[2px]">
+                    {sendError && (
+                        <p className="mb-1 px-1 text-xs text-[#e7b0b0]">{sendError}</p>
+                    )}
                     <SceneComposer
-                        availableCharacters={spaceCharacters}
+                        availableCharacters={ownSpaceCharacters}
                         replyToMessageId={replyToMessageId}
                         onClearReply={() => setReplyToMessageId(null)}
+                        editMessageId={editingMessageId}
+                        editInitialContent={editingInitialContent}
+                        onCancelEdit={() => {
+                            setEditingMessageId(null);
+                            setEditingInitialContent('');
+                        }}
+                        onSaveEdit={async (messageId, nextContent) => {
+                            const current = messages.find((m) => m.message.id === messageId);
+                            const parsed = resolveCharacterFromMention(nextContent, spaceCharacters);
+                            // При редактировании нельзя "переобуться" на чужого персонажа.
+                            if (parsed.characterId && !ownCharacterIds.has(parsed.characterId)) {
+                                setSendError('Нельзя писать от лица чужого персонажа. Выберите своего через @Имя.');
+                                return;
+                            }
+
+                            const normalizeEmotion = (value: string) =>
+                                value
+                                    .trim()
+                                    .toLowerCase()
+                                    .replace(/\s+/g, ' ');
+
+                            // При редактировании привязываем эмоцию к текущему персонажу сообщения,
+                            // либо к явно указанному @персонажу (если это ваш персонаж).
+                            const effectiveCharacterId = parsed.characterId ?? current?.message.character_id ?? null;
+                            let emotionId: string | null = null;
+                            if (effectiveCharacterId && parsed.emotionName) {
+                                const emotions = await getCharacterEmotions(effectiveCharacterId, supabase);
+                                const normalizedEmotionName = normalizeEmotion(parsed.emotionName);
+                                const matchedEmotion = emotions.find(
+                                    (emotion) => normalizeEmotion(emotion.name) === normalizedEmotionName
+                                );
+                                emotionId = matchedEmotion?.id ?? null;
+                            }
+
+                            await updateSceneMessage(
+                                messageId,
+                                {
+                                    content: parsed.content,
+                                    edited: true,
+                                    emotion_id: emotionId,
+                                    metadata: {},
+                                },
+                                supabase
+                            );
+                            await refreshMessages();
+                        }}
                         onSend={async ({ content, reply_to_message_id }) => {
                             const uid = session?.user?.id;
                             if (!uid || !sceneId) return;
+                            setSendError(null);
                             const parsed = resolveCharacterFromMention(content, spaceCharacters);
+                            if (parsed.characterId && !ownCharacterIds.has(parsed.characterId)) {
+                                setSendError('Нельзя писать от лица чужого персонажа. Выберите своего через @Имя.');
+                                return;
+                            }
                             const messageType = detectMessageType(parsed.content, !!parsed.characterId);
+                            let emotionId: string | null = null;
+                            if (parsed.characterId && parsed.emotionName) {
+                                const emotions = await getCharacterEmotions(parsed.characterId, supabase);
+                                const normalizeEmotion = (value: string) =>
+                                    value
+                                        .trim()
+                                        .toLowerCase()
+                                        .replace(/\s+/g, ' ');
+                                const normalizedEmotionName = normalizeEmotion(parsed.emotionName);
+                                const matchedEmotion = emotions.find(
+                                    (emotion) => normalizeEmotion(emotion.name) === normalizedEmotionName
+                                );
+                                emotionId = matchedEmotion?.id ?? null;
+                            }
                             await createSceneMessage(
                                 {
                                     scene_id: sceneId,
                                     user_id: uid,
                                     character_id: parsed.characterId,
-                                    emotion_id: null,
+                                    emotion_id: emotionId,
                                     type: messageType,
                                     content: parsed.content,
                                     reply_to_message_id,

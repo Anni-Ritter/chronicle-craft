@@ -305,13 +305,27 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
     },
 
     updateRoleplayMemberRole: async (spaceId, targetUserId, role, supabase) => {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('roleplay_space_members')
             .update({ role })
             .eq('space_id', spaceId)
-            .eq('user_id', targetUserId);
+            .eq('user_id', targetUserId)
+            .select('id, role')
+            .maybeSingle();
         if (error) {
             set({ error: error.message });
+            return false;
+        }
+        if (!data) {
+            set({
+                error: 'Не удалось изменить роль: доступ запрещен политикой RLS или запись не найдена',
+            });
+            return false;
+        }
+        if (data.role !== role) {
+            set({
+                error: `Роль не применилась (ожидалось: ${role}, фактически: ${data.role})`,
+            });
             return false;
         }
         await get().getRoleplaySpaceMembers(spaceId, supabase);

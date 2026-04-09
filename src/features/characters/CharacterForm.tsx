@@ -9,14 +9,16 @@ import { BookOpen, ChevronDown, Globe2, LinkIcon, Sparkles, Upload } from 'lucid
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { Button } from '../../components/ChronicleButton';
 import { useWorldStore } from '../../store/useWorldStore';
+import { useUser } from '@supabase/auth-helpers-react';
 
 interface CharacterFormProps {
     onFinish: () => void;
     initialCharacter?: Character;
-    onSave: (char: Character) => void;
+    onSave: (char: Character) => Promise<void>;
 }
 
 export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterFormProps) => {
+    const user = useUser();
     const [avatarMode, setAvatarMode] = useState<"url" | "upload">(
         initialCharacter?.avatar?.startsWith("http") ? "url" : "upload"
     );
@@ -55,7 +57,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
     const [occupation, setOccupation] = useState(initialCharacter?.occupation || "");
     const [affiliation, setAffiliation] = useState(initialCharacter?.affiliation || "");
     const [title, setTitle] = useState(initialCharacter?.title || "");
-    const [userId, setUserId] = useState<string | null>(null);
+    const userId = user?.id ?? null;
     const [allChronicles, setAllChronicles] = useState<{ id: string; title: string }[]>([]);
     const [linkedChronicles, setLinkedChronicles] = useState<string[]>(
         initialCharacter?.linked_chronicles || []
@@ -63,12 +65,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
     const { worlds } = useWorldStore();
     const [selectedWorld, setSelectedWorld] = useState<string>(initialCharacter?.world_id || "");
     const [showWorldDropdown, setShowWorldDropdown] = useState(false);
-
-    useEffect(() => {
-        supabase.auth.getUser().then(({ data, error }) => {
-            if (!error && data.user) setUserId(data.user.id);
-        });
-    }, []);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     useEffect(() => {
         if (userId) {
@@ -82,19 +79,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
         }
     }, [userId]);
 
-    const fieldMap: Record<
-        | "status"
-        | "age"
-        | "birthday"
-        | "occupation"
-        | "affiliation"
-        | "title"
-        | "species"
-        | "gender"
-        | "origin"
-        | "location",
-        [string | { name: string }, (value: any) => void]
-    > = {
+    const fieldMap = {
         status: [status, setStatus],
         age: [age, setAge],
         birthday: [birthday, setBirthday],
@@ -105,11 +90,19 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
         gender: [gender, setGender],
         origin: [origin, setOrigin],
         location: [location, setLocation],
-    };
+    } as const;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!name.trim() || userId === null) return;
+        if (!name.trim()) {
+            setSubmitError('Укажите имя персонажа');
+            return;
+        }
+        if (userId === null) {
+            setSubmitError('Сессия не загружена. Подождите секунду и повторите.');
+            return;
+        }
+        setSubmitError(null);
 
         const updatedChar: Character = {
             id: initialCharacter?.id ?? crypto.randomUUID(),
@@ -139,6 +132,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
             onFinish();
         } catch (error) {
             console.error("Ошибка при сохранении персонажа:", error);
+            setSubmitError('Не удалось сохранить персонажа. Проверьте доступ к выбранному миру.');
         }
     };
 
@@ -273,6 +267,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
                         ).map((field) => {
                             const [value, setter] = fieldMap[field];
                             const stringValue = typeof value === "string" ? value : value.name;
+                            const isNestedField = field === "origin" || field === "location";
 
                             return (
                                 <div key={field} className="flex flex-col">
@@ -282,13 +277,15 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
                                     <input
                                         className="w-full px-3 py-2 rounded-xl bg-[#0b1510] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/45 text-[14px] focus:border-[#c2a774aa] focus:outline-none focus:ring-2 focus:ring-[#c2a77433]"
                                         value={stringValue}
-                                        onChange={(e) =>
-                                            setter(
-                                                typeof value === "string"
-                                                    ? e.target.value
-                                                    : { name: e.target.value }
-                                            )
-                                        }
+                                        onChange={(e) => {
+                                            if (isNestedField) {
+                                                (setter as (value: { name: string }) => void)({
+                                                    name: e.target.value,
+                                                });
+                                                return;
+                                            }
+                                            (setter as (value: string) => void)(e.target.value);
+                                        }}
                                     />
                                 </div>
                             );
@@ -440,6 +437,11 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
             <ExtraFieldsEditor extra={extra} onChange={setExtra} />
 
             <div className="flex justify-stretch pt-4 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+                {submitError && (
+                    <p className="mb-2 w-full text-center text-xs text-[#e7b0b0] lg:mb-0 lg:mr-3 lg:w-auto">
+                        {submitError}
+                    </p>
+                )}
                 <Button
                     type="submit"
                     className="w-full justify-center font-semibold text-[16px] px-6 shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:w-auto lg:text-[15px]"

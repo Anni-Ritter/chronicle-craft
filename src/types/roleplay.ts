@@ -1,4 +1,4 @@
-export type RoleplayMemberRole = 'owner' | 'member';
+export type RoleplayMemberRole = 'owner' | 'admin' | 'member';
 export type RoleplayMemberStatus = 'active' | 'invited' | 'blocked';
 export type RoleplayMessageType = 'speech' | 'action' | 'narration' | 'system';
 

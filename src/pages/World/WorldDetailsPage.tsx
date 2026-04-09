@@ -28,7 +28,15 @@ export const WorldDetailsPage = () => {
     const { id } = useParams();
     const supabase = useSupabaseClient();
     const session = useSession();
-    const { worlds, fetchWorlds } = useWorldStore();
+    const {
+        worlds,
+        membersByWorld,
+        error: worldError,
+        fetchWorlds,
+        fetchWorldMembers,
+        inviteUserToWorld,
+        updateWorldMemberRole,
+    } = useWorldStore();
 
     const world = worlds.find(w => w.id === id);
 
@@ -37,6 +45,11 @@ export const WorldDetailsPage = () => {
     const { maps, fetchMaps } = useMapStore();
 
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const [membersModalOpen, setMembersModalOpen] = useState(false);
+    const [inviteModalOpen, setInviteModalOpen] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [roleUpdatingUserId, setRoleUpdatingUserId] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id || !session?.user?.id) return;
@@ -45,7 +58,30 @@ export const WorldDetailsPage = () => {
         fetchCharacters(session.user.id, supabase, id);
         fetchChronicles(supabase, id);
         fetchMaps(session.user.id, supabase, id);
+        fetchWorldMembers(id, supabase);
     }, [id, session?.user?.id]);
+
+    const members = id ? membersByWorld[id] ?? [] : [];
+    const currentUserMember = members.find((m) => m.member.user_id === session?.user?.id && m.member.status === 'active');
+    const canManageMembers = currentUserMember?.member.role === 'owner' || currentUserMember?.member.role === 'admin';
+    const membersCountLabel = (() => {
+        const n = members.filter((m) => m.member.status === 'active').length;
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${n} участник`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} участника`;
+        return `${n} участников`;
+    })();
+    const roleLabelMap: Record<'owner' | 'admin' | 'member', string> = {
+        owner: 'Владелец',
+        admin: 'Администратор',
+        member: 'Участник',
+    };
+    const statusLabelMap: Record<'active' | 'invited' | 'blocked', string> = {
+        active: 'Активен',
+        invited: 'Приглашён',
+        blocked: 'Заблокирован',
+    };
 
     if (!world) {
         return (
@@ -64,9 +100,9 @@ export const WorldDetailsPage = () => {
     }
 
     return (
-        <div className="max-w-[1440px] mx-auto px-3 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] space-y-10 relative z-10">
+        <div className="max-w-[1440px] mx-auto w-full overflow-x-hidden px-3 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] space-y-10 relative z-10">
             <motion.div
-                className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2"
+                className="mb-2 flex w-full min-w-0 flex-wrap items-center gap-1 text-xs text-[#c7bc98] sm:text-sm"
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
@@ -79,7 +115,7 @@ export const WorldDetailsPage = () => {
             </motion.div>
 
             <motion.section
-                className="relative rounded-3xl border border-[#c2a77455] bg-[#111712]/95 shadow-[0_0_45px_#000] px-5 py-6 md:px-8 md:py-8 space-y-6"
+                className="relative w-full min-w-0 space-y-6 rounded-3xl border border-[#c2a77455] bg-[#111712]/95 px-5 py-6 shadow-[0_0_45px_#000] md:px-8 md:py-8"
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -88,25 +124,34 @@ export const WorldDetailsPage = () => {
                 <div className="pointer-events-none absolute -bottom-24 -left-20 w-72 h-72 rounded-full bg-[#c2a77411] blur-3xl" />
 
                 <div className="relative z-10 flex flex-col gap-4 border-b border-[#3a4a34] pb-5">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div className="space-y-3">
+                    <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-4">
+                        <div className="min-w-0 space-y-3">
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#141f16]/80 text-[11px] md:text-xs uppercase tracking-[0.22em] text-[#c7bc98]">
                                 <Sparkles className="w-3.5 h-3.5 text-[#c2a774]" />
                                 <span>Мир</span>
                             </div>
-                            <h1 className="text-2xl md:text-4xl font-garamond font-bold flex items-center gap-2 flex-wrap text-[#e5d9a5]">
+                            <h1 className="flex min-w-0 flex-wrap items-center gap-2 text-2xl font-garamond font-bold text-[#e5d9a5] md:text-4xl">
                                 <Globe2 className="w-7 h-7 text-[#c2a774] shrink-0" />
-                                <span>{world.name}</span>
+                                <span className="min-w-0 break-words">{world.name}</span>
                             </h1>
+                            <button
+                                type="button"
+                                onClick={() => setMembersModalOpen(true)}
+                                className="text-left text-sm text-[#b9b08f] transition hover:text-[#e5d9a5]"
+                                title="Открыть участников мира"
+                            >
+                                {membersCountLabel}
+                            </button>
                         </div>
-
-                        <Button
+                        <button
+                            type="button"
                             onClick={() => setEditModalOpen(true)}
-                            icon={<Pencil size={20} className="shrink-0" />}
-                            className="w-full justify-center shadow-[0_4px_18px_rgba(0,0,0,0.3)] max-lg:min-h-[52px] lg:w-auto lg:self-start lg:text-xs xl:text-sm"
+                            className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                            aria-label="Редактировать мир"
+                            title="Редактировать мир"
                         >
-                            Редактировать мир
-                        </Button>
+                            <Pencil size={18} />
+                        </button>
                     </div>
 
                     {world.description && (
@@ -122,7 +167,7 @@ export const WorldDetailsPage = () => {
                             <span className="w-1.5 h-1.5 rounded-full bg-[#c2a774]" />
                             Календарь мира
                         </h2>
-                        <div className="border border-[#3a4a34] rounded-2xl px-3 py-3 md:px-4 md:py-4">
+                        <div className="px-0 py-0">
                             <WorldCalendarWidget calendar={world.calendar} />
                         </div>
                     </div>
@@ -146,8 +191,105 @@ export const WorldDetailsPage = () => {
                 />
             </Modal>
 
+            <Modal isOpen={membersModalOpen} onClose={() => setMembersModalOpen(false)}>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-2xl font-garamond text-[#e5d9a5]">Участники мира</h3>
+                        {canManageMembers && (
+                            <Button
+                                className="!text-xs !px-3 !py-1.5"
+                                onClick={() => setInviteModalOpen(true)}
+                            >
+                                Пригласить
+                            </Button>
+                        )}
+                    </div>
+                    <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                        {members.map((member) => {
+                            const name = member.profile?.username || member.member.user_id;
+                            const avatar = member.profile?.avatar_url;
+                            const isOwner = member.member.role === 'owner';
+                            const isUpdating = roleUpdatingUserId === member.member.user_id;
+                            return (
+                                <div key={member.member.id} className="flex items-center gap-3 rounded-lg border border-[#2d3a2f]/60 bg-[#101712] p-2.5">
+                                    {avatar ? (
+                                        <img src={avatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+                                    ) : (
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1a231d] text-xs text-[#9fa68a]">?</div>
+                                    )}
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[#f3e7c8]">{name}</p>
+                                        <p className="text-xs text-[#c7bc98]">
+                                            {roleLabelMap[member.member.role]} · {statusLabelMap[member.member.status]}
+                                        </p>
+                                    </div>
+                                    {canManageMembers ? (
+                                        <select
+                                            value={member.member.role}
+                                            disabled={isOwner || isUpdating || member.member.status !== 'active'}
+                                            onChange={async (e) => {
+                                                if (!id) return;
+                                                const nextRole = e.target.value as 'owner' | 'admin' | 'member';
+                                                if (nextRole === member.member.role) return;
+                                                if (nextRole === 'owner' && members.some((m) => m.member.role === 'owner' && m.member.user_id !== member.member.user_id)) {
+                                                    setStatusMessage('В мире уже есть владелец. Сначала снимите роль владельца с текущего owner.');
+                                                    return;
+                                                }
+                                                setRoleUpdatingUserId(member.member.user_id);
+                                                const ok = await updateWorldMemberRole(id, member.member.user_id, nextRole, supabase);
+                                                setRoleUpdatingUserId(null);
+                                                setStatusMessage(ok ? 'Роль участника обновлена' : worldError || 'Не удалось обновить роль');
+                                            }}
+                                            className="rounded-md border border-[#3a4a34] bg-[#0e1b12]/80 px-2 py-1 text-sm text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none disabled:opacity-50"
+                                        >
+                                            <option value="owner">Владелец</option>
+                                            <option value="admin">Администратор</option>
+                                            <option value="member">Участник</option>
+                                        </select>
+                                    ) : (
+                                        <span className="text-xs text-[#c7bc98]">{roleLabelMap[member.member.role]}</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {statusMessage && (
+                        <p className="text-xs text-[#c7bc98]">{statusMessage}</p>
+                    )}
+                </div>
+            </Modal>
+
+            <Modal isOpen={inviteModalOpen} onClose={() => setInviteModalOpen(false)}>
+                <div className="space-y-4">
+                    <h3 className="text-2xl font-garamond text-[#e5d9a5]">Пригласить в мир</h3>
+                    <input
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="email пользователя"
+                        className="w-full rounded-xl border border-[#3a4a34] bg-[#0e1b12]/80 px-4 py-3 text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none"
+                    />
+                    <Button
+                        className="w-full"
+                        onClick={async () => {
+                            const uid = session?.user?.id;
+                            if (!uid || !id) return;
+                            const result = await inviteUserToWorld(id, uid, inviteEmail, supabase);
+                            if (result.ok) {
+                                setInviteEmail('');
+                                setInviteModalOpen(false);
+                                setStatusMessage('Приглашение отправлено');
+                            } else {
+                                setStatusMessage(result.error || 'Не удалось отправить приглашение');
+                            }
+                        }}
+                    >
+                        Отправить приглашение
+                    </Button>
+                </div>
+            </Modal>
+
             <motion.section
-                className="space-y-4"
+                className="w-full min-w-0 space-y-4"
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
@@ -170,7 +312,7 @@ export const WorldDetailsPage = () => {
                     </p>
                 ) : (
                     <motion.ul
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                        className="grid w-full min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
                         variants={cardListVariants}
                         initial="hidden"
                         animate="visible"
@@ -184,7 +326,7 @@ export const WorldDetailsPage = () => {
                             >
                                 <Link
                                     to={`/character/${c.id}`}
-                                    className="flex items-center gap-4 px-4 py-3"
+                                    className="flex min-w-0 items-center gap-4 px-4 py-3"
                                 >
                                     {c.avatar ? (
                                         <div className="relative shrink-0">
@@ -221,7 +363,7 @@ export const WorldDetailsPage = () => {
             </motion.section>
 
             <motion.section
-                className="space-y-4"
+                className="w-full min-w-0 space-y-4"
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2, ease: 'easeOut' }}
@@ -244,7 +386,7 @@ export const WorldDetailsPage = () => {
                     </p>
                 ) : (
                     <motion.ul
-                        className="grid grid-cols-1 md:grid-cols-2 gap-5"
+                        className="grid w-full min-w-0 grid-cols-1 gap-5 md:grid-cols-2"
                         variants={cardListVariants}
                         initial="hidden"
                         animate="visible"
@@ -307,7 +449,7 @@ export const WorldDetailsPage = () => {
             </motion.section>
 
             <motion.section
-                className="space-y-4"
+                className="w-full min-w-0 space-y-4"
                 initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.3, ease: 'easeOut' }}
@@ -330,7 +472,7 @@ export const WorldDetailsPage = () => {
                     </p>
                 ) : (
                     <motion.ul
-                        className="grid grid-cols-1 sm:grid-cols-2 gap-5"
+                        className="grid w-full min-w-0 grid-cols-1 gap-5 sm:grid-cols-2"
                         variants={cardListVariants}
                         initial="hidden"
                         animate="visible"

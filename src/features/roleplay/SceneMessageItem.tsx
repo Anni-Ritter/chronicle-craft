@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import type { SceneMessageView } from '../../types/roleplay';
 
 interface SceneMessageItemProps {
     item: SceneMessageView;
     onReply: (messageId: string) => void;
+    onStartEdit: (messageId: string, content: string) => void;
     isOwn: boolean;
     canManage: boolean;
-    onEdit: (messageId: string, content: string) => Promise<void>;
     onDelete: (messageId: string) => Promise<void>;
 }
 
@@ -41,15 +42,13 @@ const parseFormattedSegments = (content: string) => {
     });
 };
 
-export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDelete }: SceneMessageItemProps) => {
+export const SceneMessageItem = ({ item, onReply, onStartEdit, isOwn, canManage, onDelete }: SceneMessageItemProps) => {
     const rootRef = useRef<HTMLElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
     const avatar = item.emotion?.image_url || item.character?.avatar || item.author?.avatar_url;
     const authorName = item.character?.name || item.author?.username || 'Система';
     const segments = parseFormattedSegments(item.message.content);
     const speechPrefix = item.message.type === 'speech' ? '- ' : '';
-    const [isEditing, setIsEditing] = useState(false);
-    const [draft, setDraft] = useState(item.message.content);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isActionsOpen, setIsActionsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -58,7 +57,9 @@ export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDe
 
         const onDocClick = (event: MouseEvent) => {
             const target = event.target as Node;
-            if (!rootRef.current?.contains(target)) {
+            const isInsideMessage = !!rootRef.current?.contains(target);
+            const isInsideMenu = !!menuRef.current?.contains(target);
+            if (!isInsideMessage && !isInsideMenu) {
                 setIsActionsOpen(false);
             }
         };
@@ -89,7 +90,6 @@ export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDe
                         role="button"
                         tabIndex={0}
                         onClick={(e) => {
-                            if (isEditing) return;
                             const menuWidth = 170;
                             const menuHeight = canManage ? 156 : 58;
                             const viewportPadding = 10;
@@ -105,7 +105,6 @@ export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDe
                             setIsActionsOpen(true);
                         }}
                         onKeyDown={(e) => {
-                            if (isEditing) return;
                             if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
                                 if (rootRef.current) {
@@ -142,63 +141,26 @@ export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDe
                     </span>
                 )}
             </div>
-            {isEditing ? (
-                <div className="space-y-2">
-                    <textarea
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        rows={3}
-                        className="w-full rounded-lg bg-[#0d120f] px-3 py-2 text-[14px] text-[#e5d9a5] outline-none ring-1 ring-[#2d3a34] focus:ring-[#c2a774]"
-                    />
-                    <div className="flex justify-end gap-2">
-                        <button
-                            type="button"
-                            className="rounded-md px-2 py-1 text-xs text-[#c7bc98] hover:bg-white/5"
-                            onClick={() => {
-                                setIsEditing(false);
-                                setDraft(item.message.content);
-                            }}
-                        >
-                            Отмена
-                        </button>
-                        <button
-                            type="button"
-                            className="rounded-md px-2 py-1 text-xs text-[#e5d9a5] hover:bg-[#c2a77422]"
-                            onClick={async () => {
-                                const next = draft.trim();
-                                if (!next) return;
-                                setIsSubmitting(true);
-                                await onEdit(item.message.id, next);
-                                setIsSubmitting(false);
-                                setIsEditing(false);
-                            }}
-                        >
-                            {isSubmitting ? 'Сохранение...' : 'Сохранить'}
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
-                    {speechPrefix}
-                    {segments.map((segment, idx) => {
-                        if (segment.type === 'action') {
-                            return (
-                                <span key={idx} className="italic text-[#d5ebdd]">
-                                    {segment.text}
-                                </span>
-                            );
-                        }
-                        if (segment.type === 'narration') {
-                            return (
-                                <span key={idx} className="text-[#dde0f8]">
-                                    {segment.text}
-                                </span>
-                            );
-                        }
-                        return <span key={idx}>{segment.text}</span>;
-                    })}
-                </p>
-            )}
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed">
+                {speechPrefix}
+                {segments.map((segment, idx) => {
+                    if (segment.type === 'action') {
+                        return (
+                            <span key={idx} className="italic text-[#d5ebdd]">
+                                {segment.text}
+                            </span>
+                        );
+                    }
+                    if (segment.type === 'narration') {
+                        return (
+                            <span key={idx} className="text-[#dde0f8]">
+                                {segment.text}
+                            </span>
+                        );
+                    }
+                    return <span key={idx}>{segment.text}</span>;
+                })}
+            </p>
             <p className="mt-2 text-right text-[11px] opacity-75">
                 {new Date(item.message.created_at).toLocaleString()}
                 {item.message.edited ? ' · изменено' : ''}
@@ -206,51 +168,54 @@ export const SceneMessageItem = ({ item, onReply, isOwn, canManage, onEdit, onDe
                     </div>
                 </div>
             </div>
-            {isActionsOpen && (
-                <div
-                    className="fixed z-[130] min-w-[150px] rounded-xl border border-[#2f3a34] bg-[#0d130f] p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
-                    style={{ left: menuPosition.x, top: menuPosition.y }}
-                >
-                    <button
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
-                        onClick={() => {
-                            onReply(item.message.id);
-                            setIsActionsOpen(false);
-                        }}
+            {isActionsOpen &&
+                createPortal(
+                    <div
+                        ref={menuRef}
+                        className="fixed z-[300] min-w-[150px] rounded-xl border border-[#2f3a34] bg-[#0d130f] p-1.5 shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+                        style={{ left: menuPosition.x, top: menuPosition.y }}
                     >
-                        <MessageSquareReply size={16} />
-                        <span>Ответить</span>
-                    </button>
-                    {canManage && !isEditing && (
-                        <>
-                            <button
-                                type="button"
-                                className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
-                                onClick={() => {
-                                    setIsEditing(true);
-                                    setIsActionsOpen(false);
-                                }}
-                            >
-                                <Pencil size={16} />
-                                <span>Изменить</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#e7b0b0] transition hover:bg-[#d76f6f]/10 hover:text-[#ffd0d0]"
-                                onClick={async () => {
-                                    if (!window.confirm('Удалить сообщение?')) return;
-                                    await onDelete(item.message.id);
-                                    setIsActionsOpen(false);
-                                }}
-                            >
-                                <Trash2 size={16} />
-                                <span>Удалить</span>
-                            </button>
-                        </>
-                    )}
-                </div>
-            )}
+                        <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                            onClick={() => {
+                                onReply(item.message.id);
+                                setIsActionsOpen(false);
+                            }}
+                        >
+                            <MessageSquareReply size={16} />
+                            <span>Ответить</span>
+                        </button>
+                        {canManage && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0]"
+                                    onClick={() => {
+                                        onStartEdit(item.message.id, item.message.content);
+                                        setIsActionsOpen(false);
+                                    }}
+                                >
+                                    <Pencil size={16} />
+                                    <span>Изменить</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-[#e7b0b0] transition hover:bg-[#d76f6f]/10 hover:text-[#ffd0d0]"
+                                    onClick={async () => {
+                                        if (!window.confirm('Удалить сообщение?')) return;
+                                        await onDelete(item.message.id);
+                                        setIsActionsOpen(false);
+                                    }}
+                                >
+                                    <Trash2 size={16} />
+                                    <span>Удалить</span>
+                                </button>
+                            </>
+                        )}
+                    </div>,
+                    document.body
+                )}
         </article>
     );
 };

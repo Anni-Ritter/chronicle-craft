@@ -133,3 +133,27 @@ export interface World {
         };
     }
 }
+
+export type WorldMemberRole = 'owner' | 'admin' | 'member';
+export type WorldMemberStatus = 'active' | 'invited' | 'blocked';
+
+export interface WorldMember {
+    id: string;
+    world_id: string;
+    user_id: string;
+    role: WorldMemberRole;
+    status: WorldMemberStatus;
+    joined_at: string;
+}
+
+export interface WorldProfileLite {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    email?: string | null;
+}
+
+export interface WorldMemberView {
+    member: WorldMember;
+    profile: WorldProfileLite | null;
+}

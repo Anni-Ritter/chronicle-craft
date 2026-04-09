@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { AvatarUploader } from '../components/AvatarUploader';
 import { FloatingInput } from '../components/FloatingInput';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/ChronicleButton';
-import { Pen, Sparkles, Trash2 } from 'lucide-react';
+import { LogOut, Pen, Sparkles, Trash2 } from 'lucide-react';
 import { FloatingAlert } from '../components/FloatingAlert';
 
 export const ProfilePage = () => {
@@ -25,18 +25,13 @@ export const ProfilePage = () => {
     } | null>(null);
 
     useEffect(() => {
-        if (!user) return;
-        fetchProfile();
-    }, [user]);
-
-    useEffect(() => {
         if (statusMessage) {
             const timeout = setTimeout(() => setStatusMessage(null), 4000);
             return () => clearTimeout(timeout);
         }
     }, [statusMessage]);
 
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         const { data, error } = await supabase
             .from('profiles')
             .select('username, avatar_url')
@@ -50,7 +45,12 @@ export const ProfilePage = () => {
             setAvatarUrl(data.avatar_url || '');
             setNewEmail(user?.email || '');
         }
-    };
+    }, [supabase, user?.email, user?.id]);
+
+    useEffect(() => {
+        if (!user) return;
+        fetchProfile();
+    }, [user, fetchProfile]);
 
     const updateProfile = async () => {
         const updates = {
@@ -90,6 +90,15 @@ export const ProfilePage = () => {
 
     const handleAvatarUpload = (url: string) => {
         setAvatarUrl(url);
+    };
+
+    const handleSignOut = async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+            setStatusMessage({ text: 'Ошибка при выходе', type: 'error' });
+            return;
+        }
+        setStatusMessage({ text: 'Вы вышли из аккаунта', type: 'success' });
     };
 
     if (!user) {
@@ -313,6 +322,15 @@ export const ProfilePage = () => {
                     <section className="relative z-10 flex flex-col sm:flex-row justify-between items-center gap-4 mt-10 pt-4 border-t border-[#3a4a34]">
                         <Button onClick={updateProfile} className="text-sm md:text-base max-sm:w-full">
                             Сохранить профиль
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            onClick={handleSignOut}
+                            className="text-xs md:text-sm flex items-center gap-2 max-sm:w-full lg:hidden"
+                            icon={<LogOut className="w-4 h-4" />}
+                        >
+                            Разлогиниться
                         </Button>
 
                         <Button

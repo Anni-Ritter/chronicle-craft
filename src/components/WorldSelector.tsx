@@ -4,12 +4,14 @@ import { Select } from './Select';
 import { Globe } from 'lucide-react';
 
 export const WorldSelector = () => {
-    const { worlds } = useWorldStore();
+    const { worlds, invitedWorlds } = useWorldStore();
     const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
-    if (worlds.length === 0) return null;
-    const options = worlds.map((world) => ({
+    const mergedWorlds = [...worlds, ...invitedWorlds.filter((invited) => !worlds.some((world) => world.id === invited.id))];
+    if (mergedWorlds.length === 0) return null;
+    const invitedIds = new Set(invitedWorlds.map((world) => world.id));
+    const options = mergedWorlds.map((world) => ({
         value: world.id,
-        label: world.name,
+        label: invitedIds.has(world.id) ? `${world.name} (приглашение)` : world.name,
     }));
     return (
         <div className="w-full">

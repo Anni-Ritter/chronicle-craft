@@ -12,6 +12,10 @@ interface SceneComposerProps {
     }) => Promise<void>;
     replyToMessageId: string | null;
     onClearReply: () => void;
+    editMessageId: string | null;
+    editInitialContent: string;
+    onCancelEdit: () => void;
+    onSaveEdit: (messageId: string, content: string) => Promise<void>;
 }
 
 export const SceneComposer = ({
@@ -19,6 +23,10 @@ export const SceneComposer = ({
     onSend,
     replyToMessageId,
     onClearReply,
+    editMessageId,
+    editInitialContent,
+    onCancelEdit,
+    onSaveEdit,
 }: SceneComposerProps) => {
     const [content, setContent] = useState('');
     const [isSending, setIsSending] = useState(false);
@@ -27,6 +35,16 @@ export const SceneComposer = ({
     const [cursorPos, setCursorPos] = useState(0);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const canSubmit = content.trim().length > 0;
+    const isEditMode = !!editMessageId;
+
+    useEffect(() => {
+        if (editMessageId) {
+            setContent(editInitialContent);
+            requestAnimationFrame(() => {
+                textareaRef.current?.focus();
+            });
+        }
+    }, [editMessageId, editInitialContent]);
 
     const mentionState = useMemo(() => {
         const textarea = textareaRef.current;
@@ -79,13 +97,18 @@ export const SceneComposer = ({
         e.preventDefault();
         if (!canSubmit) return;
         setIsSending(true);
-        await onSend({
-            content: content.trim(),
-            reply_to_message_id: replyToMessageId,
-        });
+        if (editMessageId) {
+            await onSaveEdit(editMessageId, content.trim());
+        } else {
+            await onSend({
+                content: content.trim(),
+                reply_to_message_id: replyToMessageId,
+            });
+        }
         setContent('');
         setIsSending(false);
         if (replyToMessageId) onClearReply();
+        if (editMessageId) onCancelEdit();
     };
 
     return (
@@ -94,7 +117,7 @@ export const SceneComposer = ({
                 type="button"
                 onClick={() => setIsHelpOpen(true)}
                 className={`absolute right-14 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0] ${
-                    replyToMessageId ? 'top-10' : 'top-3'
+                    replyToMessageId || isEditMode ? 'top-10' : 'top-3'
                 }`}
                 aria-label="Подсказка по формату"
                 title="Подсказка по формату"
@@ -106,6 +129,14 @@ export const SceneComposer = ({
                     <span>Ответ на сообщение</span>
                     <button type="button" onClick={onClearReply} className="text-[#f1e7c6]">
                         Очистить
+                    </button>
+                </div>
+            )}
+            {isEditMode && (
+                <div className="mb-2 flex items-center justify-between border-l-2 border-[#c2a774] pl-3 text-xs text-[#e5d9a5]">
+                    <span>Редактирование сообщения</span>
+                    <button type="button" onClick={onCancelEdit} className="text-[#f1e7c6]">
+                        Отмена
                     </button>
                 </div>
             )}
@@ -152,7 +183,7 @@ export const SceneComposer = ({
                     className="h-10 w-10 !min-w-10 !px-0 !gap-0 md:w-auto md:!px-3 md:!gap-2"
                     icon={<Send size={16} />}
                 >
-                    <span className="hidden md:inline">{isSending ? 'Отправка...' : 'Отправить'}</span>
+                    <span className="hidden md:inline">{isEditMode ? (isSending ? 'Сохранение...' : 'Сохранить') : (isSending ? 'Отправка...' : 'Отправить')}</span>
                 </Button>
                 {(mentionState?.suggestions.length ?? 0) > 0 && (
                 <div className="absolute bottom-full left-0 right-0 z-20 mb-2 rounded-lg border border-[#2f3a34] bg-[#0d130f] p-1 shadow-[0_10px_24px_rgba(0,0,0,0.35)]">

@@ -21,12 +21,9 @@ export const useMapStore = create<MapDataStore>()(
                 let query = supabase
                     .from('maps')
                     .select('*')
-                    .eq('user_id', userId)
                     .order('created_at', { ascending: false });
 
-                if (worldId) {
-                    query = query.eq('world_id', worldId);
-                }
+                query = worldId ? query.eq('world_id', worldId) : query.eq('user_id', userId);
 
                 const { data, error } = await query;
 

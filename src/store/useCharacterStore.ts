@@ -35,11 +35,8 @@ export const useCharacterStore = create<CharacterStore>()(
             characters: [],
 
             fetchCharacters: async (userId, supabase, worldId) => {
-                let query = supabase.from('characters').select('*').eq('user_id', userId);
-
-                if (worldId) {
-                    query = query.eq('world_id', worldId);
-                }
+                let query = supabase.from('characters').select('*');
+                query = worldId ? query.eq('world_id', worldId) : query.eq('user_id', userId);
                 const { data, error } = await query;
 
                 if (!error) {

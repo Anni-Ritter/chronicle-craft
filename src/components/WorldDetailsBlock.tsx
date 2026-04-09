@@ -14,7 +14,7 @@ export const WorldDetailsBlock = ({ details }: Props) => {
         icon,
         children,
     }: { title: string; icon: JSX.Element; children: any }) => (
-        <section className="border border-[#3a4a34] rounded-2xl p-4 md:p-5 bg-[#111712]/90 shadow-[0_0_20px_#000] space-y-3">
+        <section className="rounded-xl px-1 py-1 md:px-2 md:py-2 space-y-2">
             <h3 className="flex items-center gap-2 text-lg md:text-xl font-semibold text-[#e5d9a5]">
                 {icon}
                 {title}
@@ -32,7 +32,7 @@ export const WorldDetailsBlock = ({ details }: Props) => {
     );
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {details.continents?.length ? (
                 <Section title="Материки" icon={<Mountain className="w-5 h-5 text-[#c2a774]" />}>
                     <List arr={details.continents} />
@@ -57,7 +57,7 @@ export const WorldDetailsBlock = ({ details }: Props) => {
                         {details.countries.map((c, i) => (
                             <div
                                 key={i}
-                                className="p-3 rounded-xl border border-[#3a4a34] bg-[#141f16]/90 space-y-1 shadow-inner"
+                                className="rounded-lg bg-[#141f16]/55 px-3 py-2.5 space-y-1"
                             >
                                 <p className="text-[#e5d9a5] font-semibold text-base">{c.name}</p>
                                 {c.capital && <p>Столица: {c.capital}</p>}
@@ -75,7 +75,7 @@ export const WorldDetailsBlock = ({ details }: Props) => {
                         {details.races.map((r, i) => (
                             <div
                                 key={i}
-                                className="p-3 rounded-xl border border-[#3a4a34] bg-[#141f16]/90 space-y-1 shadow-inner"
+                                className="rounded-lg bg-[#141f16]/55 px-3 py-2.5 space-y-1"
                             >
                                 <p className="text-[#e5d9a5] font-semibold text-base">{r.name}</p>
                                 {r.description && <p>{r.description}</p>}
@@ -95,7 +95,7 @@ export const WorldDetailsBlock = ({ details }: Props) => {
                         {details.languages.map((l, i) => (
                             <div
                                 key={i}
-                                className="p-3 rounded-xl border border-[#3a4a34] bg-[#141f16]/90 space-y-1 shadow-inner"
+                                className="rounded-lg bg-[#141f16]/55 px-3 py-2.5 space-y-1"
                             >
                                 <p className="text-[#e5d9a5] font-semibold">{l.name}</p>
                                 {l.script && <p>Письменность: {l.script}</p>}

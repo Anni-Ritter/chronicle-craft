@@ -45,10 +45,13 @@ export const CharactersPage = () => {
     const handleAdd = async (char: Character) => {
         const userId = session?.user?.id;
         if (!userId) return;
-        await addCharacter(
+        const { error } = await addCharacter(
             { ...char, user_id: userId, world_id: selectedWorldId || null },
             supabase
         );
+        if (error) {
+            throw error;
+        }
         setModalOpen(false);
     };
 

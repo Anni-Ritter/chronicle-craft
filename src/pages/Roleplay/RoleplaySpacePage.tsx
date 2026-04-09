@@ -40,6 +40,7 @@ export const RoleplaySpacePage = () => {
     const {
         membersBySpace,
         scenesBySpace,
+        error: roleplayError,
         getRoleplaySpaceById,
         getRoleplaySpaceMembers,
         getRoleplaySpaceCharacters,
@@ -82,6 +83,19 @@ export const RoleplaySpacePage = () => {
     const members = spaceId ? membersBySpace[spaceId] ?? [] : [];
     const scenes = spaceId ? scenesBySpace[spaceId] ?? [] : [];
     const selectedScene = scenes.find((scene) => scene.id === selectedSceneId) ?? null;
+    const membersCountLabel = (() => {
+        const n = members.length;
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${n} участник`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} участника`;
+        return `${n} участников`;
+    })();
+    const roleLabelMap: Record<'owner' | 'admin' | 'member', string> = {
+        owner: 'Владелец',
+        admin: 'Администратор',
+        member: 'Участник',
+    };
 
     if (!spaceId) return null;
 
@@ -104,8 +118,10 @@ export const RoleplaySpacePage = () => {
                                 type="button"
                                 onClick={() => setMembersModalOpen(true)}
                                 className="text-left"
+                                title="Открыть участников"
                             >
                                 <h1 className="text-3xl md:text-4xl font-garamond text-[#f4ecd0]">{spaceTitle}</h1>
+                                <p className="mt-1 text-xs md:text-sm text-[#b9b08f]">{membersCountLabel}</p>
                             </button>
                         </div>
                         <p className="mt-2 text-[#c7bc98]">{spaceDescription || 'Без описания'}</p>
@@ -412,22 +428,47 @@ export const RoleplaySpacePage = () => {
                                     )}
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-[#f3e7c8]">{name}</p>
-                                        <p className="text-xs text-[#c7bc98]">{member.member.status}</p>
+                                        <p className="text-xs text-[#c7bc98]">
+                                            {roleLabelMap[member.member.role]} · {member.member.status}
+                                        </p>
                                     </div>
                                     <select
                                         value={member.member.role}
                                         disabled={isOwner || isUpdating}
                                         onChange={async (e) => {
-                                            const nextRole = e.target.value as 'owner' | 'member';
+                                            const nextRole = e.target.value as 'owner' | 'admin' | 'member';
                                             if (nextRole === member.member.role) return;
+                                            if (nextRole === 'owner' && members.some((m) => m.member.role === 'owner' && m.member.user_id !== member.member.user_id)) {
+                                                setStatusMessage({
+                                                    type: 'error',
+                                                    text: 'В пространстве уже есть владелец. Сначала передайте роль владельца текущему owner.',
+                                                });
+                                                return;
+                                            }
                                             setRoleUpdatingUserId(member.member.user_id);
-                                            await updateRoleplayMemberRole(spaceId, member.member.user_id, nextRole, supabase);
+                                            const ok = await updateRoleplayMemberRole(spaceId, member.member.user_id, nextRole, supabase);
                                             setRoleUpdatingUserId(null);
+                                            if (!ok) {
+                                                setStatusMessage({
+                                                    type: 'error',
+                                                    text: roleplayError || useRoleplayStore.getState().error || 'Не удалось изменить роль участника',
+                                                });
+                                                return;
+                                            }
+                                            setStatusMessage({
+                                                type: 'success',
+                                                text: nextRole === 'owner'
+                                                    ? 'Роль владельца обновлена'
+                                                    : nextRole === 'admin'
+                                                        ? 'Роль администратора обновлена'
+                                                        : 'Роль участника обновлена',
+                                            });
                                         }}
                                         className="rounded-md border border-[#3a4a34] bg-[#0e1b12]/80 px-2 py-1 text-sm text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none disabled:opacity-50"
                                     >
-                                        <option value="owner">owner</option>
-                                        <option value="member">member</option>
+                                        <option value="owner">Владелец</option>
+                                        <option value="admin">Администратор</option>
+                                        <option value="member">Участник</option>
                                     </select>
                                 </div>
                             );
