@@ -1,7 +1,22 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MessageSquareReply, Pencil, Trash2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { formatSceneMessageTimestamp, type SceneMessageView } from '../../types/roleplay';
+import {
+    formatSceneMessageTimestamp,
+    type RoleplaySpaceCharacterView,
+    type SceneMessageView,
+} from '../../types/roleplay';
+
+function resolveSpaceCharacterByMentionName(
+    rawName: string,
+    spaceCharacters: RoleplaySpaceCharacterView[],
+): { name: string; avatar: string | null } | null {
+    const needle = rawName.trim().toLowerCase();
+    if (!needle) return null;
+    const hit = spaceCharacters.find((x) => x.character.name.toLowerCase() === needle);
+    if (!hit) return null;
+    return { name: hit.character.name, avatar: hit.character.avatar };
+}
 
 interface SceneMessageItemProps {
     item: SceneMessageView;
@@ -20,14 +35,9 @@ interface SceneMessageItemProps {
     showMessageTime?: boolean;
     /** Показывать секунды в строке времени */
     messageTimeWithSeconds?: boolean;
+    /** Персонажи пространства — для аватарки/имени у вложенных @Имя: */
+    spaceCharacters?: RoleplaySpaceCharacterView[];
 }
-
-const typeLabels: Record<SceneMessageView['message']['type'], string> = {
-    speech: 'Речь',
-    action: 'Действие',
-    narration: 'Описание',
-    system: 'Системное',
-};
 
 const highlightText = (text: string, rawQuery: string | null | undefined): ReactNode => {
     const q = rawQuery?.trim();
@@ -54,9 +64,32 @@ const highlightText = (text: string, rawQuery: string | null | undefined): React
     );
 };
 
-const parseFormattedSegments = (content: string) => {
-    const speechNormalized = content.replace(/^\s*-\s*/, '');
-    const chunks = speechNormalized.split(/(`[^`]+`|\*[^*]+\*)/g).filter(Boolean);
+type ParsedSegment =
+    | { type: 'action'; text: string }
+    | { type: 'narration'; text: string }
+    | { type: 'text'; text: string };
+
+/** Вложенные реплики: `@Имя: текст` внутри одного сообщения */
+function splitInlineMentions(text: string): Array<{ speaker: string | null; body: string }> {
+    const re = /@([^\s@:]{1,40})\s*:\s*/g;
+    const out: Array<{ speaker: string | null; body: string }> = [];
+    let last = 0;
+    let currentSpeaker: string | null = null;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+        const before = text.slice(last, m.index);
+        if (before.length > 0) {
+            out.push({ speaker: currentSpeaker, body: before });
+        }
+        currentSpeaker = m[1] ?? null;
+        last = m.index + m[0].length;
+    }
+    out.push({ speaker: currentSpeaker, body: text.slice(last) });
+    return out.filter((c) => c.body.trim().length > 0);
+}
+
+const parseFormattedSegments = (content: string): ParsedSegment[] => {
+    const chunks = content.split(/(`[^`]+`|\*[^*]+\*)/g).filter(Boolean);
     return chunks.map((chunk) => {
         if (chunk.startsWith('*') && chunk.endsWith('*')) {
             return {
@@ -77,6 +110,99 @@ const parseFormattedSegments = (content: string) => {
     });
 };
 
+type MessageUnit =
+    | {
+          kind: 'content';
+          segments: Array<{ type: 'text' | 'narration'; text: string }>;
+          chunkSpeaker: string | null;
+      }
+    | { kind: 'action'; text: string; chunkSpeaker: string | null };
+
+function buildMessageUnitsWithSpeaker(segments: ParsedSegment[], chunkSpeaker: string | null): MessageUnit[] {
+    const units: MessageUnit[] = [];
+    let current: Array<{ type: 'text' | 'narration'; text: string }> = [];
+
+    const flush = () => {
+        if (current.length === 0) return;
+        if (current.some((s) => s.text.length > 0)) {
+            units.push({ kind: 'content', segments: current, chunkSpeaker });
+        }
+        current = [];
+    };
+
+    for (const seg of segments) {
+        if (seg.type === 'action') {
+            flush();
+            if (seg.text.length > 0) units.push({ kind: 'action', text: seg.text, chunkSpeaker });
+        } else {
+            current.push(seg);
+        }
+    }
+    flush();
+    return units;
+}
+
+function buildUnitsFromMessageContent(
+    content: string,
+    messageType: SceneMessageView['message']['type'],
+): MessageUnit[] {
+    const parts = splitInlineMentions(content.trim().length > 0 ? content : '');
+    if (parts.length === 0) return [];
+
+    const allUnits: MessageUnit[] = [];
+    parts.forEach((part, i) => {
+        let body = part.body;
+        if (i === 0 && messageType === 'speech') {
+            body = body.replace(/^\s*-\s*/, '');
+        }
+        const segs = parseFormattedSegments(body);
+        let processed: ParsedSegment[] = segs;
+        if (
+            messageType === 'action' &&
+            parts.length === 1 &&
+            segs.length === 1 &&
+            segs[0].type === 'text' &&
+            segs[0].text.trim().length > 0
+        ) {
+            processed = [{ type: 'action', text: segs[0].text.trim() }];
+        }
+        allUnits.push(...buildMessageUnitsWithSpeaker(processed, part.speaker));
+    });
+    return allUnits;
+}
+
+type MessageRun =
+    | { kind: 'content'; chunks: Extract<MessageUnit, { kind: 'content' }>[]; inlineSpeaker: string | null }
+    | { kind: 'action'; text: string };
+
+function groupMessageRuns(units: MessageUnit[]): MessageRun[] {
+    const runs: MessageRun[] = [];
+    let buf: Extract<MessageUnit, { kind: 'content' }>[] = [];
+    const flush = () => {
+        if (buf.length) {
+            runs.push({
+                kind: 'content',
+                chunks: buf,
+                inlineSpeaker: buf[0].chunkSpeaker,
+            });
+            buf = [];
+        }
+    };
+    for (const u of units) {
+        if (u.kind === 'action') {
+            flush();
+            runs.push({ kind: 'action', text: u.text });
+        } else {
+            if (buf.length > 0 && buf[0].chunkSpeaker !== u.chunkSpeaker) {
+                flush();
+            }
+            buf.push(u);
+        }
+    }
+    flush();
+    return runs;
+}
+
 export const SceneMessageItem = ({
     item,
     onReply,
@@ -89,16 +215,55 @@ export const SceneMessageItem = ({
     highlightQuery = null,
     showMessageTime = true,
     messageTimeWithSeconds = true,
+    spaceCharacters = [],
 }: SceneMessageItemProps) => {
     const rootRef = useRef<HTMLElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const avatar = item.emotion?.image_url || item.character?.avatar || item.author?.avatar_url;
     const authorName = item.character?.name || item.author?.username || 'Система';
-    const segments = parseFormattedSegments(item.message.content);
     const speechPrefix = item.message.type === 'speech' ? '- ' : '';
+    const units = useMemo(
+        () => buildUnitsFromMessageContent(item.message.content, item.message.type),
+        [item.message.content, item.message.type],
+    );
+    const { fallbackRun, contentChunkGlobalIndex } = useMemo(() => {
+        const runs = groupMessageRuns(units);
+        const fr: MessageRun[] =
+            runs.length === 0
+                ? [
+                      {
+                          kind: 'content',
+                          inlineSpeaker: null,
+                          chunks: [
+                              {
+                                  kind: 'content',
+                                  chunkSpeaker: null,
+                                  segments: [
+                                      {
+                                          type: 'text',
+                                          text: item.message.content.trim() || ' ',
+                                      },
+                                  ],
+                              },
+                          ],
+                      },
+                  ]
+                : runs;
+        const m = new Map<string, number>();
+        let g = 0;
+        fr.forEach((run, ri) => {
+            if (run.kind !== 'content') return;
+            run.chunks.forEach((_, uidx) => {
+                m.set(`${ri}-${uidx}`, g);
+                g += 1;
+            });
+        });
+        return { fallbackRun: fr, contentChunkGlobalIndex: m };
+    }, [units, item.message.content]);
     const s = fontScale;
     const bubblePadX = 12 * s;
-    const bubblePadY = 10 * s;
+    const bubblePadTop = 6 * s;
+    const bubblePadBottom = 8 * s;
     const bubbleRadius = Math.min(18, Math.max(10, Math.round(12 * s)));
     const avatarSize = Math.min(44, Math.max(26, Math.round(32 * s)));
     const [isActionsOpen, setIsActionsOpen] = useState(false);
@@ -121,153 +286,328 @@ export const SceneMessageItem = ({
         };
     }, [isActionsOpen]);
 
+    const openMessageMenu = (clientX: number, clientY: number) => {
+        const menuWidth = 170;
+        const menuHeight = canManage ? 156 : 58;
+        const viewportPadding = 10;
+        const x = Math.min(
+            window.innerWidth - menuWidth - viewportPadding,
+            Math.max(viewportPadding, clientX - menuWidth / 2),
+        );
+        const y = Math.min(
+            window.innerHeight - menuHeight - viewportPadding,
+            Math.max(viewportPadding, clientY + 8),
+        );
+        setMenuPosition({ x, y });
+        setIsActionsOpen(true);
+    };
+
+    const bubbleClass = `border text-[#f1e7c6] ${
+        isOwn
+            ? 'border-[#3a4a34] bg-[#1a2619] shadow-[0_6px_20px_rgba(0,0,0,0.25)]'
+            : 'border-[#2d3a34] bg-[#0f1511] shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
+    }`;
+
+    const bubbleStyle = {
+        paddingLeft: bubblePadX,
+        paddingRight: bubblePadX,
+        paddingTop: bubblePadTop,
+        paddingBottom: bubblePadBottom,
+        borderRadius: `${bubbleRadius}px`,
+    } as const;
+
+    const firstContentRunIndex = fallbackRun.findIndex((r) => r.kind === 'content');
+    const leadWithAction = fallbackRun[0]?.kind === 'action';
+
     return (
         <article
             id={messageDomId}
             ref={rootRef}
-            className={`relative flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+            className="relative w-full min-w-0"
             style={{ paddingTop: `${4 * s}px` }}
+            role="button"
+            tabIndex={0}
+            onClick={(e) => openMessageMenu(e.clientX, e.clientY)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (rootRef.current) {
+                        const rect = rootRef.current.getBoundingClientRect();
+                        openMessageMenu(rect.left + rect.width / 2, rect.top + 8);
+                    }
+                }
+            }}
         >
-            <div
-                className={`flex max-w-[88%] items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
-                style={{ gap: `${8 * s}px` }}
-            >
-                {avatar ? (
-                    <img
-                        src={avatar}
-                        alt=""
-                        className="shrink-0 rounded-full object-cover"
-                        style={{ width: avatarSize, height: avatarSize }}
-                    />
-                ) : (
+            <div className="flex w-full min-w-0 flex-col" style={{ gap: `${6 * s}px` }}>
+                {leadWithAction ? (
                     <div
-                        className="flex shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
-                        style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
+                        className={`flex w-full min-w-0 items-end ${isOwn ? 'justify-end' : 'justify-start'}`}
                     >
-                        ?
+                        <div
+                            className={`flex max-w-[88%] items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                            style={{ gap: `${8 * s}px` }}
+                        >
+                            {avatar ? (
+                                <img
+                                    src={avatar}
+                                    alt=""
+                                    className="shrink-0 rounded-full object-cover"
+                                    style={{ width: avatarSize, height: avatarSize }}
+                                />
+                            ) : (
+                                <div
+                                    className="flex shrink-0 items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
+                                    style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
+                                >
+                                    ?
+                                </div>
+                            )}
+                            <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
+                                {item.replyTo ? (
+                                    <div
+                                        className="border-[#5b5b5b] text-[#c7bc98]"
+                                        style={{
+                                            fontSize: `${12 * fontScale}px`,
+                                            paddingLeft: `${8 * s}px`,
+                                            borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                                            borderLeftStyle: 'solid',
+                                        }}
+                                    >
+                                        Ответ на: {item.replyTo.content.slice(0, 80)}
+                                    </div>
+                                ) : null}
+                                <div
+                                    className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                                    style={{ gap: `${6 * s}px` }}
+                                >
+                                    <p
+                                        className={`m-0 truncate font-semibold ${
+                                            isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
+                                        }`}
+                                        style={{ fontSize: `${10 * fontScale}px` }}
+                                    >
+                                        {highlightText(authorName, highlightQuery)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
+                ) : null}
+                {fallbackRun.map((run, ri) => {
+                    if (run.kind === 'action') {
+                        return (
+                            <div key={`a-${ri}`} className="flex w-full min-w-0 justify-center py-0.5">
+                                <div
+                                    className="max-w-[min(92%,520px)] rounded-full border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-center text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px]"
+                                    style={{ fontSize: `${14 * fontScale}px`, lineHeight: 1.35 }}
+                                >
+                                    <span className="whitespace-pre-wrap leading-snug">
+                                        {highlightText(run.text, highlightQuery)}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    }
 
-                <div className="min-w-0">
-                    <div
-                        className={`border text-[#f1e7c6] ${
-                            isOwn
-                                ? 'border-[#3a4a34] bg-[#1a2619] shadow-[0_6px_20px_rgba(0,0,0,0.25)]'
-                                : 'border-[#2d3a34] bg-[#0f1511] shadow-[0_6px_20px_rgba(0,0,0,0.2)]'
-                        }`}
-                        style={{
-                            paddingLeft: bubblePadX,
-                            paddingRight: bubblePadX,
-                            paddingTop: bubblePadY,
-                            paddingBottom: bubblePadY,
-                            borderRadius: `${bubbleRadius}px`,
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                            const menuWidth = 170;
-                            const menuHeight = canManage ? 156 : 58;
-                            const viewportPadding = 10;
-                            const x = Math.min(
-                                window.innerWidth - menuWidth - viewportPadding,
-                                Math.max(viewportPadding, e.clientX - menuWidth / 2)
+                    const isFirstContentRun = ri === firstContentRunIndex;
+                    const useAvatarImage = isFirstContentRun && !leadWithAction;
+                    const showAuthorMetaInColumn = isFirstContentRun && !leadWithAction;
+                    const resolvedInlineSpeaker = run.inlineSpeaker
+                        ? resolveSpaceCharacterByMentionName(run.inlineSpeaker, spaceCharacters)
+                        : null;
+                    const inlineSpeakerName = resolvedInlineSpeaker?.name ?? run.inlineSpeaker ?? '';
+                    const inlineSpeakerAvatar = resolvedInlineSpeaker?.avatar ?? null;
+
+                    const renderContentBubbles = (
+                        unitList: Extract<MessageUnit, { kind: 'content' }>[],
+                        runIndex: number,
+                    ) =>
+                        unitList.map((unit, uidx) => {
+                            const chunkIx = contentChunkGlobalIndex.get(`${runIndex}-${uidx}`) ?? 0;
+                            const prependSpeech = item.message.type === 'speech' && chunkIx === 0;
+
+                            return (
+                                <div key={`c-${runIndex}-${uidx}`} className={bubbleClass} style={bubbleStyle}>
+                                    <p
+                                        className="m-0 leading-snug"
+                                        style={{
+                                            fontSize: `${15 * fontScale}px`,
+                                            lineHeight: 1.35,
+                                        }}
+                                    >
+                                        {unit.segments.map((segment, idx) => {
+                                            const key = `${runIndex}-${uidx}-${idx}`;
+                                            if (segment.type === 'narration') {
+                                                return (
+                                                    <span key={key} className="italic text-[#dde0f8]">
+                                                        {highlightText(segment.text, highlightQuery)}
+                                                    </span>
+                                                );
+                                            }
+                                            const firstTextIdx = unit.segments.findIndex((x) => x.type === 'text');
+                                            const prefix =
+                                                prependSpeech && segment.type === 'text' && idx === firstTextIdx
+                                                    ? speechPrefix
+                                                    : '';
+                                            return (
+                                                <span key={key}>
+                                                    {prefix}
+                                                    {highlightText(segment.text, highlightQuery)}
+                                                </span>
+                                            );
+                                        })}
+                                    </p>
+                                </div>
                             );
-                            const y = Math.min(
-                                window.innerHeight - menuHeight - viewportPadding,
-                                Math.max(viewportPadding, e.clientY + 8)
-                            );
-                            setMenuPosition({ x, y });
-                            setIsActionsOpen(true);
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                if (rootRef.current) {
-                                    const rect = rootRef.current.getBoundingClientRect();
-                                    const menuWidth = 170;
-                                    const menuHeight = canManage ? 156 : 58;
-                                    const viewportPadding = 10;
-                                    const x = Math.min(
-                                        window.innerWidth - menuWidth - viewportPadding,
-                                        Math.max(viewportPadding, rect.left + rect.width / 2 - menuWidth / 2)
-                                    );
-                                    const y = Math.min(
-                                        window.innerHeight - menuHeight - viewportPadding,
-                                        Math.max(viewportPadding, rect.top + 8)
-                                    );
-                                    setMenuPosition({ x, y });
-                                }
-                                setIsActionsOpen(true);
-                            }
-                        }}
-                    >
-            {item.replyTo && (
-                <div
-                    className="border-[#5b5b5b] text-[#c7bc98]"
-                    style={{
-                        fontSize: `${12 * fontScale}px`,
-                        marginBottom: `${8 * s}px`,
-                        paddingLeft: `${8 * s}px`,
-                        borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
-                        borderLeftStyle: 'solid',
-                    }}
-                >
-                    Ответ на: {item.replyTo.content.slice(0, 80)}
-                </div>
-            )}
-            <div
-                className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
-                style={{ gap: `${6 * s}px` }}
-            >
-                <p
-                    className={`truncate font-semibold ${isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'}`}
-                    style={{ fontSize: `${10 * fontScale}px` }}
-                >
-                    {highlightText(authorName, highlightQuery)}
-                </p>
-                {item.message.type === 'system' && (
-                    <span
-                        className="rounded-full border border-[#5a5a5a] bg-black/20 uppercase tracking-wide text-[#c7bc98]"
-                        style={{
-                            fontSize: `${10 * fontScale}px`,
-                            paddingLeft: `${8 * s}px`,
-                            paddingRight: `${8 * s}px`,
-                            paddingTop: `${4 * s}px`,
-                            paddingBottom: `${4 * s}px`,
-                        }}
-                    >
-                        {typeLabels[item.message.type]}
-                    </span>
-                )}
-            </div>
-            <p className="whitespace-pre-wrap leading-tight" style={{ fontSize: `${15 * fontScale}px` }}>
-                {speechPrefix}
-                {segments.map((segment, idx) => {
-                    if (segment.type === 'action') {
+                        });
+
+                    if (run.inlineSpeaker) {
                         return (
-                            <span key={idx} className="italic text-[#d5ebdd]">
-                                {highlightText(segment.text, highlightQuery)}
-                            </span>
+                            <div
+                                key={`c-run-${ri}`}
+                                className={`flex w-full min-w-0 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                            >
+                                <div
+                                    className={`flex max-w-[88%] min-w-0 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                                    style={{ gap: `${8 * s}px` }}
+                                >
+                                    {inlineSpeakerAvatar ? (
+                                        <img
+                                            src={inlineSpeakerAvatar}
+                                            alt=""
+                                            className="shrink-0 self-end rounded-full object-cover"
+                                            style={{ width: avatarSize, height: avatarSize }}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="flex shrink-0 self-end items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
+                                            style={{
+                                                width: avatarSize,
+                                                height: avatarSize,
+                                                fontSize: `${12 * s}px`,
+                                            }}
+                                        >
+                                            ?
+                                        </div>
+                                    )}
+                                    <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
+                                        {isFirstContentRun && item.replyTo ? (
+                                            <div
+                                                className="border-[#5b5b5b] text-[#c7bc98]"
+                                                style={{
+                                                    fontSize: `${12 * fontScale}px`,
+                                                    paddingLeft: `${8 * s}px`,
+                                                    borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                                                    borderLeftStyle: 'solid',
+                                                }}
+                                            >
+                                                Ответ на: {item.replyTo.content.slice(0, 80)}
+                                            </div>
+                                        ) : null}
+                                        <div
+                                            className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                                            style={{ gap: `${6 * s}px` }}
+                                        >
+                                            <p
+                                                className={`m-0 truncate font-semibold ${
+                                                    isOwn
+                                                        ? 'text-right text-[#d8d1b2]'
+                                                        : 'text-left text-[#c7bc98]'
+                                                }`}
+                                                style={{ fontSize: `${10 * fontScale}px` }}
+                                            >
+                                                {highlightText(inlineSpeakerName, highlightQuery)}
+                                            </p>
+                                        </div>
+                                        {renderContentBubbles(run.chunks, ri)}
+                                    </div>
+                                </div>
+                            </div>
                         );
                     }
-                    if (segment.type === 'narration') {
-                        return (
-                            <span key={idx} className="text-[#dde0f8]">
-                                {highlightText(segment.text, highlightQuery)}
-                            </span>
-                        );
-                    }
-                    return <span key={idx}>{highlightText(segment.text, highlightQuery)}</span>;
+
+                    return (
+                        <div
+                            key={`c-run-${ri}`}
+                            className={`flex w-full min-w-0 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        >
+                            <div
+                                className={`flex max-w-[88%] min-w-0 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                                style={{ gap: `${8 * s}px` }}
+                            >
+                                {useAvatarImage ? (
+                                    avatar ? (
+                                        <img
+                                            src={avatar}
+                                            alt=""
+                                            className="shrink-0 self-end rounded-full object-cover"
+                                            style={{ width: avatarSize, height: avatarSize }}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="flex shrink-0 self-end items-center justify-center rounded-full bg-[#1a231d] text-[#9fa68a]"
+                                            style={{ width: avatarSize, height: avatarSize, fontSize: `${12 * s}px` }}
+                                        >
+                                            ?
+                                        </div>
+                                    )
+                                ) : (
+                                    <div className="shrink-0 self-end" style={{ width: avatarSize }} aria-hidden />
+                                )}
+                                <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
+                                    {showAuthorMetaInColumn && item.replyTo ? (
+                                        <div
+                                            className="border-[#5b5b5b] text-[#c7bc98]"
+                                            style={{
+                                                fontSize: `${12 * fontScale}px`,
+                                                paddingLeft: `${8 * s}px`,
+                                                borderLeftWidth: `${Math.max(1, Math.round(2 * s))}px`,
+                                                borderLeftStyle: 'solid',
+                                            }}
+                                        >
+                                            Ответ на: {item.replyTo.content.slice(0, 80)}
+                                        </div>
+                                    ) : null}
+                                    {showAuthorMetaInColumn ? (
+                                        <div
+                                            className={`flex items-center ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                                            style={{ gap: `${6 * s}px` }}
+                                        >
+                                            <p
+                                                className={`m-0 truncate font-semibold ${
+                                                    isOwn ? 'text-right text-[#d8d1b2]' : 'text-left text-[#c7bc98]'
+                                                }`}
+                                                style={{ fontSize: `${10 * fontScale}px` }}
+                                            >
+                                                {highlightText(authorName, highlightQuery)}
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                    {renderContentBubbles(run.chunks, ri)}
+                                </div>
+                            </div>
+                        </div>
+                    );
                 })}
-            </p>
-            {showMessageTime ? (
-                <p className="text-right opacity-75" style={{ fontSize: `${9 * fontScale}px`, marginTop: `${4 * s}px` }}>
-                    {formatSceneMessageTimestamp(item.message.created_at, messageTimeWithSeconds)}
-                    {item.message.edited ? ' · изменено' : ''}
-                </p>
-            ) : null}
+
+                {showMessageTime ? (
+                    <div
+                        className={`flex w-full min-w-0 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                        style={{ marginTop: `${2 * s}px` }}
+                    >
+                        <p
+                            className={`m-0 max-w-[88%] opacity-75 ${isOwn ? 'pr-1 text-right' : 'pl-1 text-left'}`}
+                            style={{
+                                fontSize: `${9 * fontScale}px`,
+                                paddingLeft: isOwn ? undefined : avatarSize + 8 * s,
+                                paddingRight: isOwn ? avatarSize + 8 * s : undefined,
+                            }}
+                        >
+                            {formatSceneMessageTimestamp(item.message.created_at, messageTimeWithSeconds)}
+                            {item.message.edited ? ' · изменено' : ''}
+                        </p>
                     </div>
-                </div>
+                ) : null}
             </div>
             {isActionsOpen &&
                 createPortal(

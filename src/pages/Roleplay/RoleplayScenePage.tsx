@@ -180,7 +180,10 @@ export const RoleplayScenePage = () => {
         [spaceId, spaceCharactersBySpace]
     );
     const messages = useMemo(
-        () => (sceneId ? sceneMessagesByScene[sceneId] ?? [] : []),
+        () =>
+            sceneId
+                ? (sceneMessagesByScene[sceneId] ?? []).filter((item) => item.message.type !== 'system')
+                : [],
         [sceneId, sceneMessagesByScene]
     );
 
@@ -570,6 +573,7 @@ export const RoleplayScenePage = () => {
                             showMessageTime={chatTimeDisplay.show}
                             messageTimeWithSeconds={chatTimeDisplay.withSeconds}
                             fontScale={chatFontScale}
+                            spaceCharacters={spaceCharacters}
                             item={item}
                             onReply={setReplyToMessageId}
                             onStartEdit={(messageId, content) => {

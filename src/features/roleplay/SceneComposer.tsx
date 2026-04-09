@@ -259,16 +259,19 @@ export const SceneComposer = ({
                     <h3 className="text-2xl font-garamond text-[#e5d9a5]">Подсказка по формату</h3>
                     <div className="space-y-2 text-sm text-[#c7bc98]">
                         <p>
-                            <span className="text-[#e5d9a5]">@Имя:</span> в начале сообщения — писать от лица персонажа.
+                            <span className="text-[#e5d9a5]">@Имя:</span> в начале сообщения — писать от лица персонажа; в
+                            том же сообщении можно снова написать <span className="text-[#e5d9a5]">@Другой:</span> —
+                            реплика покажется отдельным блоком с подписью.
                         </p>
                         <p>
                             <span className="text-[#e5d9a5]">-</span> в начале фрагмента — речь.
                         </p>
                         <p>
-                            <span className="text-[#e5d9a5]">*действие*</span> — действие.
+                            <span className="text-[#e5d9a5]">*действие*</span> — действие (отдельная капсула по центру
+                            чата).
                         </p>
                         <p>
-                            <span className="text-[#e5d9a5]">`описание`</span> — описание/ремарка.
+                            <span className="text-[#e5d9a5]">`описание`</span> — описание/ремарка курсивом в пузыре.
                         </p>
                     </div>
                     <div className="rounded-lg bg-[#111712] p-3 text-sm text-[#e5d9a5]">
