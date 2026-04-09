@@ -6,7 +6,7 @@ import { BottomNav } from './components/BottomNav';
 import { useEffect, useMemo, useState } from 'react';
 import { AppRouter } from './AppRouter';
 import { Footer } from './components/Footer';
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useSession, useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
 import { useRealtimeNotifications } from './hooks/useRealtimeNotifications';
 function useIsStandalone() {
   const nav = window.navigator as Navigator & { standalone?: boolean };
@@ -21,10 +21,11 @@ function AppShell() {
   const isStandalone = useIsStandalone();
   const location = useLocation();
   const session = useSession();
+  const user = useUser();
   const supabase = useSupabaseClient();
   const isRoleplayScene = /^\/roleplay\/[^/]+\/scenes\/[^/]+$/.test(location.pathname);
 
-  useRealtimeNotifications(session?.user?.id, supabase);
+  useRealtimeNotifications(user?.id ?? session?.user?.id, supabase);
 
   useEffect(() => {
     document.body.classList.toggle('pwa-standalone', isStandalone);

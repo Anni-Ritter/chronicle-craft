@@ -4,8 +4,12 @@ import { AvatarUploader } from '../components/AvatarUploader';
 import { FloatingInput } from '../components/FloatingInput';
 import { Modal } from '../components/Modal';
 import { Button } from '../components/ChronicleButton';
-import { LogOut, Pen, Sparkles, Trash2 } from 'lucide-react';
+import { Bell, LogOut, Pen, Sparkles, Trash2 } from 'lucide-react';
 import { FloatingAlert } from '../components/FloatingAlert';
+import {
+    getNotificationPermissionState,
+    requestNotificationPermission,
+} from '../hooks/useRealtimeNotifications';
 
 export const ProfilePage = () => {
     const supabase = useSupabaseClient();
@@ -19,6 +23,7 @@ export const ProfilePage = () => {
     const [showEmailEdit, setShowEmailEdit] = useState(false);
     const [showPasswordEdit, setShowPasswordEdit] = useState(false);
     const [emailError, setEmailError] = useState<string | null>(null);
+    const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('unsupported');
     const [statusMessage, setStatusMessage] = useState<{
         text: string;
         type: 'success' | 'error';
@@ -51,6 +56,10 @@ export const ProfilePage = () => {
         if (!user) return;
         fetchProfile();
     }, [user, fetchProfile]);
+
+    useEffect(() => {
+        setNotificationPermission(getNotificationPermissionState());
+    }, []);
 
     const updateProfile = async () => {
         const updates = {
@@ -99,6 +108,23 @@ export const ProfilePage = () => {
             return;
         }
         setStatusMessage({ text: 'Вы вышли из аккаунта', type: 'success' });
+    };
+
+    const handleEnableNotifications = async () => {
+        const permission = await requestNotificationPermission();
+        setNotificationPermission(permission);
+        if (permission === 'granted') {
+            setStatusMessage({ text: 'Уведомления включены', type: 'success' });
+            return;
+        }
+        if (permission === 'denied') {
+            setStatusMessage({
+                text: 'Уведомления отключены в браузере. Разрешите их в настройках сайта.',
+                type: 'error',
+            });
+            return;
+        }
+        setStatusMessage({ text: 'Не удалось включить уведомления на этом устройстве', type: 'error' });
     };
 
     if (!user) {
@@ -317,6 +343,33 @@ export const ProfilePage = () => {
                                 />
                             </div>
                         )}
+
+                        <div className="rounded-xl border border-[#3a4a34] bg-[#0f1712]/70 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm text-[#e5d9a5]">Push-уведомления</p>
+                                    <p className="text-xs text-[#c7bc98]">
+                                        {notificationPermission === 'granted'
+                                            ? 'Включены'
+                                            : notificationPermission === 'denied'
+                                                ? 'Отключены в настройках браузера'
+                                                : notificationPermission === 'default'
+                                                    ? 'Нужно разрешение'
+                                                    : 'Не поддерживаются на этом устройстве'}
+                                    </p>
+                                </div>
+                                {notificationPermission !== 'unsupported' && notificationPermission !== 'granted' && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleEnableNotifications}
+                                        className="text-xs md:text-sm"
+                                        icon={<Bell size={14} />}
+                                    >
+                                        Включить
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
                     </section>
 
                     <section className="relative z-10 flex flex-col sm:flex-row justify-between items-center gap-4 mt-10 pt-4 border-t border-[#3a4a34]">
