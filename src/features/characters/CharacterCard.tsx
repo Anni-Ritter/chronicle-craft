@@ -232,11 +232,12 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                 <CharacterForm
                     initialCharacter={character}
                     onFinish={() => setIsEditing(false)}
-                    onSave={(char) =>
-                        useCharacterStore
+                    onSave={async (char) => {
+                        const { error } = await useCharacterStore
                             .getState()
-                            .updateCharacter(char, supabase)
-                    }
+                            .updateCharacter(char, supabase);
+                        if (error) throw error;
+                    }}
                 />
             </Modal>
 

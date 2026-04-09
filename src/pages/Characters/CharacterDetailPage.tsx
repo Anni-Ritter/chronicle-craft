@@ -402,7 +402,10 @@ export const CharacterDetailPage = () => {
                 <CharacterForm
                     initialCharacter={character}
                     onFinish={() => setIsEditing(false)}
-                    onSave={(char) => updateCharacter(char, supabase)}
+                    onSave={async (char) => {
+                        const { error } = await updateCharacter(char, supabase);
+                        if (error) throw error;
+                    }}
                 />
             </Modal>
 
