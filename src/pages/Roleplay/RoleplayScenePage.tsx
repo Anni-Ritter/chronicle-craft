@@ -35,21 +35,21 @@ export const RoleplayScenePage = () => {
 
     useEffect(() => {
         if (!spaceId || !sceneId) return;
-        getRoleplaySpaceCharacters(spaceId, supabase);
         getSceneMessages(sceneId, supabase);
-    }, [spaceId, sceneId, supabase, getRoleplaySpaceCharacters, getSceneMessages]);
+    }, [spaceId, sceneId, supabase, getSceneMessages]);
 
     useEffect(() => {
-        if (!sceneId) return;
+        if (!sceneId || !spaceId) return;
         supabase
             .from('roleplay_scenes')
-            .select('background_image')
+            .select('background_image, world_id')
             .eq('id', sceneId)
             .maybeSingle()
             .then(({ data }) => {
                 setSceneBackgroundImage(data?.background_image ?? null);
+                getRoleplaySpaceCharacters(spaceId, supabase, data?.world_id ?? null);
             });
-    }, [sceneId, supabase]);
+    }, [sceneId, spaceId, supabase, getRoleplaySpaceCharacters]);
 
     useSceneMessagesRealtime(sceneId ?? null, refreshMessages);
 
@@ -122,7 +122,7 @@ export const RoleplayScenePage = () => {
     };
 
     return (
-        <div className="mx-auto mt-0 flex h-[100dvh] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:px-4">
+        <div className="mx-auto mt-0 flex h-[calc(var(--app-vh,1vh)*100)] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:h-[100dvh] md:px-4">
             <header className="px-1 pt-2">
                 <div className="flex items-center gap-3">
                     <button

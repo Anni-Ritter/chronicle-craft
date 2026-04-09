@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Globe, Image, Settings } from 'lucide-react';
 import { Button } from '../../components/ChronicleButton';
 import { Select } from '../../components/Select';
@@ -43,6 +43,21 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
     const [settingsJson, setSettingsJson] = useState(initialValues?.settings ? JSON.stringify(initialValues.settings) : '');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const availableChronicles = useMemo(() => {
+        if (!worldId) return chronicles;
+        return chronicles.filter((chronicle) => chronicle.world_id === worldId);
+    }, [chronicles, worldId]);
+
+    useEffect(() => {
+        if (!worldId && chronicleId !== null) {
+            setChronicleId(null);
+            return;
+        }
+        if (chronicleId && !availableChronicles.some((chronicle) => chronicle.id === chronicleId)) {
+            setChronicleId(null);
+        }
+    }, [worldId, chronicleId, availableChronicles]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim()) return;
@@ -59,7 +74,7 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
             title: title.trim(),
             description: description.trim() || null,
             world_id: worldId,
-            chronicle_id: chronicleId,
+            chronicle_id: worldId ? chronicleId : null,
             background_image: backgroundImage.trim() || null,
             status,
             settings: parsedSettings,
@@ -96,7 +111,7 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
                 onChange={setChronicleId}
                 placeholder="Связанная хроника (опционально)"
                 icon={<BookOpen className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
-                options={chronicles.map((chronicle) => ({ value: chronicle.id, label: chronicle.title || 'Без названия' }))}
+                options={availableChronicles.map((chronicle) => ({ value: chronicle.id, label: chronicle.title || 'Без названия' }))}
             />
             <div className="space-y-2">
                 <div className="flex items-center justify-between">

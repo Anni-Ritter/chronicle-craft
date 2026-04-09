@@ -127,7 +127,11 @@ interface RoleplayState {
     deleteRoleplaySpace: (spaceId: string, userId: string, supabase: SupabaseClient) => Promise<boolean>;
     getRoleplaySpaceById: (spaceId: string, supabase: SupabaseClient) => Promise<RoleplaySpace | null>;
     getRoleplaySpaceMembers: (spaceId: string, supabase: SupabaseClient) => Promise<RoleplaySpaceMemberView[]>;
-    getRoleplaySpaceCharacters: (spaceId: string, supabase: SupabaseClient) => Promise<RoleplaySpaceCharacterView[]>;
+    getRoleplaySpaceCharacters: (
+        spaceId: string,
+        supabase: SupabaseClient,
+        worldIdOverride?: string | null
+    ) => Promise<RoleplaySpaceCharacterView[]>;
     addOwnCharacterToSpace: (spaceId: string, characterId: string, userId: string, supabase: SupabaseClient) => Promise<boolean>;
     getRoleplayScenesBySpace: (spaceId: string, supabase: SupabaseClient) => Promise<RoleplayScene[]>;
     createRoleplayScene: (spaceId: string, userId: string, input: CreateRoleplaySceneInput, supabase: SupabaseClient) => Promise<RoleplayScene | null>;
@@ -430,7 +434,7 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
         return members;
     },
 
-    getRoleplaySpaceCharacters: async (spaceId, supabase) => {
+    getRoleplaySpaceCharacters: async (spaceId, supabase, worldIdOverride) => {
         const { data: spaceRow, error: spaceError } = await supabase
             .from('roleplay_spaces')
             .select('world_id')
@@ -446,8 +450,10 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
             .select('id, user_id, name, avatar, created_at, world_id')
             .order('name', { ascending: true });
 
-        if (spaceRow?.world_id) {
-            charactersQuery = charactersQuery.eq('world_id', spaceRow.world_id);
+        const effectiveWorldId = worldIdOverride !== undefined ? worldIdOverride : (spaceRow?.world_id ?? null);
+
+        if (effectiveWorldId) {
+            charactersQuery = charactersQuery.eq('world_id', effectiveWorldId);
         }
 
         const { data: charactersData, error: charactersError } = await charactersQuery;
@@ -577,15 +583,30 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
     },
 
     updateRoleplayScene: async (sceneId, input, supabase) => {
+        const payload: Record<string, unknown> = {
+            updated_at: new Date().toISOString(),
+        };
+
+        if (input.title !== undefined) payload.title = input.title;
+        if (input.description !== undefined) payload.description = input.description;
+        if (input.world_id !== undefined) payload.world_id = input.world_id;
+        if (input.chronicle_id !== undefined) payload.chronicle_id = input.chronicle_id;
+        if (input.background_image !== undefined) payload.background_image = input.background_image;
+        if (input.status !== undefined) payload.status = input.status;
+        if (input.settings !== undefined) payload.settings = input.settings ?? {};
+
         const { data, error } = await supabase
             .from('roleplay_scenes')
-            .update(input)
+            .update(payload)
             .eq('id', sceneId)
             .select('*')
             .single();
 
         if (error || !data) {
-            set({ error: error?.message ?? 'Не удалось обновить сцену' });
+            const details = [error?.message, error?.details, error?.hint]
+                .filter(Boolean)
+                .join(' | ');
+            set({ error: details || 'Не удалось обновить сцену' });
             return null;
         }
 
