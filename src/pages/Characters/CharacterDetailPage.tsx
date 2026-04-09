@@ -7,7 +7,7 @@ import {
     PolarRadiusAxis,
     ResponsiveContainer
 } from 'recharts';
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useCharacterStore } from "../../store/useCharacterStore";
 import { useRelationshipStore } from "../../store/useRelationshipStore";
 import { CharacterGraph } from "../../features/relations/CharacterGraph";
@@ -35,9 +35,11 @@ import {
 import { Button } from "../../components/ChronicleButton";
 import { Modal } from "../../components/Modal";
 import { CharacterForm } from "../../features/characters/CharacterForm";
+import { CharacterEmotionsManager } from "../../features/characters/CharacterEmotionsManager";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
 import { useDraftRelationshipStore } from "../../store/useDraftRelationshipStore";
 import { formatEventDate } from "../../lib/formatEventDate";
+import { motion } from "framer-motion";
 
 export const CharacterDetailPage = () => {
     const { id } = useParams();
@@ -65,6 +67,52 @@ export const CharacterDetailPage = () => {
         }
     }, [character, relationships, setDraftRelationships]);
 
+    const characterId = character?.id ?? "";
+
+    const radarData = character?.attributes ? [
+        { attribute: 'Сила', value: character.attributes.strength },
+        { attribute: 'Интеллект', value: character.attributes.intelligence },
+        { attribute: 'Магия', value: character.attributes.magic },
+        { attribute: 'Харизма', value: character.attributes.charisma },
+        { attribute: 'Ловкость', value: character.attributes.dexterity },
+        { attribute: 'Выносливость', value: character.attributes.endurance },
+    ] : [];
+
+    const relatedCharacters = useMemo(() => {
+        if (!character) return [];
+        return allCharacters.filter((c) =>
+            relationships.some(
+                (r) =>
+                    (r.source_id === characterId && r.target_id === c.id) ||
+                    (r.target_id === characterId && r.source_id === c.id) ||
+                    c.id === characterId
+            )
+        );
+    }, [allCharacters, relationships, character, characterId]);
+
+    const relatedRelationships = useMemo(
+        () => {
+            if (!character) return [];
+            return relationships.filter(
+                (r) => r.source_id === characterId || r.target_id === characterId
+            );
+        },
+        [relationships, character, characterId]
+    );
+
+    const linkedChronicles = useMemo(
+        () => chronicles.filter((c) => c.linked_characters.includes(characterId)),
+        [chronicles, characterId]
+    );
+
+    const handleSelectCharacter = useCallback(() => {
+        if (activeTab !== 'info') {
+            setActiveTab('info');
+        }
+    }, [activeTab]);
+
+    const otherCharacters = useMemo(() => allCharacters, [allCharacters]);
+
     if (!character) {
         return (
             <div className="p-8 text-center text-[#e5d9a5] font-lora">
@@ -79,51 +127,11 @@ export const CharacterDetailPage = () => {
         );
     }
 
-    const radarData = character.attributes ? [
-        { attribute: 'Сила', value: character.attributes.strength },
-        { attribute: 'Интеллект', value: character.attributes.intelligence },
-        { attribute: 'Магия', value: character.attributes.magic },
-        { attribute: 'Харизма', value: character.attributes.charisma },
-        { attribute: 'Ловкость', value: character.attributes.dexterity },
-        { attribute: 'Выносливость', value: character.attributes.endurance },
-    ] : [];
-
-    const relatedCharacters = useMemo(() => {
-        return allCharacters.filter((c) =>
-            relationships.some(
-                (r) =>
-                    (r.source_id === character.id && r.target_id === c.id) ||
-                    (r.target_id === character.id && r.source_id === c.id) ||
-                    c.id === character.id
-            )
-        );
-    }, [allCharacters, relationships, character.id]);
-
-    const relatedRelationships = useMemo(
-        () => relationships.filter(
-            (r) => r.source_id === character.id || r.target_id === character.id
-        ),
-        [relationships, character.id]
-    );
-
-    const linkedChronicles = useMemo(
-        () => chronicles.filter((c) => c.linked_characters.includes(character.id)),
-        [chronicles, character.id]
-    );
-
-    const handleSelectCharacter = useCallback(() => {
-        if (activeTab !== 'info') {
-            setActiveTab('info');
-        }
-    }, [activeTab]);
-
-    const otherCharacters = useMemo(() => allCharacters, [allCharacters]);
-
     return (
-        <div className="text-[#e5d9a5] font-lora mt-6 md:mt-8 px-2">
+        <div className="max-w-[1440px] mx-auto px-2 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] overflow-x-hidden">
             <div className="space-y-8">
                 <div className="space-y-4">
-                    <nav className="max-sm:text-sm text-lg text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2">
+                    <nav className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2">
                         <Link to="/" className="text-[#c2a774] hover:underline">
                             Главная
                         </Link>
@@ -141,11 +149,11 @@ export const CharacterDetailPage = () => {
                         </span>
                     </nav>
 
-                    <div className="inline-flex rounded-full border border-[#c2a77444] bg-[#0e1b12] p-1 gap-1 max-sm:w-full">
+                    <div className="inline-flex w-full max-w-md gap-1 rounded-full border border-[#c2a77444] bg-[#0e1b12] p-1 lg:max-w-none">
                         <Button
                             onClick={() => setActiveTab('info')}
-                            icon={<LibraryBig className="w-4 h-4" />}
-                            className={`!px-4 !py-1.5 text-sm rounded-full transition max-sm:flex-1
+                            icon={<LibraryBig className="h-4 w-4 shrink-0" />}
+                            className={`!min-h-11 flex-1 !rounded-full !py-2.5 text-sm transition touch-manipulation md:!min-h-0 md:!py-1.5
                                 ${activeTab === 'info'
                                     ? 'bg-[#c2a774] text-[#0E1B12] shadow-[0_0_12px_#c2a77466]'
                                     : 'bg-transparent text-[#c2a774] hover:bg-[#2b3a29]'}`}
@@ -154,8 +162,8 @@ export const CharacterDetailPage = () => {
                         </Button>
                         <Button
                             onClick={() => setActiveTab('graph')}
-                            icon={<LinkIcon className="w-4 h-4" />}
-                            className={`!px-4 !py-1.5 text-sm rounded-full transition max-sm:flex-1
+                            icon={<LinkIcon className="h-4 w-4 shrink-0" />}
+                            className={`!min-h-11 flex-1 !rounded-full !py-2.5 text-sm transition touch-manipulation md:!min-h-0 md:!py-1.5
                                 ${activeTab === 'graph'
                                     ? 'bg-[#c2a774] text-[#0E1B12] shadow-[0_0_12px_#c2a77466]'
                                     : 'bg-transparent text-[#c2a774] hover:bg-[#2b3a29]'}`}
@@ -166,11 +174,19 @@ export const CharacterDetailPage = () => {
                 </div>
 
                 {activeTab === 'info' && (
-                    <div className="space-y-10 animate-fade-in-down">
-                        <section className=" py-6 sm:py-8 flex flex-col gap-6">
-                            <div className="flex flex-col md:flex-row md:items-start gap-6">
+                    <motion.div
+                        className="space-y-6"
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35 }}
+                    >
+                        {/* Hero card */}
+                        <section className="relative overflow-hidden rounded-3xl border border-[#c2a77455] bg-[#111712]/95 shadow-[0_0_45px_#000] px-5 py-6 md:px-8 md:py-8">
+                            <div className="pointer-events-none absolute -top-16 -right-10 w-48 h-48 rounded-full bg-[#c2a77418] blur-3xl" />
+                            <div className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[#c2a774] to-transparent opacity-50 rounded-t-3xl" />
+                            <div className="relative z-10 flex flex-col md:flex-row md:items-start gap-6">
                                 <div className="flex flex-col items-center md:items-start gap-4 shrink-0">
-                                    {character.avatar && (
+                                    {character.avatar ? (
                                         <button
                                             type="button"
                                             onClick={() => setIsAvatarPreviewOpen(true)}
@@ -179,108 +195,80 @@ export const CharacterDetailPage = () => {
                                             <img
                                                 src={character.avatar}
                                                 alt={character.name}
-                                                className="
-                                                    max-sm:w-[220px] max-sm:h-[220px]
-                                                    w-[160px] h-[160px]
-                                                    rounded-full object-cover
-                                                    border border-[#c2a774] shadow-lg
-                                                "
+                                                className="w-[140px] h-[140px] sm:w-[180px] sm:h-[180px] rounded-full object-cover border-2 border-[#c2a774] shadow-[0_0_24px_#000]"
                                             />
                                             <span className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0 rounded-full bg-black/40 flex items-center justify-center text-xs text-[#f5e9c6]">
-                                                Нажмите, чтобы увеличить
+                                                Увеличить
                                             </span>
                                         </button>
+                                    ) : (
+                                        <div className="w-[140px] h-[140px] rounded-full border border-dashed border-[#3a4a34] bg-[#0e1b12] flex items-center justify-center text-xs text-[#c7bc98]">
+                                            Нет аватара
+                                        </div>
                                     )}
                                 </div>
 
                                 <div className="flex-1 space-y-4">
                                     <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <h1 className="text-[30px] sm:text-[34px] font-bold text-[#D6C5A2] leading-snug">
+                                        <div className="space-y-1">
+                                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#141f16]/80 text-[11px] uppercase tracking-[0.22em] text-[#c7bc98]">
+                                                <Sparkles className="w-3.5 h-3.5 text-[#c2a774]" />
+                                                <span>Персонаж</span>
+                                            </div>
+                                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-garamond font-bold text-[#e5d9a5] leading-snug">
                                                 {character.name}
                                             </h1>
                                             {character.status && (
-                                                <p className="mt-1 flex items-center gap-2 text-sm text-[#c7bc98]">
-                                                    <Pin size={16} className="text-[#C2A774]" />
-                                                    <span className="font-semibold text-[#C2A774]">
-                                                        Статус:
-                                                    </span>
+                                                <p className="flex items-center gap-2 text-sm text-[#c7bc98]">
+                                                    <Pin size={14} className="text-[#c2a774]" />
                                                     <span>{character.status}</span>
                                                 </p>
                                             )}
                                         </div>
-
-                                        <Button
+                                        <button
+                                            type="button"
                                             onClick={() => setIsEditing(true)}
-                                            icon={<Pencil size={18} />}
-                                            className="max-md:hidden text-sm shrink-0"
+                                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-start text-[#c7bc98] transition hover:text-[#e5d9a5]"
+                                            aria-label="Редактировать"
                                         >
-                                            Редактировать
-                                        </Button>
+                                            <Pencil size={18} />
+                                        </button>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm sm:text-base">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                                         {character.age && (
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles size={18} className="text-[#C2A774]" />
-                                                <span className="font-semibold text-[#C2A774]">
-                                                    Возраст:
-                                                </span>
-                                                <span>{character.age ?? '—'}</span>
+                                            <div className="flex items-center gap-2 text-[#c7bc98]">
+                                                <Sparkles size={15} className="text-[#c2a774] shrink-0" />
+                                                <span className="font-semibold text-[#c2a774]">Возраст:</span>
+                                                <span>{character.age}</span>
                                             </div>
                                         )}
-
                                         {character.gender && (
-                                            <div className="flex items-center gap-2">
-                                                <VenusAndMars
-                                                    size={18}
-                                                    className="text-[#C2A774]"
-                                                />
-                                                <span className="font-semibold text-[#C2A774]">
-                                                    Пол:
-                                                </span>
+                                            <div className="flex items-center gap-2 text-[#c7bc98]">
+                                                <VenusAndMars size={15} className="text-[#c2a774] shrink-0" />
+                                                <span className="font-semibold text-[#c2a774]">Пол:</span>
                                                 <span>{character.gender}</span>
                                             </div>
                                         )}
-
                                         {character.origin?.name && (
-                                            <div className="flex items-center gap-2">
-                                                <Earth size={18} className="text-[#C2A774]" />
-                                                <span className="font-semibold text-[#C2A774]">
-                                                    Родина:
-                                                </span>
+                                            <div className="flex items-center gap-2 text-[#c7bc98]">
+                                                <Earth size={15} className="text-[#c2a774] shrink-0" />
+                                                <span className="font-semibold text-[#c2a774]">Родина:</span>
                                                 <span>{character.origin.name}</span>
                                             </div>
                                         )}
-
                                         {character.location?.name && (
-                                            <div className="flex items-center gap-2">
-                                                <House size={18} className="text-[#C2A774]" />
-                                                <span className="font-semibold text-[#C2A774]">
-                                                    Жилье:
-                                                </span>
+                                            <div className="flex items-center gap-2 text-[#c7bc98]">
+                                                <House size={15} className="text-[#c2a774] shrink-0" />
+                                                <span className="font-semibold text-[#c2a774]">Жилище:</span>
                                                 <span>{character.location.name}</span>
                                             </div>
                                         )}
-
                                         {character.species && (
-                                            <div className="flex items-start gap-2 md:col-span-2">
-                                                <Dna
-                                                    size={18}
-                                                    className="text-[#C2A774] mt-1 shrink-0"
-                                                />
-                                                <div>
-                                                    <span className="font-semibold text-[#C2A774]">
-                                                        Вид:
-                                                    </span>
-                                                    <ul className="ml-1 list-disc list-inside text-[#e5d9a5]">
-                                                        {character.species
-                                                            .split(',')
-                                                            .map((part, idx) => (
-                                                                <li key={idx}>{part.trim()}</li>
-                                                            ))}
-                                                    </ul>
-                                                </div>
+                                            <div className="flex items-start gap-2 sm:col-span-2 text-[#c7bc98]">
+                                                <Dna size={15} className="text-[#c2a774] mt-0.5 shrink-0" />
+                                                <span className="font-semibold text-[#c2a774]">Вид:</span>
+                                                <span>{character.species}</span>
                                             </div>
                                         )}
                                     </div>
@@ -289,63 +277,40 @@ export const CharacterDetailPage = () => {
                         </section>
 
                         {character.bio && (
-                            <section className="bg-[#141f16]/95 border border-[#c2a774] rounded-2xl p-5 sm:p-6 shadow-md space-y-3">
-                                <h2 className="text-xl md:text-2xl font-bold text-[#e5d9a5] flex items-center gap-2">
-                                    <BookCopy size={20} /> Биография
+                            <section className="relative rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] p-5 sm:p-6 space-y-3">
+                                <h2 className="text-lg md:text-xl font-garamond font-bold text-[#e5d9a5] flex items-center gap-2">
+                                    <BookCopy size={18} className="text-[#c2a774]" /> Биография
                                 </h2>
                                 <div
                                     dangerouslySetInnerHTML={{ __html: character.bio }}
-                                    className="whitespace-pre-line text-[#c7bc98] text-[15px] sm:text-[17px] leading-relaxed text-justify font-lora"
+                                    className="whitespace-pre-line text-[#c7bc98] text-sm sm:text-base leading-relaxed font-lora"
                                 />
                             </section>
                         )}
 
                         {character.attributes && (
-                            <section className="space-y-6 border-t border-[#c2a77455] pt-6">
-                                <h2 className="text-xl md:text-2xl w-full flex justify-center mt-4 md:mt-8 mb-8 md:mb-[32px] font-bold pt-8 border-t border-[#c2a774] pb-1">
-                                    <span className="flex flex-row items-center gap-2">
-                                        <Sparkle />
-                                        Атрибуты
-                                    </span>
+                            <section className="space-y-5">
+                                <h2 className="text-lg md:text-xl font-garamond font-bold text-[#e5d9a5] flex items-center gap-2 border-t border-[#c2a77433] pt-6">
+                                    <Sparkle size={18} className="text-[#c2a774]" />
+                                    Атрибуты
                                 </h2>
-                                <div className="bg-[#141f16]/95 w-fit mx-auto border border-[#c2a774] rounded-xl p-4 mb-6 shadow-md">
-                                    <ul className="grid grid-cols-2 md:grid-cols-3 gap-1 text-lg text-center text-[#e5d9a5]">
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <Smile size={16} /> Харизма:
-                                            </span>
-                                            {character.attributes.charisma}
-                                        </li>
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <BicepsFlexed size={16} />Сила:
-                                            </span>
-                                            {character.attributes.strength}
-                                        </li>
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <Sparkles size={16} /> Магия:
-                                            </span>
-                                            {character.attributes.magic}
-                                        </li>
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <BrainCircuit size={16} /> Интеллект:
-                                            </span>
-                                            {character.attributes.intelligence}
-                                        </li>
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <Zap size={16} />Ловкость:
-                                            </span>
-                                            {character.attributes.dexterity}
-                                        </li>
-                                        <li className="flex flex-row items-center gap-1 justify-center">
-                                            <span className="font-semibold flex flex-row items-center gap-1 text-[#C2A774]">
-                                                <ShieldUser size={16} />Выносливость:
-                                            </span>
-                                            {character.attributes.endurance}
-                                        </li>
+                                <div className="rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] p-4 sm:p-5">
+                                    <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm text-[#e5d9a5]">
+                                        {([
+                                            { icon: <Smile size={15} />, label: 'Харизма', value: character.attributes.charisma },
+                                            { icon: <BicepsFlexed size={15} />, label: 'Сила', value: character.attributes.strength },
+                                            { icon: <Sparkles size={15} />, label: 'Магия', value: character.attributes.magic },
+                                            { icon: <BrainCircuit size={15} />, label: 'Интеллект', value: character.attributes.intelligence },
+                                            { icon: <Zap size={15} />, label: 'Ловкость', value: character.attributes.dexterity },
+                                            { icon: <ShieldUser size={15} />, label: 'Выносливость', value: character.attributes.endurance },
+                                        ] as { icon: React.ReactNode; label: string; value: number }[]).map(({ icon, label, value }) => (
+                                            <li key={label} className="flex flex-col items-center gap-1 rounded-xl border border-[#3a4a34] bg-[#0e1b12]/60 px-3 py-2">
+                                                <span className="flex items-center gap-1 text-[#c2a774] text-xs font-semibold">
+                                                    {icon} {label}
+                                                </span>
+                                                <span className="text-lg font-bold text-[#e5d9a5]">{value}</span>
+                                            </li>
+                                        ))}
                                     </ul>
                                 </div>
 
@@ -363,42 +328,39 @@ export const CharacterDetailPage = () => {
                         )}
 
                         {linkedChronicles.length > 0 && (
-                            <section className="space-y-5 border-t border-[#c2a77455] pt-6">
-                                <h2 className="text-xl md:text-2xl font-bold flex justify-center">
-                                    <span className="inline-flex items-center gap-2">
-                                        <BookCopy />
-                                        Хроники с участием персонажа
-                                    </span>
+                            <section className="space-y-4 border-t border-[#c2a77433] pt-6">
+                                <h2 className="text-lg md:text-xl font-garamond font-bold text-[#e5d9a5] flex items-center gap-2">
+                                    <BookCopy size={18} className="text-[#c2a774]" />
+                                    Хроники с участием
                                 </h2>
-
-                                <ul className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                                <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {linkedChronicles.map((chronicle) => {
-                                        const moodEmoji = chronicle.mood?.split(' ')[0] || '';
+                                        const moodEmoji = chronicle.mood?.split(' ')[0] || '📖';
                                         return (
                                             <li
                                                 key={chronicle.id}
-                                                className="bg-[#141f16]/95 border border-[#c2a774] rounded-2xl p-4 shadow-md hover:shadow-[0_0_18px_#c2a77455] transition"
+                                                className="rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_22px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_28px_#c2a77440] transition-all"
                                             >
                                                 <Link
                                                     to={`/chronicles/${chronicle.id}`}
-                                                    className="text-[#e5d9a5] text-[16px] sm:text-[17px] font-semibold flex items-start gap-2 hover:underline"
+                                                    className="block p-4"
                                                 >
-                                                    <span className="text-xl leading-none">
-                                                        {moodEmoji}
-                                                    </span>
-                                                    <span>
-                                                        {chronicle.title}{' '}
-                                                        <span className="text-[#c7bc98] font-normal italic text-xs sm:text-sm">
-                                                            ({formatEventDate(chronicle.event_date)})
-                                                        </span>
-                                                    </span>
+                                                    <div className="flex items-start gap-3 mb-2">
+                                                        <span className="text-xl leading-none shrink-0">{moodEmoji}</span>
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-[#e5d9a5] hover:underline line-clamp-2">
+                                                                {chronicle.title}
+                                                            </p>
+                                                            <p className="text-xs text-[#c7bc98] mt-0.5">
+                                                                {formatEventDate(chronicle.event_date)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div
+                                                        dangerouslySetInnerHTML={{ __html: chronicle.content }}
+                                                        className="text-xs text-[#c7bc98] italic line-clamp-2"
+                                                    />
                                                 </Link>
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: chronicle.content,
-                                                    }}
-                                                    className="mt-2 text-xs sm:text-sm text-[#c7bc98] italic line-clamp-3"
-                                                />
                                             </li>
                                         );
                                     })}
@@ -407,23 +369,23 @@ export const CharacterDetailPage = () => {
                         )}
 
                         {character.extra && character.extra.length > 0 && (
-                            <section className="bg-[#141f16]/95 rounded-2xl p-4 sm:p-5 border border-[#c2a774] shadow-md space-y-2">
-                                <h2 className="text-lg sm:text-xl font-semibold text-[#e5d9a5] flex items-center gap-2">
-                                    <Scroll size={20} /> Дополнительно
+                            <section className="rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] p-4 sm:p-5 space-y-3 border-t border-t-[#c2a77433] mt-2">
+                                <h2 className="text-lg md:text-xl font-garamond font-bold text-[#e5d9a5] flex items-center gap-2">
+                                    <Scroll size={18} className="text-[#c2a774]" /> Дополнительно
                                 </h2>
-                                <ul className="list-disc list-inside text-[#c7bc98] text-sm sm:text-base">
+                                <ul className="space-y-1.5 text-sm text-[#c7bc98]">
                                     {character.extra.map((field) => (
-                                        <li key={field.id}>
-                                            <span className="font-semibold text-[#e5d9a5]">
-                                                {field.key}:
-                                            </span>{' '}
-                                            {field.value}
+                                        <li key={field.id} className="flex items-start gap-2">
+                                            <span className="font-semibold text-[#e5d9a5] shrink-0">{field.key}:</span>
+                                            <span>{field.value}</span>
                                         </li>
                                     ))}
                                 </ul>
                             </section>
                         )}
-                    </div>
+
+                        <CharacterEmotionsManager characterId={character.id} />
+                    </motion.div>
                 )}
 
                 {activeTab === 'graph' && (

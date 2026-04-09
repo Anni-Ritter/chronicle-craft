@@ -22,7 +22,8 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
     const [menuOpen, setMenuOpen] = useState(false);
 
     const cardRef = useRef<HTMLDivElement | null>(null);
-    const menuRef = useRef<HTMLDivElement | null>(null);
+    const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+    const desktopMenuRef = useRef<HTMLDivElement | null>(null);
 
     const totalAttributes = Object.values(character.attributes).reduce(
         (sum, val) => sum + val,
@@ -34,15 +35,15 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
         setIsDeleteModalOpen(false);
     };
 
-    // Закрытие меню по клику вне
+    // Закрытие меню по клику вне — проверяем оба контейнера
     useEffect(() => {
         if (!menuOpen) return;
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (
-                menuRef.current &&
-                !menuRef.current.contains(e.target as Node)
-            ) {
+            const target = e.target as Node;
+            const insideMobile = mobileMenuRef.current?.contains(target);
+            const insideDesktop = desktopMenuRef.current?.contains(target);
+            if (!insideMobile && !insideDesktop) {
                 setMenuOpen(false);
             }
         };
@@ -92,46 +93,48 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                                group-hover:drop-shadow-[0_0_4px_#e5d9a5aa]">
                                         {character.name}
                                     </h2>
-                                    <div ref={menuRef} className="relative md:hidden">
+                                    <div ref={mobileMenuRef} className="relative md:hidden">
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setMenuOpen((prev) => !prev);
                                             }}
-                                            className="p-1.5 rounded-full border border-[#3a4a34] bg-[#101712]/90 
+                                            className="min-h-11 min-w-11 rounded-full border border-[#3a4a34] bg-[#101712]/90 
                                            text-[#e5d9a5] hover:bg-[#2c3c2b] hover:border-[#c2a774aa] 
-                                           transition flex items-center justify-center"
+                                           transition flex items-center justify-center touch-manipulation md:min-h-0 md:min-w-0 md:p-1.5"
                                             aria-label="Меню действий"
                                         >
-                                            <MoreVertical size={18} />
+                                            <MoreVertical size={20} className="md:w-[18px] md:h-[18px]" />
                                         </button>
 
                                         {menuOpen && (
                                             <div
-                                                className="absolute right-0 mt-2 w-44 rounded-xl bg-[#101712] border border-[#3a4a34] 
-                                               shadow-[0_0_25px_#000] flex flex-col py-1 z-30"
+                                                className="absolute right-0 z-30 mt-2 flex w-[min(100vw-2rem,11rem)] flex-col overflow-hidden rounded-xl border border-[#3a4a34] bg-[#101712] 
+                                               py-1 shadow-[0_0_25px_#000]"
                                                 onClick={(e) => e.stopPropagation()}
                                             >
                                                 <button
+                                                    type="button"
                                                     onClick={() => {
                                                         setMenuOpen(false);
                                                         setIsEditing(true);
                                                     }}
-                                                    className="flex items-center gap-2 px-3 py-2 text-sm text-[#e5d9a5] 
-                                                   hover:bg-[#1c281c] transition text-left"
+                                                    className="flex min-h-12 items-center gap-3 px-4 py-3 text-sm text-[#e5d9a5] 
+                                                   hover:bg-[#1c281c] transition text-left touch-manipulation md:min-h-0 md:px-3 md:py-2"
                                                 >
-                                                    <SquarePen size={16} />
+                                                    <SquarePen size={18} className="shrink-0 md:w-4 md:h-4" />
                                                     Редактировать
                                                 </button>
                                                 <button
+                                                    type="button"
                                                     onClick={() => {
                                                         setMenuOpen(false);
                                                         setIsDeleteModalOpen(true);
                                                     }}
-                                                    className="flex items-center gap-2 px-3 py-2 text-sm text-[#d76f6f] 
-                                                   hover:bg-[#3b2626] transition text-left"
+                                                    className="flex min-h-12 items-center gap-3 px-4 py-3 text-sm text-[#d76f6f] 
+                                                   hover:bg-[#3b2626] transition text-left touch-manipulation md:min-h-0 md:px-3 md:py-2"
                                                 >
-                                                    <LucideTrash2 size={16} />
+                                                    <LucideTrash2 size={18} className="shrink-0 md:w-4 md:h-4" />
                                                     Удалить
                                                 </button>
                                             </div>
@@ -160,7 +163,7 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                         {totalAttributes}
                                     </span>
                                 </div>
-                                <div ref={menuRef} className="relative max-sm:hidden">
+                                <div ref={desktopMenuRef} className="relative max-sm:hidden">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -177,27 +180,29 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                                     {menuOpen && (
                                         <div
                                             className="absolute right-0 mt-2 w-44 rounded-xl bg-[#101712] border border-[#3a4a34] 
-                                               shadow-[0_0_25px_#000] flex flex-col py-1 z-20"
+                                               shadow-[0_0_25px_#000] flex flex-col py-1 z-20 overflow-hidden"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <button
+                                                type="button"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     setIsEditing(true);
                                                 }}
-                                                className="flex items-center gap-2 px-3 py-2 text-sm text-[#e5d9a5] 
-                                                   hover:bg-[#1c281c] transition text-left"
+                                                className="flex min-h-11 items-center gap-2 px-3 py-2.5 text-sm text-[#e5d9a5] 
+                                                   hover:bg-[#1c281c] transition text-left touch-manipulation lg:min-h-0 lg:py-2"
                                             >
                                                 <SquarePen size={16} />
                                                 Редактировать
                                             </button>
                                             <button
+                                                type="button"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     setIsDeleteModalOpen(true);
                                                 }}
-                                                className="flex items-center gap-2 px-3 py-2 text-sm text-[#d76f6f] 
-                                                   hover:bg-[#3b2626] transition text-left"
+                                                className="flex min-h-11 items-center gap-2 px-3 py-2.5 text-sm text-[#d76f6f] 
+                                                   hover:bg-[#3b2626] transition text-left touch-manipulation lg:min-h-0 lg:py-2"
                                             >
                                                 <LucideTrash2 size={16} />
                                                 Удалить
@@ -250,18 +255,18 @@ export const CharacterCard = ({ character }: CharacterCardProps) => {
                         </strong>
                         ? Это действие необратимо.
                     </p>
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                    <div className="flex flex-col-reverse justify-center gap-3 sm:flex-row sm:gap-4">
                         <Button
                             variant="outline"
                             onClick={() => setIsDeleteModalOpen(false)}
-                            className="text-sm md:text-base"
+                            className="w-full text-sm sm:w-auto md:text-base"
                         >
                             Отмена
                         </Button>
                         <Button
                             variant="danger"
                             onClick={handleDeleteConfirmed}
-                            className="text-sm md:text-base"
+                            className="w-full text-sm sm:w-auto md:text-base"
                         >
                             Удалить
                         </Button>

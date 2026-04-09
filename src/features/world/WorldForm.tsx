@@ -1303,8 +1303,11 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                 </>
             )}
 
-            <div className="flex justify-end">
-                <Button onClick={handleSubmit} className="font-semibold">
+            <div className="flex justify-stretch pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+                <Button
+                    onClick={handleSubmit}
+                    className="w-full justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:w-auto !text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
+                >
                     {initialWorld ? 'Сохранить мир' : 'Создать мир'}
                 </Button>
             </div>

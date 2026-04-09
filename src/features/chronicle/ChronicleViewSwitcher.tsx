@@ -5,18 +5,27 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { Link } from 'react-router-dom';
 import parse from 'html-react-parser';
 import { Select } from '../../components/Select';
+import { Modal } from '../../components/Modal';
+import { Button } from '../../components/ChronicleButton';
 import { normalizeText } from '../../lib/NormalizeText';
 import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import { useWorldStore } from '../../store/useWorldStore';
 import { formatWorldDate } from '../../lib/formatWorldDate';
 import type { Chronicle } from '../../types/chronicle';
-import { BookOpen, Sparkles } from 'lucide-react';
+import { BookOpen, Globe, Hash, Search, SlidersHorizontal, Users } from 'lucide-react';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 
-interface ChronicleViewSwitcherProps {
-    searchTerm?: string;
-}
+const timelineItemVariants: Variants = {
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35 } },
+};
 
-export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps) => {
+const timelineContainerVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } },
+};
+
+export const ChronicleViewSwitcher = () => {
     const supabase = useSupabaseClient();
     const { fetchChronicles, chronicles } = useChronicleStore();
     const { characters, fetchCharacters } = useCharacterStore();
@@ -24,6 +33,8 @@ export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps
 
     const [filterCharacter, setFilterCharacter] = useState<string | null>(null);
     const [filterTag, setFilterTag] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const { worlds, fetchWorlds } = useWorldStore();
     const { selectedWorldId, setSelectedWorldId } = useWorldSelectionStore();
@@ -88,43 +99,37 @@ export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps
 
     return (
         <div className="space-y-8">
-            <section className="bg-[#151f16]/90 border border-[#3a4a34] rounded-2xl px-4 py-4 md:px-6 md:py-5 shadow-[0_0_18px_#000]">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-1">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#101712]/80 text-[11px] uppercase tracking-[0.18em] text-[#c7bc98]">
-                            <Sparkles size={14} className="text-[#c2a774]" />
-                            <span>Фильтры хроник</span>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 w-full md:w-auto">
-                        <Select
-                            value={selectedWorldId}
-                            onChange={(val) => setSelectedWorldId(val)}
-                            placeholder="Все миры"
-                            options={worlds.map((w) => ({ value: w.id, label: w.name }))}
-                        />
-                        <Select
-                            value={filterCharacter}
-                            onChange={(val) => setFilterCharacter(val)}
-                            placeholder="Все персонажи"
-                            options={characters.map((c) => ({ value: c.id, label: c.name }))}
-                        />
-                        <Select
-                            value={filterTag}
-                            onChange={(val) => setFilterTag(val)}
-                            placeholder="Все теги"
-                            options={allTags.map((tag) => ({
-                                value: tag,
-                                label: tag,
-                            }))}
-                        />
-                    </div>
+            <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#c7bc98]/50 w-5 h-5 pointer-events-none" />
+                    <input
+                        type="text"
+                        placeholder="Поиск по хроникам..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-3 rounded-xl w-full bg-[#0e1b12]/80 text-[#e5d9a5] border border-[#3a4a34] placeholder:text-[#c7bc98]/50 focus:outline-none focus:border-[#c2a774] transition font-lora"
+                    />
                 </div>
-            </section>
+                <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(true)}
+                    className="h-[52px] w-[52px] shrink-0 rounded-xl border border-[#3a4a34] bg-[#0e1b12]/90 text-[#c2a774] flex items-center justify-center transition hover:border-[#c2a774] hover:text-[#e5d9a5]"
+                    aria-label="Открыть фильтры"
+                >
+                    <SlidersHorizontal className="w-5 h-5" />
+                </button>
+            </div>
 
+            <AnimatePresence mode="wait">
             {filteredChronicles.length === 0 ? (
-                <div className="mt-10 flex flex-col items-center justify-center gap-3 text-center font-lora">
+                <motion.div
+                    key="empty"
+                    className="mt-10 flex flex-col items-center justify-center gap-3 text-center font-lora"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <div className="px-4 py-3 rounded-2xl border border-[#3a4a34] bg-[#151f16]/90 shadow-sm max-w-md">
                         <p className="text-sm text-[#d6c5a2]">
                             Под ваши условия не нашлось ни одной записи хроники.
@@ -137,24 +142,30 @@ export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps
                     <span className="text-xs text-[#c7bc98]">
                         Каждая история начинается с первой записи.
                     </span>
-                </div>
+                </motion.div>
             ) : (
-                <div className="relative pl-6 md:pl-8 space-y-8">
+                <motion.div
+                    key="timeline"
+                    className="relative pl-6 md:pl-8 space-y-8"
+                    variants={timelineContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
                     <div className="pointer-events-none absolute left-2 top-0 bottom-0">
                         <div className="w-[2px] h-full bg-gradient-to-b from-[#c2a774cc] via-[#c2a77455] to-transparent shadow-[0_0_12px_#c2a77488]" />
                     </div>
 
-                    {[...filteredChronicles].sort(sortChronicles).map((c, index) => {
+                    {[...filteredChronicles].sort(sortChronicles).map((c) => {
                         const previewHtml =
                             c.content.length > 400
                                 ? c.content.slice(0, 400) + '...'
                                 : c.content;
 
                         return (
-                            <div
+                            <motion.div
                                 key={c.id}
-                                className="relative group opacity-0 animate-fade-in-down"
-                                style={{ animationDelay: `${index * 80}ms` }}
+                                variants={timelineItemVariants}
+                                className="relative group"
                             >
                                 <div className="absolute -left-4 top-6 w-6 h-6 rounded-full bg-[#111712] border border-[#c2a774aa] shadow-[0_0_12px_#c2a774aa] flex items-center justify-center">
                                     <div className="w-3 h-3 rounded-full bg-[#c2a774]" />
@@ -224,11 +235,63 @@ export const ChronicleViewSwitcher = ({ searchTerm }: ChronicleViewSwitcherProps
                                         </span>
                                     </div>
                                 </Link>
-                            </div>
+                            </motion.div>
                         );
                     })}
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
+
+            <Modal isOpen={isFilterOpen} onClose={() => setIsFilterOpen(false)}>
+                <div className="space-y-4">
+                    <h3 className="text-lg font-garamond text-[#e5d9a5] flex items-center gap-2">
+                        <SlidersHorizontal className="w-5 h-5 text-[#c2a774]" />
+                        Фильтры хроник
+                    </h3>
+                    <div className="space-y-3">
+                        <Select
+                            value={selectedWorldId}
+                            onChange={(val) => setSelectedWorldId(val)}
+                            placeholder="Все миры"
+                            icon={<Globe className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
+                            options={worlds.map((w) => ({ value: w.id, label: w.name }))}
+                        />
+                        <Select
+                            value={filterCharacter}
+                            onChange={(val) => setFilterCharacter(val)}
+                            placeholder="Все персонажи"
+                            icon={<Users className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
+                            options={characters.map((c) => ({ value: c.id, label: c.name }))}
+                        />
+                        <Select
+                            value={filterTag}
+                            onChange={(val) => setFilterTag(val)}
+                            placeholder="Все теги"
+                            icon={<Hash className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
+                            options={allTags.map((tag) => ({
+                                value: tag,
+                                label: tag,
+                            }))}
+                        />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => {
+                                setSelectedWorldId(null);
+                                setFilterCharacter(null);
+                                setFilterTag(null);
+                            }}
+                        >
+                            Сбросить
+                        </Button>
+                        <Button className="w-full" onClick={() => setIsFilterOpen(false)}>
+                            Готово
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };

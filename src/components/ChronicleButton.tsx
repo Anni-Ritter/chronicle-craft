@@ -23,21 +23,28 @@ export const Button = ({
 }: ButtonProps) => {
     const isIconOnly = !children && !!icon;
 
-    const base = 'transition font-lora rounded-xl shadow flex items-center justify-center gap-2';
+    const base =
+        'transition font-lora rounded-xl shadow flex items-center justify-center gap-2 touch-manipulation select-none active:opacity-90 max-lg:active:scale-[0.98] lg:active:scale-100';
     const withTextVariants = {
-        default: 'bg-[#c2a774] text-[#2d422b] hover:bg-[#e5d9a5] text-[18px] px-4 py-2',
-        danger: 'bg-[#7c2d2d] text-white hover:bg-[#a94444] text-[18px] px-4 py-2',
-        outline: 'bg-transparent border border-[#c2a774] text-[#c2a774] hover:bg-[#2f3e29] px-4 py-2 text-[18px]',
-        ghost: 'bg-transparent text-[#e5d9a5] hover:bg-[#2f3e29] px-3 py-1 text-[16px]',
+        default:
+            'bg-[#c2a774] text-[#2d422b] hover:bg-[#e5d9a5] text-[15px] px-3.5 py-1.5 min-h-10 rounded-[12px]',
+        danger:
+            'bg-[#7c2d2d] text-white hover:bg-[#a94444] text-[15px] px-3.5 py-1.5 min-h-10 rounded-[12px]',
+        outline:
+            'bg-transparent border border-[#c2a774] text-[#c2a774] hover:bg-[#2f3e29] px-3.5 py-1.5 text-[15px] min-h-10 rounded-[12px]',
+        ghost:
+            'bg-transparent text-[#e5d9a5] hover:bg-[#2f3e29] px-3 py-1 text-[16px] max-lg:min-h-[48px] max-lg:px-4 max-lg:rounded-[14px]',
     };
 
     const iconVariants = {
         default:
-            'p-2 rounded-lg border border-[#c2a774] text-[#c2a774] hover:bg-[#c2a774] hover:text-[#223120]',
+            'min-h-11 min-w-11 p-0 rounded-xl border border-[#c2a774] text-[#c2a774] hover:bg-[#c2a774] hover:text-[#223120] lg:min-h-0 lg:min-w-0 lg:p-2 lg:rounded-lg',
         danger:
-            'p-2 rounded-lg border border-[#d76f6f] text-[#d76f6f] hover:bg-[#d76f6f] hover:text-white',
-        outline: 'p-2 rounded-lg border border-[#c2a774] text-[#c2a774] hover:bg-[#3a4c3a]',
-        ghost: 'p-2 text-[#e5d9a5] hover:bg-[#2f3e29]',
+            'min-h-11 min-w-11 p-0 rounded-xl border border-[#d76f6f] text-[#d76f6f] hover:bg-[#d76f6f] hover:text-white lg:min-h-0 lg:min-w-0 lg:p-2 lg:rounded-lg',
+        outline:
+            'min-h-11 min-w-11 p-0 rounded-xl border border-[#c2a774] text-[#c2a774] hover:bg-[#3a4c3a] lg:min-h-0 lg:min-w-0 lg:p-2 lg:rounded-lg',
+        ghost:
+            'min-h-11 min-w-11 p-0 rounded-xl text-[#e5d9a5] hover:bg-[#2f3e29] lg:min-h-0 lg:min-w-0 lg:p-2 lg:rounded-lg',
     };
 
     return (

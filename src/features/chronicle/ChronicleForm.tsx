@@ -414,14 +414,17 @@ export const ChronicleForm = ({ onFinish, supabase, initial }: ChronicleFormProp
                                 setNewTag('');
                             }
                         }}
-                        icon={<Plus size={16} />}
-                        className="shrink-0"
+                        icon={<Plus size={18} />}
+                        className="shrink-0 max-lg:!min-h-12 max-lg:!min-w-12"
                     />
                 </div>
             </section>
 
-            <div className="relative z-10 flex justify-end pt-2">
-                <Button onClick={handleSubmit} className="font-semibold min-w-[210px]">
+            <div className="relative z-10 flex justify-stretch pt-4 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+                <Button
+                    onClick={handleSubmit}
+                    className="w-full justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] max-lg:min-w-0 lg:min-w-[210px]"
+                >
                     {initial ? 'Сохранить изменения' : 'Добавить хронику'}
                 </Button>
             </div>

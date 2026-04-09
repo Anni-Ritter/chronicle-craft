@@ -61,11 +61,26 @@ export const ExtraFieldsEditor = ({ extra, onChange }: ExtraFieldsEditorProps) =
                 </div>
             ) : (
                 <div className="space-y-3 mt-2">
-                    {extra.map(({ id, key, value }) => (
+                    {extra.map(({ id, key, value }, index) => (
                         <div
                             key={id}
-                            className="flex gap-3 items-start bg-[#101712] px-3 py-3 md:px-4 md:py-4 rounded-2xl border border-[#3a4a34] shadow-sm"
+                            className="bg-[#101712] px-3 py-3 md:px-4 md:py-4 rounded-2xl border border-[#3a4a34] shadow-sm space-y-3"
                         >
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] uppercase tracking-[0.14em] text-[#8a9a82]">
+                                    Поле {index + 1}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDelete(id)}
+                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[#c7bc98] border border-[#3a4a34] hover:border-[#d76f6f88] hover:text-[#ffb2b2] transition"
+                                    title="Удалить поле"
+                                >
+                                    <Trash2 size={14} />
+                                    <span className="max-sm:hidden">Удалить</span>
+                                </button>
+                            </div>
+
                             <div className="flex flex-1 gap-3 max-sm:flex-col">
                                 <div className="flex-1">
                                     <FloatingInput
@@ -85,16 +100,6 @@ export const ExtraFieldsEditor = ({ extra, onChange }: ExtraFieldsEditorProps) =
                                         label="Значение"
                                     />
                                 </div>
-                            </div>
-
-                            <div className="flex items-center max-sm:self-stretch max-sm:justify-end">
-                                <Button
-                                    variant="danger"
-                                    icon={<Trash2 size={18} />}
-                                    onClick={() => handleDelete(id)}
-                                    className="!px-3 !py-2 text-xs max-sm:self-center"
-                                    title="Удалить поле"
-                                />
                             </div>
                         </div>
                     ))}

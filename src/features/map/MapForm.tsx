@@ -218,11 +218,11 @@ export const MapForm = ({ userId, supabase, onSuccess, initial }: MapFormProps) 
                 )}
             </section>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-stretch pt-4 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
                 <Button
                     type="submit"
-                    icon={<MapIcon className="w-5 h-5" />}
-                    className="font-semibold min-w-[190px] justify-center"
+                    icon={<MapIcon className="h-5 w-5 shrink-0" />}
+                    className="w-full justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:min-w-[190px] lg:w-auto"
                 >
                     {loading
                         ? (initial ? 'Сохраняем...' : 'Создаём...')

@@ -1,0 +1,215 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { CircleHelp, Send } from 'lucide-react';
+import { Button } from '../../components/ChronicleButton';
+import { Modal } from '../../components/Modal';
+import type { RoleplaySpaceCharacterView } from '../../types/roleplay';
+
+interface SceneComposerProps {
+    availableCharacters: RoleplaySpaceCharacterView[];
+    onSend: (payload: {
+        content: string;
+        reply_to_message_id: string | null;
+    }) => Promise<void>;
+    replyToMessageId: string | null;
+    onClearReply: () => void;
+}
+
+export const SceneComposer = ({
+    availableCharacters,
+    onSend,
+    replyToMessageId,
+    onClearReply,
+}: SceneComposerProps) => {
+    const [content, setContent] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
+    const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+    const [cursorPos, setCursorPos] = useState(0);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const canSubmit = content.trim().length > 0;
+
+    const mentionState = useMemo(() => {
+        const textarea = textareaRef.current;
+        const cursor = textarea?.selectionStart ?? cursorPos;
+        const beforeCursor = content.slice(0, cursor);
+        const mentionMatch = /(^|\s)@([^\n@:]{0,40})$/.exec(beforeCursor);
+        if (!mentionMatch) return null;
+
+        const prefixLen = mentionMatch[1].length;
+        const mentionStart = (mentionMatch.index ?? 0) + prefixLen;
+        const query = mentionMatch[2].toLowerCase().trim();
+        const suggestions = availableCharacters
+            .filter((character) => {
+                if (!query) return true;
+                return character.character.name.toLowerCase().includes(query);
+            })
+            .slice(0, 8);
+
+        return { mentionStart, cursor, suggestions };
+    }, [content, availableCharacters, cursorPos]);
+
+    useEffect(() => {
+        const total = mentionState?.suggestions.length ?? 0;
+        if (total === 0) {
+            setActiveSuggestionIndex(0);
+            return;
+        }
+        if (activeSuggestionIndex >= total) {
+            setActiveSuggestionIndex(0);
+        }
+    }, [mentionState, activeSuggestionIndex]);
+
+    const applySuggestion = (name: string) => {
+        if (!mentionState) return;
+        const nextValue =
+            content.slice(0, mentionState.mentionStart) +
+            `@${name}: ` +
+            content.slice(mentionState.cursor);
+        setContent(nextValue);
+        setActiveSuggestionIndex(0);
+
+        const nextCursor = mentionState.mentionStart + name.length + 3;
+        requestAnimationFrame(() => {
+            textareaRef.current?.focus();
+            textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+        });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!canSubmit) return;
+        setIsSending(true);
+        await onSend({
+            content: content.trim(),
+            reply_to_message_id: replyToMessageId,
+        });
+        setContent('');
+        setIsSending(false);
+        if (replyToMessageId) onClearReply();
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="relative rounded-xl bg-[#0a0f0c]/70 p-2.5">
+            <button
+                type="button"
+                onClick={() => setIsHelpOpen(true)}
+                className={`absolute right-14 inline-flex h-10 w-10 items-center justify-center rounded-full text-[#c7bc98] transition hover:bg-white/5 hover:text-[#f4ecd0] ${
+                    replyToMessageId ? 'top-10' : 'top-3'
+                }`}
+                aria-label="Подсказка по формату"
+                title="Подсказка по формату"
+            >
+                <CircleHelp size={20} />
+            </button>
+            {replyToMessageId && (
+                <div className="mb-2 flex items-center justify-between border-l-2 border-[#555] pl-3 text-xs text-[#c7bc98]">
+                    <span>Ответ на сообщение</span>
+                    <button type="button" onClick={onClearReply} className="text-[#f1e7c6]">
+                        Очистить
+                    </button>
+                </div>
+            )}
+            <div className="mt-1 flex items-end gap-2">
+                <textarea
+                    ref={textareaRef}
+                    value={content}
+                    onChange={(e) => {
+                        setContent(e.target.value);
+                        setCursorPos(e.target.selectionStart ?? e.target.value.length);
+                    }}
+                    onClick={(e) => setCursorPos(e.currentTarget.selectionStart ?? 0)}
+                    onSelect={(e) => setCursorPos(e.currentTarget.selectionStart ?? 0)}
+                    onKeyDown={(e) => {
+                        const suggestions = mentionState?.suggestions ?? [];
+                        if (suggestions.length === 0) return;
+
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            setActiveSuggestionIndex((prev) => (prev + 1) % suggestions.length);
+                            return;
+                        }
+                        if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            setActiveSuggestionIndex((prev) => (prev - 1 + suggestions.length) % suggestions.length);
+                            return;
+                        }
+                        if (e.key === 'Enter' || e.key === 'Tab') {
+                            e.preventDefault();
+                            const selected = suggestions[activeSuggestionIndex] ?? suggestions[0];
+                            if (selected) applySuggestion(selected.character.name);
+                            return;
+                        }
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            setActiveSuggestionIndex(0);
+                        }
+                    }}
+                    rows={3}
+                    className="w-full rounded-lg bg-[#0e1410] pl-3 pr-12 py-2 text-[#e5d9a5] outline-none ring-1 ring-[#2f3a34] focus:ring-[#c2a774]"
+                />
+                <Button
+                    type="submit"
+                    className="h-10 w-10 !min-w-10 !px-0 !gap-0 md:w-auto md:!px-3 md:!gap-2"
+                    icon={<Send size={16} />}
+                >
+                    <span className="hidden md:inline">{isSending ? 'Отправка...' : 'Отправить'}</span>
+                </Button>
+            </div>
+            {(mentionState?.suggestions.length ?? 0) > 0 && (
+                <div className="mt-1 rounded-lg bg-[#0d130f]/95 p-1">
+                    <p className="px-2 py-1 text-[11px] text-[#9fa68a]">Подсказки персонажей</p>
+                    <div className="max-h-40 overflow-y-auto">
+                        {mentionState!.suggestions.map((item, index) => (
+                            <button
+                                key={item.character.id}
+                                type="button"
+                                onClick={() => applySuggestion(item.character.name)}
+                                className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm transition ${
+                                    index === activeSuggestionIndex
+                                        ? 'bg-[#2a3a2e] text-[#f4ecd0]'
+                                        : 'text-[#d3c89f] hover:bg-[#1a241d]'
+                                }`}
+                            >
+                                <span>{item.character.name}</span>
+                                {item.owner?.username && (
+                                    <span className="text-xs text-[#9fa68a]">@{item.owner.username}</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+            <Modal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)}>
+                <div className="space-y-4">
+                    <h3 className="text-2xl font-garamond text-[#e5d9a5]">Подсказка по формату</h3>
+                    <div className="space-y-2 text-sm text-[#c7bc98]">
+                        <p>
+                            <span className="text-[#e5d9a5]">@Имя:</span> в начале сообщения — писать от лица персонажа.
+                        </p>
+                        <p>
+                            <span className="text-[#e5d9a5]">-</span> в начале фрагмента — речь.
+                        </p>
+                        <p>
+                            <span className="text-[#e5d9a5]">*действие*</span> — действие.
+                        </p>
+                        <p>
+                            <span className="text-[#e5d9a5]">`описание`</span> — описание/ремарка.
+                        </p>
+                    </div>
+                    <div className="rounded-lg bg-[#111712] p-3 text-sm text-[#e5d9a5]">
+                        <p className="mb-1 text-xs text-[#9fa68a]">Примеры</p>
+                        <p>@Лиа: - Я пришла вовремя.</p>
+                        <p>@Лиа: *садится у окна*</p>
+                        <p>@Лиа: `Вечерний туман стелется по мостовой`</p>
+                        <p>@Лиа: - Я пришла. *улыбается* `Ветер усиливается`</p>
+                    </div>
+                    <div className="flex justify-end">
+                        <Button variant="outline" onClick={() => setIsHelpOpen(false)}>
+                            Понятно
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </form>
+    );
+};

@@ -37,8 +37,8 @@ export default {
         },
       },
       fontFamily: {
-        garamond: ['"Cormorant Garamond"', 'serif'],
-        lora: ['Lora', 'serif'],
+        lora: ['Montserrat', 'sans-serif'],
+        garamond: ['Cinzel', 'serif'],
       },
       screens: {
         'max-sm': { max: '640px' },
@@ -59,4 +59,5 @@ export default {
     },
   ],
 }
+
 

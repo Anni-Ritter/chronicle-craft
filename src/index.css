@@ -34,7 +34,60 @@ body {
   background-attachment: fixed;
   background-size: cover;
   color: var(--cc-text);
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Глобально скрываем визуальные полосы прокрутки, сохраняя скролл */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/old Edge */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chromium/Safari */
+}
+
+/* На мобильных поднимаем кегль для читаемости */
+@media (max-width: 1023px) {
+  :where(
+      p,
+      li,
+      button,
+      input,
+      textarea,
+      select
+  ) {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Базовая визуальная иерархия заголовков после увеличения текста */
+:where(h1, h2) {
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+:where(h3, h4, h5, h6) {
+  line-height: 1.3;
+}
+
+/* Fallback-оверрайд: даже если в кэше старый tailwind.css */
+.font-lora {
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+.font-garamond {
+  font-family: 'Cinzel', serif !important;
+}
+
+@media (max-width: 1023px) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 body::after {

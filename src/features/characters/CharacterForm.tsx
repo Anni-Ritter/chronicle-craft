@@ -439,8 +439,11 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
 
             <ExtraFieldsEditor extra={extra} onChange={setExtra} />
 
-            <div className="flex justify-end pt-2">
-                <Button type="submit" className="font-semibold text-[15px] px-6">
+            <div className="flex justify-stretch pt-4 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+                <Button
+                    type="submit"
+                    className="w-full justify-center font-semibold text-[16px] px-6 shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:w-auto lg:text-[15px]"
+                >
                     {initialCharacter ? "Сохранить изменения" : "Добавить персонажа"}
                 </Button>
             </div>

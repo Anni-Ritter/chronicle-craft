@@ -1,6 +1,7 @@
 import { useWorldStore } from '../store/useWorldStore';
 import { useWorldSelectionStore } from '../store/useWorldSelectionStore';
 import { Select } from './Select';
+import { Globe } from 'lucide-react';
 
 export const WorldSelector = () => {
     const { worlds } = useWorldStore();
@@ -11,12 +12,13 @@ export const WorldSelector = () => {
         label: world.name,
     }));
     return (
-        <div>
+        <div className="w-full">
             <Select
                 value={selectedWorldId}
                 options={options}
                 onChange={setSelectedWorldId}
                 placeholder="Все миры"
+                icon={<Globe className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
             />
         </div>
     );

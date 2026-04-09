@@ -10,6 +10,17 @@ import { useWorldStore } from '../../store/useWorldStore';
 import { useWorldSelectionStore } from '../../store/useWorldSelectionStore';
 import { WorldSelector } from '../../components/WorldSelector';
 import { Link } from 'react-router-dom';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+
+const mapCardVariants: Variants = {
+    hidden: { opacity: 0, y: 22, scale: 0.97 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.34 } },
+};
+
+const mapGridVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.07 } },
+};
 
 const MAPS_PER_PAGE = 10;
 
@@ -76,27 +87,40 @@ export const MapListPage = () => {
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 md:gap-4">
-                    <WorldSelector />
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center md:gap-4">
+                    <div className="w-full sm:w-auto sm:min-w-[200px]">
+                        <WorldSelector />
+                    </div>
                     <Button
                         onClick={() => {
                             setMapToEdit(null);
                             setShowFormModal(true);
                         }}
-                        icon={<Plus size={18} />}
-                        className="max-sm:gap-0"
+                        icon={<Plus size={20} className="max-lg:shrink-0" />}
+                        className="w-full justify-center shadow-[0_4px_20px_rgba(194,167,116,0.2)] sm:w-auto"
                     >
-                        <span className="hidden md:block">Добавить карту</span>
-                        <span className="md:hidden">Создать</span>
+                        Добавить карту
                     </Button>
                 </div>
             </div>
 
+            <AnimatePresence mode="wait">
             {maps.length === 0 ? (
-                <div className="mt-10 flex flex-col items-center justify-center text-center text-[#c7bc98]">
-                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[#c2a77466] bg-[#151e16] shadow-[0_0_24px_#000] mb-4">
+                <motion.div
+                    key="empty"
+                    className="mt-10 flex flex-col items-center justify-center text-center text-[#c7bc98]"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35 }}
+                >
+                    <motion.div
+                        className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[#c2a77466] bg-[#151e16] shadow-[0_0_24px_#000] mb-4"
+                        animate={{ rotate: [0, 5, -5, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                    >
                         <Sparkles className="w-7 h-7 text-[#c2a774]" />
-                    </div>
+                    </motion.div>
                     <p className="text-xl font-semibold text-[#e5d9a5] mb-1">
                         Карт пока нет
                     </p>
@@ -108,19 +132,27 @@ export const MapListPage = () => {
                             setMapToEdit(null);
                             setShowFormModal(true);
                         }}
-                        icon={<Plus size={18} />}
+                        icon={<Plus size={20} />}
+                        className="w-full max-w-sm justify-center shadow-[0_4px_24px_rgba(194,167,116,0.18)] sm:w-auto"
                     >
                         Добавить карту
                     </Button>
-                </div>
+                </motion.div>
             ) : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {paginatedMaps.map((map, index) => (
-                            <div
+                <motion.div key="grid" className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    <motion.div
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                        variants={mapGridVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {paginatedMaps.map((map) => (
+                            <motion.div
                                 key={map.id}
-                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-gradient-to-br from-[#151e16] via-[#202a1f] to-[#111711] shadow-[0_0_24px_rgba(0,0,0,0.85)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_28px_#c2a77455] opacity-0 animate-fade-in-down"
-                                style={{ animationDelay: `${index * 70}ms` }}
+                                variants={mapCardVariants}
+                                whileHover={{ y: -5, boxShadow: '0 0 32px rgba(194,167,116,0.35)' }}
+                                whileTap={{ scale: 0.98 }}
+                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-gradient-to-br from-[#151e16] via-[#202a1f] to-[#111711] shadow-[0_0_24px_rgba(0,0,0,0.85)]"
                             >
                                 <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_0%_0%,rgba(194,167,116,0.20),transparent_55%)] opacity-80 group-hover:opacity-100 transition-opacity" />
 
@@ -152,7 +184,7 @@ export const MapListPage = () => {
                                             )}
                                         </div>
 
-                                        <div className="flex flex-col gap-2 items-end shrink-0">
+                                        <div className="flex flex-row gap-2 items-center shrink-0 sm:flex-col sm:items-end">
                                             <Button
                                                 variant="outline"
                                                 onClick={(e) => {
@@ -162,7 +194,7 @@ export const MapListPage = () => {
                                                     setShowFormModal(true);
                                                 }}
                                                 icon={<Pen className="w-4 h-4" />}
-                                                className="h-8 w-8 p-0 flex items-center justify-center bg-[#1c2618]/70 hover:bg-[#263320] border-[#c2a77488]"
+                                                className="h-10 w-10 bg-[#1c2618]/70 hover:bg-[#263320] border-[#c2a77488] lg:h-8 lg:w-8"
                                                 title="Редактировать"
                                             >
                                             </Button>
@@ -175,16 +207,16 @@ export const MapListPage = () => {
                                                     setMapToDelete(map);
                                                 }}
                                                 icon={<Trash2 className="w-4 h-4" />}
-                                                className="h-8 w-8 p-0 flex items-center justify-center text-xs"
+                                                className="h-10 w-10 text-xs lg:h-8 lg:w-8"
                                                 title="Удалить"
                                             >
                                             </Button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
 
                     {totalPages > 1 && (
                         <div className="flex justify-center gap-2 pt-2 font-lora text-[#e5d9a5]">
@@ -219,8 +251,9 @@ export const MapListPage = () => {
                             </button>
                         </div>
                     )}
-                </div>
+                </motion.div>
             )}
+            </AnimatePresence>
 
             <Modal isOpen={!!mapToDelete} onClose={() => setMapToDelete(null)}>
                 <div className="p-6 sm:p-7 text-center text-[#c7bc98] font-lora">
@@ -232,18 +265,18 @@ export const MapListPage = () => {
                         <strong className="text-[#e5d9a5]">«{mapToDelete?.name}»</strong>?<br />
                         <span className="text-[#e88]">Это действие необратимо.</span>
                     </p>
-                    <div className="flex justify-center gap-4">
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center sm:gap-4">
                         <Button
                             variant="outline"
                             onClick={() => setMapToDelete(null)}
-                            className="text-base max-sm:text-sm"
+                            className="w-full sm:w-auto"
                         >
                             Отмена
                         </Button>
                         <Button
                             variant="danger"
                             onClick={confirmDelete}
-                            className="text-base max-sm:text-sm"
+                            className="w-full sm:w-auto"
                             icon={<Trash2 className="w-4 h-4" />}
                         >
                             Удалить

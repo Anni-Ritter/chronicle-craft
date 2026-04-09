@@ -1,25 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Lora:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap');
 
 
 body {
-  font-family: 'Lora', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 
 #root {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 1rem;
-  font-family: 'Lora', serif;
+  padding: 0;
+  font-family: 'Montserrat', sans-serif;
   color: #D6C5A2;
   z-index: 2;
+}
+
+@media (min-width: 1024px) {
+  #root {
+    padding: 1rem;
+  }
 }
 
 input,
 textarea,
 select {
-  font-family: 'Lora', serif;
+  font-family: 'Montserrat', sans-serif;
   color: #D6C5A2;
   background-color: #223120;
   border: 1px solid #C2A774;

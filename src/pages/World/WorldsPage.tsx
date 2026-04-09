@@ -8,6 +8,17 @@ import { Globe2, Pencil, PlusCircle, Trash2, Sparkles } from 'lucide-react';
 import type { World } from '../../types/world';
 import { WorldForm } from '../../features/world/WorldForm';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
+
+const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 24, scale: 0.97 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35 } },
+};
+
+const listVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.07 } },
+};
 
 export const WorldsPage = () => {
     const session = useSession();
@@ -54,23 +65,34 @@ export const WorldsPage = () => {
                 </div>
 
                 <Button
-                    icon={<PlusCircle size={18} />}
+                    icon={<PlusCircle size={20} className="max-lg:shrink-0" />}
                     onClick={() => {
                         setEditingWorld(null);
                         setModalOpen(true);
                     }}
-                    className="self-start md:self-auto max-sm:gap-0"
+                    className="w-full justify-center gap-2 shadow-[0_4px_20px_rgba(194,167,116,0.2)] md:self-center lg:w-auto !text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
                 >
-                    <span className="hidden md:block">Новый мир</span>
-                    <span className="md:hidden">Создать</span>
+                    Новый мир
                 </Button>
             </div>
 
+            <AnimatePresence mode="wait">
             {worlds.length === 0 ? (
-                <div className="flex flex-col items-center justify-center text-center text-[#e5d9a5]/80 font-lora gap-4 mt-10">
-                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[#c2a77466] bg-[#151e16] shadow-[0_0_24px_#000]">
+                <motion.div
+                    key="empty"
+                    className="flex flex-col items-center justify-center text-center text-[#e5d9a5]/80 font-lora gap-4 mt-10"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.35 }}
+                >
+                    <motion.div
+                        className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-[#c2a77466] bg-[#151e16] shadow-[0_0_24px_#000]"
+                        animate={{ rotate: [0, 5, -5, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                    >
                         <Sparkles className="w-7 h-7 text-[#c2a774]" />
-                    </div>
+                    </motion.div>
                     <div className="space-y-1">
                         <p className="text-base md:text-lg italic">
                             У вас пока нет созданных миров.
@@ -80,24 +102,33 @@ export const WorldsPage = () => {
                         </p>
                     </div>
                     <Button
-                        icon={<PlusCircle size={18} />}
+                        icon={<PlusCircle size={20} />}
                         onClick={() => {
                             setEditingWorld(null);
                             setModalOpen(true);
                         }}
-                        className="mt-2"
+                        className="mt-2 w-full max-w-sm justify-center shadow-[0_4px_24px_rgba(194,167,116,0.18)] lg:w-auto !text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
                     >
                         Создать первый мир
                     </Button>
-                </div>
+                </motion.div>
             ) : (
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-[#e5d9a5] font-lora">
-                    {worlds.map((world: World, index) => {
+                <motion.ul
+                    key="list"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-[#e5d9a5] font-lora"
+                    variants={listVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    {worlds.map((world: World) => {
                         const isActive = selectedWorldId === world.id;
 
                         return (
-                            <li
+                            <motion.li
                                 key={world.id}
+                                variants={cardVariants}
+                                whileHover={{ y: -5, boxShadow: '0 0 32px rgba(194,167,116,0.35)' }}
+                                whileTap={{ scale: 0.98 }}
                                 onClick={() => {
                                     navigate(`/worlds/${world.id}`);
                                 }}
@@ -105,12 +136,9 @@ export const WorldsPage = () => {
                                     group relative overflow-hidden rounded-2xl border border-[#3a4a34] 
                                     bg-gradient-to-br from-[#161f16] via-[#1f2b1f] to-[#131a13]
                                     shadow-[0_0_24px_rgba(0,0,0,0.8)]
-                                    cursor-pointer transition-all duration-300
-                                    hover:-translate-y-1 hover:shadow-[0_0_28px_#c2a77455]
+                                    cursor-pointer
                                     ${isActive ? 'ring-2 ring-[#c2a774] ring-offset-2 ring-offset-[#050807]' : ''}
-                                    opacity-0 animate-fade-in-down
                                 `}
-                                style={{ animationDelay: `${index * 70}ms` }}
                             >
                                 <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_0%_0%,rgba(194,167,116,0.18),transparent_55%)] opacity-70 group-hover:opacity-100 transition-opacity" />
 
@@ -165,11 +193,12 @@ export const WorldsPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            </li>
+                            </motion.li>
                         );
                     })}
-                </ul>
+                </motion.ul>
             )}
+            </AnimatePresence>
 
             <Modal isOpen={isModalOpen} onClose={() => {
                 setModalOpen(false);
@@ -198,18 +227,18 @@ export const WorldsPage = () => {
                         ? <br className="hidden sm:block" />
                         <span className="text-[#e88]">Это действие необратимо.</span>
                     </p>
-                    <div className="flex justify-center gap-3 sm:gap-4">
+                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-center sm:gap-4">
                         <Button
                             variant="outline"
                             onClick={() => setDeletingWorld(null)}
-                            className="min-w-[110px] max-sm:text-sm"
+                            className="w-full min-w-0 sm:min-w-[120px] sm:w-auto"
                         >
                             Отмена
                         </Button>
                         <Button
                             variant="danger"
                             onClick={handleDelete}
-                            className="min-w-[110px] max-sm:text-sm"
+                            className="w-full min-w-0 sm:min-w-[120px] sm:w-auto"
                             icon={<Trash2 className="w-4 h-4" />}
                         >
                             Удалить

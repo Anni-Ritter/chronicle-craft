@@ -74,7 +74,7 @@ export const AuthForm = () => {
             <div className="space-y-3">
                 <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-[#c2a774] to-[#e5d9a5] hover:from-[#e5d9a5] hover:to-[#fffbe6] text-[#223120] py-2.5 rounded-xl font-semibold text-base transition shadow-[0_0_18px_#c2a77466] border border-[#c2a774] flex items-center justify-center gap-2"
+                    className="w-full min-h-[52px] bg-gradient-to-r from-[#c2a774] to-[#e5d9a5] hover:from-[#e5d9a5] hover:to-[#fffbe6] text-[#223120] py-3 rounded-[14px] font-semibold text-base transition shadow-[0_0_18px_#c2a77466] border border-[#c2a774] flex items-center justify-center gap-2 touch-manipulation"
                 >
                     {isSignUp ? "Создать аккаунт" : "Войти в мир магии"}
                 </Button>

@@ -137,33 +137,36 @@ export const ChronicleDetailPage = () => {
                 <div className="pointer-events-none absolute -top-20 -right-10 w-64 h-64 rounded-full bg-[#c2a77422] blur-3xl" />
 
                 <div className="relative z-10 px-4 py-5 md:px-8 md:py-7 space-y-6">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2 md:space-y-3 md:max-w-[70%]">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#101712]/80 text-[10px] md:text-xs uppercase tracking-[0.18em] text-[#c7bc98]">
-                                <Sparkles size={14} className="text-[#c2a774]" />
-                                <span>Запись хроники</span>
+                    <div className="flex flex-col gap-3">
+                        <div className="space-y-2 md:space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-[#3a4a34] bg-[#101712]/80 text-[10px] md:text-xs uppercase tracking-[0.18em] text-[#c7bc98]">
+                                    <Sparkles size={14} className="text-[#c2a774]" />
+                                    <span>Запись хроники</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-[#c7bc98]">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditing(true)}
+                                    className="inline-flex h-8 w-8 items-center justify-center text-[#c7bc98] hover:text-[#e5d9a5] transition"
+                                    aria-label="Редактировать"
+                                >
+                                    <Pencil size={18} />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDeleting(true)}
+                                    className="inline-flex h-8 w-8 items-center justify-center text-[#ff9b9b] hover:text-[#ffb2b2] transition"
+                                    aria-label="Удалить"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
+                                </div>
                             </div>
                             <h1 className="flex items-start gap-2 text-2xl md:text-3xl lg:text-[32px] font-garamond font-bold text-[#f4ecd0] drop-shadow-[0_0_10px_#000]">
                                 <BookCopy className="w-6 h-6 mt-1 text-[#c2a774] max-sm:hidden flex-shrink-0" />
                                 <span className="break-words">{chronicle.title}</span>
                             </h1>
-                        </div>
-
-                        <div className="flex flex-row gap-2 md:flex-col md:items-end max-sm:hidden">
-                            <Button
-                                onClick={() => setIsEditing(true)}
-                                icon={<Pencil size={18} />}
-                                className="text-sm md:text-base"
-                            >
-                                Редактировать
-                            </Button>
-                            <Button
-                                variant="danger"
-                                onClick={() => setIsDeleting(true)}
-                                icon={<Trash2 className="w-5 h-5" />}
-                            >
-                                Удалить
-                            </Button>
                         </div>
                     </div>
 
@@ -241,20 +244,6 @@ export const ChronicleDetailPage = () => {
                         </div>
                     </section>
 
-                    <div className="flex gap-2 pt-1 md:hidden">
-                        <Button
-                            onClick={() => setIsEditing(true)}
-                            icon={<Pencil className="w-5 h-5" />}
-                            className="text-sm flex-1"
-                        >
-                            Редактировать
-                        </Button>
-                        <Button
-                            variant="danger"
-                            onClick={() => setIsDeleting(true)}
-                            icon={<Trash2 className="w-5 h-5" />}
-                        />
-                    </div>
                 </div>
             </div>
 
@@ -275,25 +264,26 @@ export const ChronicleDetailPage = () => {
                     <p className="text-sm text-[#c7bc98]">
                         Это действие необратимо. Запись будет удалена из архива навсегда.
                     </p>
-                    <div className="flex justify-end gap-3 pt-3">
+                    <div className="flex flex-col-reverse gap-3 pt-3 sm:flex-row sm:justify-end">
                         <Button
                             onClick={() => setIsDeleting(false)}
                             variant="outline"
-                            className="text-sm"
+                            className="w-full text-sm sm:w-auto"
                         >
                             Отмена
                         </Button>
                         <Button
                             onClick={handleDelete}
                             variant="danger"
-                            icon={<Trash2 className="w-4 h-4" />}
-                            className="text-sm"
+                            icon={<Trash2 className="h-4 w-4" />}
+                            className="w-full text-sm sm:w-auto"
                         >
                             Удалить
                         </Button>
                     </div>
                 </div>
             </Modal>
+
         </div>
     );
 };

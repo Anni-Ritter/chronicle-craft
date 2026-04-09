@@ -12,6 +12,17 @@ import { Modal } from '../../components/Modal';
 import { formatEventDate } from '../../lib/formatEventDate';
 import { Button } from '../../components/ChronicleButton';
 import { WorldDetailsBlock } from '../../components/WorldDetailsBlock';
+import { motion, type Variants } from 'framer-motion';
+
+const cardListVariants: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardItemVariants: Variants = {
+    hidden: { opacity: 0, y: 18, scale: 0.97 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.32 } },
+};
 
 export const WorldDetailsPage = () => {
     const { id } = useParams();
@@ -54,15 +65,25 @@ export const WorldDetailsPage = () => {
 
     return (
         <div className="max-w-[1440px] mx-auto px-3 md:px-4 pt-6 md:pt-10 pb-16 font-lora text-[#e5d9a5] space-y-10 relative z-10">
-            <div className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2">
+            <motion.div
+                className="text-xs sm:text-sm text-[#c7bc98] flex flex-wrap items-center gap-1 mb-2"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+            >
                 <Link to="/" className="text-[#c2a774] hover:underline">Главная</Link>
                 <Dot className="w-4 h-4" />
                 <Link to="/worlds" className="text-[#c2a774] hover:underline">Миры</Link>
                 <Dot className="w-4 h-4" />
                 <span className="text-[#e5d9a5] line-clamp-1">{world.name}</span>
-            </div>
+            </motion.div>
 
-            <section className="relative rounded-3xl border border-[#c2a77455] bg-[#111712]/95 shadow-[0_0_45px_#000] px-5 py-6 md:px-8 md:py-8 space-y-6">
+            <motion.section
+                className="relative rounded-3xl border border-[#c2a77455] bg-[#111712]/95 shadow-[0_0_45px_#000] px-5 py-6 md:px-8 md:py-8 space-y-6"
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+            >
                 <div className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#c2a77422] blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-24 -left-20 w-72 h-72 rounded-full bg-[#c2a77411] blur-3xl" />
 
@@ -81,8 +102,8 @@ export const WorldDetailsPage = () => {
 
                         <Button
                             onClick={() => setEditModalOpen(true)}
-                            icon={<Pencil size={18} />}
-                            className="text-xs md:text-sm h-9 md:h-10 self-start"
+                            icon={<Pencil size={20} className="shrink-0" />}
+                            className="w-full justify-center shadow-[0_4px_18px_rgba(0,0,0,0.3)] max-lg:min-h-[52px] lg:w-auto lg:self-start lg:text-xs xl:text-sm"
                         >
                             Редактировать мир
                         </Button>
@@ -113,7 +134,7 @@ export const WorldDetailsPage = () => {
                     </div>
                 )}
 
-            </section>
+            </motion.section>
 
             <Modal isOpen={editModalOpen} onClose={() => setEditModalOpen(false)}>
                 <WorldForm
@@ -125,7 +146,12 @@ export const WorldDetailsPage = () => {
                 />
             </Modal>
 
-            <section className="space-y-4">
+            <motion.section
+                className="space-y-4"
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
+            >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
                         <Users className="w-5 h-5 text-[#c2a774]" />
@@ -143,12 +169,18 @@ export const WorldDetailsPage = () => {
                         В этом мире пока нет персонажей. Самое время кого-то вписать в хроники.
                     </p>
                 ) : (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {characters.map((c, index) => (
-                            <li
+                    <motion.ul
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                        variants={cardListVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {characters.map((c) => (
+                            <motion.li
                                 key={c.id}
-                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_22px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77455] transition transform hover:-translate-y-[2px] animate-fade-in-down"
-                                style={{ animationDelay: `${index * 40}ms` }}
+                                variants={cardItemVariants}
+                                whileHover={{ y: -3, boxShadow: '0 0 30px rgba(194,167,116,0.35)' }}
+                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_22px_#000] hover:border-[#c2a774bb] transition-colors"
                             >
                                 <Link
                                     to={`/character/${c.id}`}
@@ -182,13 +214,18 @@ export const WorldDetailsPage = () => {
                                         )}
                                     </div>
                                 </Link>
-                            </li>
+                            </motion.li>
                         ))}
-                    </ul>
+                    </motion.ul>
                 )}
-            </section>
+            </motion.section>
 
-            <section className="space-y-4">
+            <motion.section
+                className="space-y-4"
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.2, ease: 'easeOut' }}
+            >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
                         <BookMarked className="w-5 h-5 text-[#c2a774]" />
@@ -206,8 +243,13 @@ export const WorldDetailsPage = () => {
                         Хроник пока нет — но мир терпеливо ждёт первую запись.
                     </p>
                 ) : (
-                    <ul className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {chronicles.map((chronicle, index) => {
+                    <motion.ul
+                        className="grid grid-cols-1 md:grid-cols-2 gap-5"
+                        variants={cardListVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {chronicles.map((chronicle) => {
                             const moodEmoji = chronicle.mood?.split(' ')[0] || '📖';
                             const preview =
                                 chronicle.content.length > 260
@@ -215,10 +257,11 @@ export const WorldDetailsPage = () => {
                                     : chronicle.content;
 
                             return (
-                                <li
+                                <motion.li
                                     key={chronicle.id}
-                                    className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77444] transition transform hover:-translate-y-[2px] animate-fade-in-down"
-                                    style={{ animationDelay: `${index * 60}ms` }}
+                                    variants={cardItemVariants}
+                                    whileHover={{ y: -3, boxShadow: '0 0 30px rgba(194,167,116,0.27)' }}
+                                    className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] transition-colors"
                                 >
                                     <Link to={`/chronicles/${chronicle.id}`} className="block p-4">
                                         <div className="flex items-start gap-3 mb-2">
@@ -256,14 +299,19 @@ export const WorldDetailsPage = () => {
                                             dangerouslySetInnerHTML={{ __html: preview }}
                                         />
                                     </Link>
-                                </li>
+                                </motion.li>
                             );
                         })}
-                    </ul>
+                    </motion.ul>
                 )}
-            </section>
+            </motion.section>
 
-            <section className="space-y-4">
+            <motion.section
+                className="space-y-4"
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.3, ease: 'easeOut' }}
+            >
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <h2 className="text-xl md:text-2xl font-garamond flex items-center gap-2">
                         <MapPinned className="w-5 h-5 text-[#c2a774]" />
@@ -281,12 +329,18 @@ export const WorldDetailsPage = () => {
                         Пока здесь пусто — добавьте первую карту, чтобы мир обрел очертания.
                     </p>
                 ) : (
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {maps.map((map, index) => (
-                            <li
+                    <motion.ul
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-5"
+                        variants={cardListVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {maps.map((map) => (
+                            <motion.li
                                 key={map.id}
-                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] hover:shadow-[0_0_30px_#c2a77444] transition transform hover:-translate-y-[2px] animate-fade-in-down"
-                                style={{ animationDelay: `${index * 60}ms` }}
+                                variants={cardItemVariants}
+                                whileHover={{ y: -3, boxShadow: '0 0 30px rgba(194,167,116,0.27)' }}
+                                className="relative group overflow-hidden rounded-2xl border border-[#3a4a34] bg-[#141f16]/90 shadow-[0_0_24px_#000] hover:border-[#c2a774bb] transition-colors"
                             >
                                 <Link to={`/maps/${map.id}`} className="block">
                                     <div className="relative">
@@ -315,11 +369,11 @@ export const WorldDetailsPage = () => {
                                         )}
                                     </div>
                                 </Link>
-                            </li>
+                            </motion.li>
                         ))}
-                    </ul>
+                    </motion.ul>
                 )}
-            </section>
+            </motion.section>
         </div>
     );
 };
