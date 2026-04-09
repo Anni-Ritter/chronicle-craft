@@ -158,7 +158,7 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
     };
 
     return (
-        <form className="relative no-scrollbar text-[#e5d9a5] font-lora shadow-lg max-w-full md:max-w-4xl mx-auto space-y-10">
+        <form className="relative no-scrollbar overflow-x-hidden text-[#e5d9a5] font-lora shadow-lg max-w-full md:max-w-4xl mx-auto space-y-10">
             <div className="pointer-events-none absolute -top-24 -right-10 w-40 h-40 rounded-full bg-[#c2a77433] blur-3xl" />
             <div className="pointer-events-none absolute -bottom-24 -left-20 w-52 h-52 rounded-full bg-[#4ade8030] blur-3xl" />
             <header className="text-center space-y-2">
@@ -1303,7 +1303,7 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                 </>
             )}
 
-            <div className="flex justify-stretch pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-1 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+            <div className="flex justify-stretch pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
                 <Button
                     onClick={handleSubmit}
                     className="w-full justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:w-auto !text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
