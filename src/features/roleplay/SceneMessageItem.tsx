@@ -452,13 +452,14 @@ export const SceneMessageItem = ({
                 ) : null}
                 {fallbackRun.map((run, ri) => {
                     if (run.kind === 'action') {
+                        const isLongAction = run.text.length > 180 || run.text.includes('\n');
                         return (
                             <div key={`a-${ri}`} className="flex w-full min-w-0 justify-center py-0.5">
                                 <div
                                     role="button"
                                     tabIndex={0}
                                     data-scene-msg-hit=""
-                                    className={`max-w-[min(92%,520px)] rounded-full border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-center text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px] ${bubbleInteractiveClass}`}
+                                    className={`max-w-[min(92%,640px)] border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px] ${isLongAction ? 'rounded-2xl text-left' : 'rounded-full text-center'} ${bubbleInteractiveClass}`}
                                     style={{ fontSize: `${14 * fontScale}px`, lineHeight: 1.35 }}
                                     onClick={openMenuFromEvent}
                                     onKeyDown={openMenuFromKeyboard}
