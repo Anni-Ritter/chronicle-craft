@@ -1,14 +1,68 @@
-import { CircleQuestionMark, Dices, Plus, Save, Trash2 } from "lucide-react";
+import { CircleQuestionMark, Dices, Plus, Trash2 } from "lucide-react";
 import { useCalendarStore } from "../store/useCalendarStore";
 import { Button } from "./ChronicleButton";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useEffect, useState } from "react";
 
-interface CalendarEditorFormProps {
-    onSave: (calendar: any) => void;
-    onCancel: () => void;
+interface NumericInputProps {
+    value: number | undefined;
+    onCommit: (value: number) => void;
+    className: string;
+    placeholder?: string;
+    min?: number;
 }
 
-export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps) => {
+const NumericInput = ({ value, onCommit, className, placeholder, min }: NumericInputProps) => {
+    const [inputValue, setInputValue] = useState(
+        value === undefined || Number.isNaN(value) ? "" : String(value)
+    );
+    const [isFocused, setIsFocused] = useState(false);
+
+    useEffect(() => {
+        if (isFocused) return;
+        setInputValue(value === undefined || Number.isNaN(value) ? "" : String(value));
+    }, [value, isFocused]);
+
+    const commit = (raw: string) => {
+        if (raw.trim() === "") {
+            setInputValue(value === undefined || Number.isNaN(value) ? "" : String(value));
+            return;
+        }
+
+        const parsed = Number(raw);
+        if (Number.isNaN(parsed)) {
+            setInputValue(value === undefined || Number.isNaN(value) ? "" : String(value));
+            return;
+        }
+
+        const next = Math.round(parsed);
+        const clamped = min !== undefined ? Math.max(min, next) : next;
+        onCommit(clamped);
+    };
+
+    return (
+        <input
+            type="text"
+            inputMode="numeric"
+            className={className}
+            placeholder={placeholder}
+            value={inputValue}
+            onFocus={() => setIsFocused(true)}
+            onChange={(e) => {
+                const raw = e.target.value;
+                if (/^-?\d*$/.test(raw)) {
+                    setInputValue(raw);
+                }
+            }}
+            onBlur={() => {
+                setIsFocused(false);
+                commit(inputValue);
+            }}
+        />
+    );
+};
+
+export const CalendarEditorForm = () => {
     const { calendar, updateField } = useCalendarStore();
     const supabase = useSupabaseClient();
 
@@ -104,7 +158,7 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
         );
     };
 
-    const updatePhases = (index: number, key: string, value: any) => {
+    const updatePhases = (index: number, key: string, value: string | number) => {
         const updated = [...(calendar.phases || [])];
         updated[index] = { ...updated[index], [key]: value };
         updateField("phases", updated);
@@ -123,7 +177,7 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
         ]);
     };
 
-    const updateKeyDate = (index: number, key: string, value: any) => {
+    const updateKeyDate = (index: number, key: string, value: string | number) => {
         const updated = [...(calendar.keyDates || [])];
         updated[index] = { ...updated[index], [key]: value };
         updateField("keyDates", updated);
@@ -160,22 +214,20 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <label className="block text-sm space-y-1">
                         <span className="text-[#c2a774]">Дней в неделе</span>
-                        <input
-                            type="number"
+                        <NumericInput
                             min={1}
                             className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                             value={calendar.daysInWeek}
-                            onChange={(e) => updateField("daysInWeek", +e.target.value)}
+                            onCommit={(value) => updateField("daysInWeek", value)}
                         />
                     </label>
                     <label className="block text-sm space-y-1">
                         <span className="text-[#c2a774]">Месяцев в году</span>
-                        <input
-                            type="number"
+                        <NumericInput
                             min={1}
                             className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                             value={calendar.monthsInYear}
-                            onChange={(e) => updateField("monthsInYear", +e.target.value)}
+                            onCommit={(value) => updateField("monthsInYear", value)}
                         />
                     </label>
                 </div>
@@ -185,12 +237,11 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 <h3 className="text-lg font-garamond text-[#e5d9a5]">Точка отсчёта</h3>
                 <div className="space-y-1 text-sm">
                     <label className="text-[#c2a774]">Текущий год</label>
-                    <input
-                        type="number"
+                    <NumericInput
                         placeholder="Год (например, 1 или 2025)"
                         className="w-full px-4 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
-                        value={calendar.currentYear ? Number(calendar.currentYear) : ""}
-                        onChange={(e) => updateField("currentYear", +e.target.value)}
+                        value={calendar.currentYear ? Number(calendar.currentYear) : undefined}
+                        onCommit={(value) => updateField("currentYear", value)}
                     />
                 </div>
             </section>
@@ -204,16 +255,15 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 </p>
                 <div className="grid gap-2 md:grid-cols-2">
                     {Array.from({ length: calendar.monthsInYear }).map((_, i) => (
-                        <input
+                        <NumericInput
                             key={i}
-                            type="number"
                             min={1}
                             className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                             placeholder={`Дней в месяце ${i + 1}`}
-                            value={calendar.daysInMonth?.[i] ? Number(calendar.daysInMonth[i]) : ""}
-                            onChange={(e) => {
+                            value={calendar.daysInMonth?.[i]}
+                            onCommit={(value) => {
                                 const updated = [...(calendar.daysInMonth || [])];
-                                updated[i] = +e.target.value;
+                                updated[i] = value;
                                 updateField("daysInMonth", updated);
                             }}
                         />
@@ -339,26 +389,25 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                     в лоре и привязать всё к нему.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <input
-                        type="number"
+                    <NumericInput
+                        min={1}
                         placeholder="День"
                         className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
-                        value={calendar.epochStart?.day || ""}
-                        onChange={(e) => handleEpochStartChange("day", +e.target.value)}
+                        value={calendar.epochStart?.day}
+                        onCommit={(value) => handleEpochStartChange("day", value)}
                     />
-                    <input
-                        type="number"
+                    <NumericInput
+                        min={1}
                         placeholder="Месяц"
                         className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
-                        value={calendar.epochStart?.month || ""}
-                        onChange={(e) => handleEpochStartChange("month", +e.target.value)}
+                        value={calendar.epochStart?.month}
+                        onCommit={(value) => handleEpochStartChange("month", value)}
                     />
-                    <input
-                        type="number"
+                    <NumericInput
                         placeholder="Год"
                         className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
-                        value={calendar.epochStart?.year || ""}
-                        onChange={(e) => handleEpochStartChange("year", +e.target.value)}
+                        value={calendar.epochStart?.year}
+                        onCommit={(value) => handleEpochStartChange("year", value)}
                     />
                 </div>
             </section>
@@ -416,17 +465,10 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                         </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="ml-auto flex">
                         <Button
                             onClick={addPhase}
-                            className="max-sm:hidden text-xs md:text-sm"
-                            icon={<Plus size={16} />}
-                        >
-                            Добавить
-                        </Button>
-                        <Button
-                            onClick={addPhase}
-                            className="md:hidden p-2"
+                            className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                             icon={<Plus size={16} />}
                         />
                     </div>
@@ -435,27 +477,29 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 {(calendar.phases || []).map((phase, i) => (
                     <div
                         key={i}
-                        className="relative border border-[#c2a77466] rounded-2xl bg-gradient-to-br from-[#131d14] to-[#18271a] px-4 md:px-5 py-5 md:py-6 shadow-inner hover:shadow-[0_0_20px_#c2a77433] transition-all"
+                        className="rounded-2xl border border-[#3a4a34] bg-[#111b14] px-4 md:px-5 py-4 md:py-5 space-y-4"
                     >
-                        <Button
-                            variant="danger"
-                            type="button"
-                            onClick={() => removePhase(i)}
-                            icon={<Trash2 size={14} />}
-                            className="absolute top-3 right-3 p-1.5 opacity-70 hover:opacity-100 transition"
-                        />
-
-                        <div className="flex items-center gap-3 mb-4">
-                            <div
-                                className="w-7 h-7 rounded-full border border-[#c2a774aa] shadow-[0_0_10px_rgba(0,0,0,0.6)]"
-                                style={{ background: phase.color || "#c2a774" }}
+                        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className="w-7 h-7 rounded-full border border-[#c2a774aa] shadow-[0_0_10px_rgba(0,0,0,0.6)]"
+                                    style={{ background: phase.color || "#c2a774" }}
+                                />
+                                <span className="text-xs text-[#c7bc98]">
+                                    Цвет фазы — для визуализации в календаре и лоре.
+                                </span>
+                            </div>
+                            <Button
+                                variant="danger"
+                                type="button"
+                                onClick={() => removePhase(i)}
+                                icon={<Trash2 size={14} />}
+                                className="shrink-0 !min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !shadow-none hover:!bg-transparent"
+                                aria-label="Удалить фазу"
                             />
-                            <span className="text-xs text-[#c7bc98]">
-                                Цвет фазы — для визуализации в календаре и лоре.
-                            </span>
                         </div>
 
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-2 gap-3">
                             <div className="md:col-span-2">
                                 <label className="text-xs mb-1 block text-[#c2a774]">
                                     Название
@@ -485,26 +529,22 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                                     <label className="text-xs mb-1 block text-[#c2a774]">
                                         С дня
                                     </label>
-                                    <input
-                                        type="number"
+                                    <NumericInput
+                                        min={1}
                                         className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                                         value={phase.fromDay}
-                                        onChange={(e) =>
-                                            updatePhases(i, "fromDay", +e.target.value)
-                                        }
+                                        onCommit={(value) => updatePhases(i, "fromDay", value)}
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs mb-1 block text-[#c2a774]">
                                         До дня
                                     </label>
-                                    <input
-                                        type="number"
+                                    <NumericInput
+                                        min={1}
                                         className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                                         value={phase.toDay}
-                                        onChange={(e) =>
-                                            updatePhases(i, "toDay", +e.target.value)
-                                        }
+                                        onCommit={(value) => updatePhases(i, "toDay", value)}
                                     />
                                 </div>
                             </div>
@@ -570,17 +610,10 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                         </Button>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="ml-auto flex">
                         <Button
                             onClick={addKeyDate}
-                            className="max-sm:hidden text-xs md:text-sm"
-                            icon={<Plus size={16} />}
-                        >
-                            Добавить
-                        </Button>
-                        <Button
-                            onClick={addKeyDate}
-                            className="md:hidden p-2"
+                            className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                             icon={<Plus size={16} />}
                         />
                     </div>
@@ -589,17 +622,21 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 {(calendar.keyDates || []).map((date, i) => (
                     <div
                         key={i}
-                        className="relative border border-[#c2a77466] rounded-2xl bg-gradient-to-br from-[#131d14] to-[#18271a] px-4 md:px-5 py-5 md:py-6 shadow-inner hover:shadow-[0_0_20px_#c2a77433] transition-all"
+                        className="rounded-2xl border border-[#3a4a34] bg-[#111b14] px-4 md:px-5 py-4 md:py-5 space-y-3"
                     >
-                        <Button
-                            variant="danger"
-                            type="button"
-                            onClick={() => removeKeyDate(i)}
-                            icon={<Trash2 size={14} />}
-                            className="absolute top-3 right-3 opacity-70 p-1.5 hover:opacity-100 transition"
-                        />
+                        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+                            <span className="text-xs text-[#c7bc98]">Событие #{i + 1}</span>
+                            <Button
+                                variant="danger"
+                                type="button"
+                                onClick={() => removeKeyDate(i)}
+                                icon={<Trash2 size={14} />}
+                                className="shrink-0 !min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !shadow-none hover:!bg-transparent"
+                                aria-label="Удалить событие"
+                            />
+                        </div>
 
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid md:grid-cols-2 gap-3">
                             <div className="md:col-span-2">
                                 <label className="text-xs mb-1 block text-[#c2a774]">
                                     Название
@@ -616,11 +653,11 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                                 <label className="text-xs mb-1 block text-[#c2a774]">
                                     День
                                 </label>
-                                <input
-                                    type="number"
+                                <NumericInput
+                                    min={1}
                                     className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                                     value={date.day}
-                                    onChange={(e) => updateKeyDate(i, "day", +e.target.value)}
+                                    onCommit={(value) => updateKeyDate(i, "day", value)}
                                 />
                             </div>
 
@@ -628,11 +665,11 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                                 <label className="text-xs mb-1 block text-[#c2a774]">
                                     Месяц
                                 </label>
-                                <input
-                                    type="number"
+                                <NumericInput
+                                    min={1}
                                     className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] text-[#f5e9c6] border border-[#3a4a34] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-2 focus:ring-[#c2a77455]"
                                     value={date.month}
-                                    onChange={(e) => updateKeyDate(i, "month", +e.target.value)}
+                                    onCommit={(value) => updateKeyDate(i, "month", value)}
                                 />
                             </div>
 
@@ -655,24 +692,6 @@ export const CalendarEditorForm = ({ onSave, onCancel }: CalendarEditorFormProps
                 ))}
             </section>
 
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onCancel}
-                    className="max-sm:text-sm"
-                >
-                    Отмена
-                </Button>
-                <Button
-                    type="button"
-                    onClick={() => onSave(calendar)}
-                    icon={<Save size={18} className="max-sm:w-4 max-sm:h-4" />}
-                    className="gap-2 max-sm:text-sm"
-                >
-                    Сохранить календарь
-                </Button>
-            </div>
         </div>
     );
 };

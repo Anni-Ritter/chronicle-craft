@@ -298,14 +298,14 @@ export const CharacterDetailPage = () => {
                                         {character.origin?.name && (
                                             <div className="flex items-center gap-2 text-[#c7bc98]">
                                                 <Earth size={15} className="text-[#c2a774] shrink-0" />
-                                                <span className="font-semibold text-[#c2a774]">Родина:</span>
+                                                <span className="font-semibold text-[#c2a774]">Страна:</span>
                                                 <span>{character.origin.name}</span>
                                             </div>
                                         )}
                                         {character.location?.name && (
                                             <div className="flex items-center gap-2 text-[#c7bc98]">
                                                 <House size={15} className="text-[#c2a774] shrink-0" />
-                                                <span className="font-semibold text-[#c2a774]">Жилище:</span>
+                                                <span className="font-semibold text-[#c2a774]">Город:</span>
                                                 <span>{character.location.name}</span>
                                             </div>
                                         )}

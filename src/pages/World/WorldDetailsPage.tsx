@@ -120,9 +120,6 @@ export const WorldDetailsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
             >
-                <div className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#c2a77422] blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-24 -left-20 w-72 h-72 rounded-full bg-[#c2a77411] blur-3xl" />
-
                 <div className="relative z-10 flex flex-col gap-4 border-b border-[#3a4a34] pb-5">
                     <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0 space-y-3">

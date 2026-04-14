@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Globe2, Map, Users, Languages, Sparkles, Plus, 
 import type { World } from '../../types/world';
 import { useCalendarStore } from '../../store/useCalendarStore';
 import { CalendarEditorForm } from '../../components/CalendarEditorForm';
+import { StorageImageUploader } from '../../components/StorageImageUploader';
 
 interface WorldFormProps {
     initialWorld?: World;
@@ -159,8 +160,6 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
 
     return (
         <form className="relative no-scrollbar overflow-x-hidden text-[#e5d9a5] font-lora shadow-lg max-w-full md:max-w-4xl mx-auto space-y-10">
-            <div className="pointer-events-none absolute -top-24 -right-10 w-40 h-40 rounded-full bg-[#c2a77433] blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-24 -left-20 w-52 h-52 rounded-full bg-[#4ade8030] blur-3xl" />
             <header className="text-center space-y-2">
                 <h2 className="text-2xl md:text-3xl tracking-wide flex items-center justify-center gap-2">
                     <Globe2 className="w-6 h-6 text-[#c2a774]" />
@@ -228,13 +227,7 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
 
                 {showCalendar && (
                     <div className="mt-4 rounded-2xl overflow-hidden">
-                        <CalendarEditorForm
-                            onCancel={() => setShowCalendar(false)}
-                            onSave={(data) => {
-                                setShowCalendar(false);
-                                setCalendar(data);
-                            }}
-                        />
+                        <CalendarEditorForm />
                     </div>
                 )}
             </section>
@@ -301,11 +294,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             countries: [...(details.countries || []), { name: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить страну
-                                </Button>
+                                />
                             </div>
 
                             {(details.countries || []).map((country: any, idx: number) => (
@@ -322,10 +313,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.countries || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, countries: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить страну"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -407,11 +398,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             races: [...(details.races || []), { name: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить расу
-                                </Button>
+                                />
                             </div>
 
                             {(details.races || []).map((race: any, idx: number) => (
@@ -428,10 +417,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.races || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, races: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить расу"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -504,11 +493,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             languages: [...(details.languages || []), { name: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить язык
-                                </Button>
+                                />
                             </div>
 
                             {(details.languages || []).map((lang: any, idx: number) => (
@@ -525,10 +512,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.languages || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, languages: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить язык"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -597,11 +584,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             pantheon: [...(details.pantheon || []), { name: '', domain: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить бога
-                                </Button>
+                                />
                             </div>
 
                             {(details.pantheon || []).map((god: any, idx: number) => (
@@ -618,10 +603,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.pantheon || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, pantheon: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить божество"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -691,11 +676,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             religions: [...(details.religions || []), { name: '', beliefs: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить религию
-                                </Button>
+                                />
                             </div>
 
                             {(details.religions || []).map((rel: any, idx: number) => (
@@ -712,10 +695,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.religions || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, religions: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить религию"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -848,11 +831,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             artifacts: [...(details.artifacts || []), { name: '', power: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить артефакт
-                                </Button>
+                                />
                             </div>
 
                             {(details.artifacts || []).map((art: any, idx: number) => (
@@ -869,10 +850,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.artifacts || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, artifacts: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить артефакт"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -984,11 +965,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             currencies: [...(details.currencies || []), { name: '', symbol: '' }],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить валюту
-                                </Button>
+                                />
                             </div>
 
                             {(details.currencies || []).map((cur: any, idx: number) => (
@@ -1005,10 +984,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.currencies || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, currencies: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить валюту"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -1079,11 +1058,9 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                             ],
                                         });
                                     }}
-                                    className="text-sm"
+                                    className="!min-h-8 !w-8 !px-0 !py-0 !border-0 !bg-transparent !text-[#c2a774] !shadow-none hover:!bg-transparent hover:!text-[#e5d9a5]"
                                     icon={<Plus size={16} />}
-                                >
-                                    Добавить организацию
-                                </Button>
+                                />
                             </div>
 
                             {(details.organizations || []).map((org: any, idx: number) => (
@@ -1100,10 +1077,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                                                 const updated = (details.organizations || []).filter((_, i) => i !== idx);
                                                 setDetails({ ...details, organizations: updated });
                                             }}
-                                            className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition"
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-transparent p-0 text-red-300 transition hover:text-red-200"
+                                            aria-label="Удалить организацию"
                                         >
                                             <Trash2 className="w-3 h-3" />
-                                            Удалить
                                         </button>
                                     </div>
                                     <input
@@ -1236,9 +1213,17 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                             <label className="block mb-1 text-sm font-medium text-[#c2a774]">
                                 Ссылка на карту мира
                             </label>
+                            <StorageImageUploader
+                                bucket="map"
+                                pathPrefix={user?.id}
+                                initialUrl={details.worldMapImage || undefined}
+                                onUpload={(url) => setDetails({ ...details, worldMapImage: url })}
+                                emptyLabel="Загрузить изображение карты"
+                                previewClassName="h-44 w-full rounded-xl object-cover border border-[#3a4a34]"
+                            />
                             <input
                                 className="w-full px-3 py-2 rounded-xl bg-[#0e1b12] border border-[#3a4a34] text-[#f5e9c6] placeholder:text-[#f5e9c6]/50 focus:outline-none focus:ring-1 focus:ring-[#c2a77455]"
-                                placeholder="URL изображения карты или id файла"
+                                placeholder="...или вставьте URL вручную"
                                 value={details.worldMapImage || ''}
                                 onChange={(e) =>
                                     setDetails({ ...details, worldMapImage: e.target.value })
@@ -1303,10 +1288,10 @@ export const WorldForm = ({ initialWorld, onFinish }: WorldFormProps) => {
                 </>
             )}
 
-            <div className="flex justify-stretch pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:border-t max-lg:border-[#3a4a34]/80 max-lg:bg-[#050806]/95 max-lg:px-1 max-lg:pb-1 max-lg:pt-3 lg:justify-end">
+            <div className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] right-3 z-40 sm:right-4">
                 <Button
                     onClick={handleSubmit}
-                    className="w-full justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] lg:w-auto !text-sm !px-3.5 !py-1.5 max-lg:!min-h-10 max-lg:!px-3.5"
+                    className="justify-center font-semibold shadow-[0_4px_20px_rgba(194,167,116,0.2)] !text-sm !px-3.5 !py-1.5 !min-h-10"
                 >
                     {initialWorld ? 'Сохранить мир' : 'Создать мир'}
                 </Button>

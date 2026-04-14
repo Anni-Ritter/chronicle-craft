@@ -160,10 +160,10 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
         gender: "Пол",
         birthday: "День рождения",
         occupation: "Профессия",
-        affiliation: "Афилиация",
+        affiliation: "Фракция",
         title: "Звание",
-        origin: "Родина",
-        location: "Жилище",
+        origin: "Страна",
+        location: "Город",
     } as const;
 
     return (
@@ -305,7 +305,7 @@ export const CharacterForm = ({ onFinish, initialCharacter, onSave }: CharacterF
                     Опишите прошлое, характер, ключевые события и тайны персонажа. Это текст, к
                     которому вы будете часто возвращаться.
                 </p>
-                <RichTextEditor content={bio} onChange={setBio} />
+                <RichTextEditor content={bio} onChange={setBio} compact />
             </section>
 
             <section className="bg-[#141f16]/90 rounded-2xl border border-[#3a4a34] p-4 md:p-5 shadow-[0_0_25px_#00000066] space-y-4">

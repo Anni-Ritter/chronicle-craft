@@ -3,9 +3,10 @@ import React, { useEffect, useRef } from 'react';
 interface RichTextEditorProps {
     content: string;
     onChange: (html: string) => void;
+    compact?: boolean;
 }
 
-export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
+export const RichTextEditor = ({ content, onChange, compact = false }: RichTextEditorProps) => {
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -20,7 +21,7 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
     };
 
     return (
-        <div className="rounded-xl border border-[#2a2f25] bg-[#1a2218] p-4 space-y-4">
+        <div className={compact ? "space-y-3" : "rounded-xl border border-[#2a2f25] bg-[#1a2218] p-4 space-y-4"}>
             <div className="flex flex-wrap gap-2">
                 <ToolbarButton label="𝐁" onClick={() => exec("bold")} title="Жирный" />
                 <ToolbarButton label="𝑰" onClick={() => exec("italic")} title="Курсив" />
@@ -38,8 +39,12 @@ export const RichTextEditor = ({ content, onChange }: RichTextEditorProps) => {
                 ref={ref}
                 contentEditable
                 onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)}
-                className="rich-editor min-h-[200px] border border-[#2a2f25] rounded-xl bg-[#22291f] p-4 text-base leading-relaxed shadow-inner focus:outline-none
-                prose prose-sm prose-invert list-outside list-disc marker:text-[#c2a774]"
+                className={`rich-editor min-h-[200px] rounded-xl p-4 text-base leading-relaxed focus:outline-none
+                prose prose-sm prose-invert list-outside list-disc marker:text-[#c2a774]
+                ${compact
+                        ? "border border-[#3a4a34] bg-[#111b14]"
+                        : "border border-[#2a2f25] bg-[#22291f] shadow-inner"
+                    }`}
             />
         </div>
     );

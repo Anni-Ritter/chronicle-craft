@@ -22,6 +22,10 @@ export const DiceStat = ({
     inputId,
 }: DiceStatProps) => {
     const [isRolling, setIsRolling] = useState(false);
+    const [inputValue, setInputValue] = useState(
+        Number.isFinite(value) ? String(value) : ''
+    );
+    const [isFocused, setIsFocused] = useState(false);
 
     useEffect(() => {
         if (value == null) return;
@@ -31,6 +35,11 @@ export const DiceStat = ({
 
         return () => clearTimeout(timeout);
     }, [value]);
+
+    useEffect(() => {
+        if (isFocused) return;
+        setInputValue(Number.isFinite(value) ? String(value) : '');
+    }, [value, isFocused]);
 
     const clamp = (n: number) => Math.min(max, Math.max(min, n));
     const fieldId = inputId ?? `attr-${label.replace(/\s+/g, '-').toLowerCase()}`;
@@ -74,16 +83,19 @@ export const DiceStat = ({
                         min={min}
                         max={max}
                         step={1}
-                        value={Number.isFinite(value) ? value : 0}
+                        value={inputValue}
+                        onFocus={() => setIsFocused(true)}
                         onChange={(e) => {
                             const raw = e.target.value;
+                            setInputValue(raw);
                             if (raw === '') return;
                             const n = Number(raw);
                             if (Number.isNaN(n)) return;
                             onChange(clamp(Math.round(n)));
                         }}
-                        onBlur={(e) => {
-                            const raw = e.target.value;
+                        onBlur={() => {
+                            setIsFocused(false);
+                            const raw = inputValue;
                             if (raw === '') onChange(min);
                             else {
                                 const n = Number(raw);
