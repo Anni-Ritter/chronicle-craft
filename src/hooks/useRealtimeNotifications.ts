@@ -117,7 +117,27 @@ export const useRealtimeNotifications = (
     supabase: SupabaseClient
 ) => {
     const enabledRef = useRef(false);
+    const sceneTitleCacheRef = useRef(new Map<string, string>());
     const [activeUserId, setActiveUserId] = useState<string | null>(userId ?? null);
+
+    const getSceneTitle = async (sceneId: string): Promise<string> => {
+        const cached = sceneTitleCacheRef.current.get(sceneId);
+        if (cached) return cached;
+        const { data } = await supabase
+            .from('roleplay_scenes')
+            .select('title')
+            .eq('id', sceneId)
+            .maybeSingle();
+        const title = data?.title?.trim() || 'Без названия';
+        sceneTitleCacheRef.current.set(sceneId, title);
+        return title;
+    };
+
+    const buildSceneMessagePreview = (content: string): string => {
+        const cleaned = content.replace(/\s+/g, ' ').trim();
+        if (!cleaned) return 'Новое сообщение в сцене.';
+        return cleaned.length > 90 ? `${cleaned.slice(0, 90)}...` : cleaned;
+    };
 
     useEffect(() => {
         if (userId) {
@@ -209,14 +229,18 @@ export const useRealtimeNotifications = (
                     table: 'scene_messages',
                 },
                 async (payload) => {
-                    const row = payload.new as { user_id?: string } | null;
+                    const row = payload.new as { user_id?: string; scene_id?: string; content?: string; type?: string } | null;
                     if (!row?.user_id || row.user_id === activeUserId) return;
+                    if (!row.scene_id) return;
+                    if (row.type === 'system') return;
+                    const sceneTitle = await getSceneTitle(row.scene_id);
+                    const preview = buildSceneMessagePreview(row.content ?? '');
                     addToNotificationFeed({
                         type: 'scene_message',
-                        title: 'Новое сообщение в сцене',
-                        body: 'В одной из ваших сцен появилось новое сообщение.',
+                        title: `Сцена: ${sceneTitle}`,
+                        body: preview,
                     });
-                    await showNotification('Новое сообщение в сцене', 'В одной из ваших сцен появилось новое сообщение.');
+                    await showNotification(`Сцена: ${sceneTitle}`, preview);
                 }
             )
             .subscribe();
