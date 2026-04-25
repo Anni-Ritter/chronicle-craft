@@ -502,7 +502,7 @@ export const SceneMessageItem = ({
                                     onKeyDown={openMenuFromKeyboard}
                                 >
                                     <p
-                                        className="m-0 leading-snug"
+                                        className="m-0 whitespace-pre-wrap leading-snug"
                                         style={{
                                             fontSize: `${15 * fontScale}px`,
                                             lineHeight: 1.35,

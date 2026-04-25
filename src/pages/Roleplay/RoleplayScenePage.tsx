@@ -426,6 +426,12 @@ export const RoleplayScenePage = () => {
             setTimelineBackgroundImage(sceneBackgroundImage);
             return;
         }
+        if (isNearChatBottom) {
+            const latestVisible = filteredMessages[filteredMessages.length - 1] ?? null;
+            const nextBg = resolveTimelineBackgroundByTimestamp(latestVisible?.message.created_at ?? null);
+            setTimelineBackgroundImage(nextBg);
+            return;
+        }
         const containerRect = container.getBoundingClientRect();
         let firstVisible: (typeof filteredMessages)[number] | null = null;
         for (const item of filteredMessages) {
@@ -445,6 +451,7 @@ export const RoleplayScenePage = () => {
         filteredMessages,
         resolveTimelineBackgroundByTimestamp,
         sceneBackgroundImage,
+        isNearChatBottom,
     ]);
 
     useEffect(() => {
@@ -519,9 +526,9 @@ export const RoleplayScenePage = () => {
         if (mentionWithColonMatch) {
             const mentionedName = mentionWithColonMatch[1].trim().toLowerCase();
             const character = characters.find((c) => c.character.name.toLowerCase() === mentionedName);
-            const baseContent = raw.replace(/^\s*@([^:]+)\s*:\s*/, '').trim();
+            const baseContent = raw.replace(/^\s*@([^:]+)\s*:\s*/, '');
             const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
-            const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
+            const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').trim();
             return {
                 characterId: character?.character.id ?? null,
                 emotionName: emotionMatch?.[1]?.trim() ?? null,
@@ -532,7 +539,7 @@ export const RoleplayScenePage = () => {
         const mentionMatch = raw.match(/^\s*@([^\s:]+)\s*:?\s*/);
         if (!mentionMatch) {
             const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
-            const contentWithoutEmotion = raw.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
+            const contentWithoutEmotion = raw.replace(/\[([^\]\n]{1,80})\]/, '').trim();
             return {
                 characterId: null as string | null,
                 emotionName: emotionMatch?.[1]?.trim() ?? null,
@@ -542,9 +549,9 @@ export const RoleplayScenePage = () => {
 
         const mentionedName = mentionMatch[1].toLowerCase();
         const character = characters.find((c) => c.character.name.toLowerCase() === mentionedName);
-        const baseContent = raw.replace(/^\s*@([^\s:]+)\s*:?\s*/, '').trim();
+        const baseContent = raw.replace(/^\s*@([^\s:]+)\s*:?\s*/, '');
         const emotionMatch = raw.match(/\[([^\]\n]{1,80})\]/);
-        const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').replace(/\s{2,}/g, ' ').trim();
+        const content = baseContent.replace(/\[([^\]\n]{1,80})\]/, '').trim();
         return {
             characterId: character?.character.id ?? null,
             emotionName: emotionMatch?.[1]?.trim() ?? null,
@@ -574,7 +581,7 @@ export const RoleplayScenePage = () => {
             .replace(/\s+/g, ' ');
 
     return (
-        <div className="mx-auto mt-0 flex h-[calc(var(--app-vh,1vh)*100)] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:h-[100dvh] md:px-4">
+        <div className="mx-auto mt-0 flex h-[100dvh] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:px-4">
             <header className="relative z-[5] px-1 pt-2">
                 {sceneSearchOpen ? (
                     <div className="flex min-w-0 items-center gap-2">
