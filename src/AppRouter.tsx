@@ -40,7 +40,7 @@ const pageVariants: Variants = {
 
 export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
     const session = useSession();
-    useSessionContext();
+    const { isLoading } = useSessionContext();
     const [resolvedSession, setResolvedSession] = useState<Session | null>(null);
     const [authBootstrapped, setAuthBootstrapped] = useState(false);
     const supabase = useSupabaseClient();
@@ -55,9 +55,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
 
     useEffect(() => {
         let cancelled = false;
-        const fallback = window.setTimeout(() => {
-            if (!cancelled) setAuthBootstrapped(true);
-        }, 3000);
 
         void supabase.auth.getSession().then(({ data }) => {
             if (cancelled) return;
@@ -74,7 +71,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
 
         return () => {
             cancelled = true;
-            window.clearTimeout(fallback);
             subscription.unsubscribe();
         };
     }, [supabase]);
@@ -87,7 +83,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ onLoginClick }) => {
         void fetchRelationships(supabase);
     }, [uid, fetchCharacters, fetchRelationships, supabase]);
 
-    if (!authBootstrapped) {
+    if (!authBootstrapped || isLoading) {
         const outerFireflies = Array.from({ length: 12 });
         const innerFireflies = Array.from({ length: 8 });
 

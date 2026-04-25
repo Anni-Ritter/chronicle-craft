@@ -273,13 +273,26 @@ export const SceneComposer = ({
                         <p>
                             <span className="text-[#e5d9a5]">`описание`</span> — описание/ремарка курсивом в пузыре.
                         </p>
+                        <p>
+                            <span className="text-[#e5d9a5]">[эмоция]</span> — выбрать эмоцию персонажа в сообщении.
+                            Пиши в квадратных скобках точное имя эмоции, например{' '}
+                            <span className="text-[#e5d9a5]">[улыбается]</span> или{' '}
+                            <span className="text-[#e5d9a5]">[злость]</span>.
+                        </p>
+                        <p>
+                            <span className="text-[#e5d9a5]">/Локация/</span> — переключить фон сцены по пресету (по name
+                            или key), например <span className="text-[#e5d9a5]">/Комната/</span> или{' '}
+                            <span className="text-[#e5d9a5]">/room_day/</span>.
+                        </p>
                     </div>
                     <div className="rounded-lg bg-[#111712] p-3 text-sm text-[#e5d9a5]">
                         <p className="mb-1 text-xs text-[#9fa68a]">Примеры</p>
                         <p>@Лиа: - Я пришла вовремя.</p>
+                        <p>@Лиа: [улыбается] - Я пришла вовремя.</p>
                         <p>@Лиа: *садится у окна*</p>
                         <p>@Лиа: `Вечерний туман стелется по мостовой`</p>
                         <p>@Лиа: - Я пришла. *улыбается* `Ветер усиливается`</p>
+                        <p>/Комната/</p>
                     </div>
                     <div className="flex justify-end">
                         <Button variant="outline" onClick={() => setIsHelpOpen(false)}>

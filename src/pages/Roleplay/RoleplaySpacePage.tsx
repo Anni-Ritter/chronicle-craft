@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { ArrowLeft, CirclePlus, DoorOpen, EllipsisVertical, Pencil, Trash2, Users } from 'lucide-react';
 import { Modal } from '../../components/Modal';
 import { Button } from '../../components/ChronicleButton';
 import { FloatingAlert } from '../../components/FloatingAlert';
+import { StorageImageUploader } from '../../components/StorageImageUploader';
 import { useRoleplayStore } from '../../store/useRoleplayStore';
 import { useWorldStore } from '../../store/useWorldStore';
 import { useChronicleStore } from '../../store/useChronicleStore';
 import { RoleplaySceneForm } from '../../features/roleplay/RoleplaySceneForm';
+import type { RoleplaySceneBackgroundPreset } from '../../types/roleplay';
 import { RoleplaySpaceForm } from '../../features/roleplay/RoleplaySpaceForm';
 
 export const RoleplaySpacePage = () => {
@@ -36,6 +38,13 @@ export const RoleplaySpacePage = () => {
         type: 'success' | 'error';
         text: string;
     } | null>(null);
+    const [sceneBackgroundPresets, setSceneBackgroundPresets] = useState<RoleplaySceneBackgroundPreset[]>([]);
+    const [presetKey, setPresetKey] = useState('');
+    const [presetName, setPresetName] = useState('');
+    const [presetImageUrl, setPresetImageUrl] = useState('');
+    const [presetSortOrderInput, setPresetSortOrderInput] = useState('');
+    const [presetEditingId, setPresetEditingId] = useState<string | null>(null);
+    const [presetSubmitting, setPresetSubmitting] = useState(false);
 
     const {
         membersBySpace,
@@ -79,6 +88,21 @@ export const RoleplaySpacePage = () => {
             }
         });
     }, [session, spaceId, supabase, fetchWorlds, getRoleplaySpaceMembers, getRoleplaySpaceCharacters, getRoleplayScenesBySpace, getRoleplaySpaceById, fetchChronicles]);
+
+    const reloadBackgroundPresets = useCallback(async () => {
+        if (!spaceId) return;
+        const { data } = await supabase
+            .from('roleplay_scene_background_presets')
+            .select('*')
+            .eq('space_id', spaceId)
+            .order('sort_order', { ascending: true })
+            .order('name', { ascending: true });
+        setSceneBackgroundPresets((data ?? []) as RoleplaySceneBackgroundPreset[]);
+    }, [spaceId, supabase]);
+
+    useEffect(() => {
+        reloadBackgroundPresets();
+    }, [reloadBackgroundPresets]);
 
     const members = spaceId ? membersBySpace[spaceId] ?? [] : [];
     const scenes = spaceId ? scenesBySpace[spaceId] ?? [] : [];
@@ -259,10 +283,165 @@ export const RoleplaySpacePage = () => {
                 </div>
             </section>
 
+            <section className="rounded-lg border border-[#2d3a2f]/60 bg-[#111712]/55 p-2.5">
+                <h2 className="mb-3 text-xl font-garamond text-[#e5d9a5] md:text-2xl">Пресеты фонов</h2>
+                <div className="grid gap-2 md:grid-cols-2">
+                    <input
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        placeholder="Название (например, Университет — день)"
+                        className="w-full rounded-xl border border-[#3a4a34] bg-[#0e1b12]/80 px-4 py-3 text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none"
+                    />
+                    <input
+                        value={presetKey}
+                        onChange={(e) => setPresetKey(e.target.value)}
+                        placeholder="Ключ (например, university_day)"
+                        className="w-full rounded-xl border border-[#3a4a34] bg-[#0e1b12]/80 px-4 py-3 text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none"
+                    />
+                    <div className="md:col-span-2">
+                        <StorageImageUploader
+                            bucket="scene-backgrounds"
+                            onUpload={setPresetImageUrl}
+                            initialUrl={presetImageUrl || undefined}
+                            emptyLabel="Загрузить изображение пресета"
+                            previewClassName="h-36 w-full rounded-xl object-cover border border-[#3a4a34]"
+                        />
+                    </div>
+                    <div className="space-y-1">
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={presetSortOrderInput}
+                            onChange={(e) => setPresetSortOrderInput(e.target.value.replace(/[^\d]/g, ''))}
+                            placeholder="Порядок (опционально)"
+                            className="w-full rounded-xl border border-[#3a4a34] bg-[#0e1b12]/80 px-4 py-3 text-[#e5d9a5] focus:border-[#c2a774] focus:outline-none"
+                        />
+                        <p className="text-xs text-[#9fa68a]">
+                            Меньше число — выше в списке. Оставьте пустым, тогда будет 0.
+                        </p>
+                    </div>
+                    <Button
+                        className="w-full"
+                        onClick={async () => {
+                            if (!spaceId) return;
+                            const key = presetKey.trim().toLowerCase().replace(/\s+/g, '_');
+                            const name = presetName.trim();
+                            const imageUrl = presetImageUrl.trim();
+                            if (!key || !name || !imageUrl) {
+                                setStatusMessage({ type: 'error', text: 'Заполните ключ, название и загрузите изображение пресета' });
+                                return;
+                            }
+                            const sortOrder = presetSortOrderInput.trim() ? Number(presetSortOrderInput) : 0;
+                            setPresetSubmitting(true);
+                            if (presetEditingId) {
+                                const { error } = await supabase
+                                    .from('roleplay_scene_background_presets')
+                                    .update({
+                                        key,
+                                        name,
+                                        image_url: imageUrl,
+                                        sort_order: sortOrder,
+                                        is_active: true,
+                                    })
+                                    .eq('id', presetEditingId)
+                                    .eq('space_id', spaceId);
+                                if (error) {
+                                    setStatusMessage({ type: 'error', text: error.message });
+                                    setPresetSubmitting(false);
+                                    return;
+                                }
+                                setStatusMessage({ type: 'success', text: 'Пресет обновлен' });
+                            } else {
+                                const { error } = await supabase
+                                    .from('roleplay_scene_background_presets')
+                                    .insert({
+                                        space_id: spaceId,
+                                        key,
+                                        name,
+                                        image_url: imageUrl,
+                                        sort_order: sortOrder,
+                                        is_active: true,
+                                    });
+                                if (error) {
+                                    setStatusMessage({ type: 'error', text: error.message });
+                                    setPresetSubmitting(false);
+                                    return;
+                                }
+                                setStatusMessage({ type: 'success', text: 'Пресет создан' });
+                            }
+                            setPresetEditingId(null);
+                            setPresetKey('');
+                            setPresetName('');
+                            setPresetImageUrl('');
+                            setPresetSortOrderInput('');
+                            await reloadBackgroundPresets();
+                            setPresetSubmitting(false);
+                        }}
+                    >
+                        {presetSubmitting ? 'Сохранение...' : (presetEditingId ? 'Сохранить пресет' : 'Создать пресет')}
+                    </Button>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                    {sceneBackgroundPresets.length === 0 ? (
+                        <p className="text-[#c7bc98]">Пока нет пресетов фонов.</p>
+                    ) : (
+                        sceneBackgroundPresets.map((preset) => (
+                            <div key={preset.id} className="rounded-lg border border-[#2f3a34] bg-[#0d120f]/80 p-2.5">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[#f3e7c8]">{preset.name}</p>
+                                        <p className="text-xs text-[#c7bc98]">key: {preset.key} · sort: {preset.sort_order}</p>
+                                        <p className="truncate text-xs text-[#9fa68a]">{preset.image_url}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            className="rounded-md border border-[#3a4a34] p-1.5 text-[#c7bc98] hover:border-[#c2a774] hover:text-[#e5d9a5]"
+                                            onClick={() => {
+                                                setPresetEditingId(preset.id);
+                                                setPresetKey(preset.key);
+                                                setPresetName(preset.name);
+                                                setPresetImageUrl(preset.image_url);
+                                                setPresetSortOrderInput(String(preset.sort_order));
+                                            }}
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="rounded-md border border-[#513434] p-1.5 text-[#e29a9a] hover:border-[#d76f6f] hover:text-[#ffd0d0]"
+                                            onClick={async () => {
+                                                const { error } = await supabase
+                                                    .from('roleplay_scene_background_presets')
+                                                    .delete()
+                                                    .eq('id', preset.id)
+                                                    .eq('space_id', spaceId);
+                                                if (error) {
+                                                    setStatusMessage({ type: 'error', text: error.message });
+                                                    return;
+                                                }
+                                                setStatusMessage({ type: 'success', text: 'Пресет удален' });
+                                                await reloadBackgroundPresets();
+                                            }}
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <img src={preset.image_url} alt={preset.name} className="mt-2 h-20 w-full rounded-md object-cover opacity-90" />
+                            </div>
+                        ))
+                    )}
+                </div>
+            </section>
+
             <Modal isOpen={isSceneModalOpen} onClose={() => setSceneModalOpen(false)}>
                 <RoleplaySceneForm
                     worlds={worlds}
                     chronicles={chronicles}
+                    backgroundPresets={sceneBackgroundPresets}
                     onCancel={() => setSceneModalOpen(false)}
                     onSubmit={async (values) => {
                         const uid = session?.user?.id;
@@ -288,9 +467,11 @@ export const RoleplaySpacePage = () => {
                             world_id: selectedScene.world_id,
                             chronicle_id: selectedScene.chronicle_id,
                             background_image: selectedScene.background_image,
+                            background_preset_id: selectedScene.background_preset_id,
                             status: selectedScene.status,
                             settings: selectedScene.settings,
                         }}
+                        backgroundPresets={sceneBackgroundPresets}
                         onCancel={() => setEditSceneModalOpen(false)}
                         onSubmit={async (values) => {
                             const updated = await updateRoleplayScene(selectedScene.id, values, supabase);

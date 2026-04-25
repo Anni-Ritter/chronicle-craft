@@ -28,6 +28,7 @@ interface CreateRoleplaySceneInput {
     world_id: string | null;
     chronicle_id: string | null;
     background_image: string | null;
+    background_preset_id: string | null;
     status: string;
     settings: Record<string, unknown> | null;
 }
@@ -92,6 +93,116 @@ interface SceneMessageRow {
     updated_at: string;
 }
 
+interface SceneMessagesPageResult {
+    messages: SceneMessageView[];
+    hasMore: boolean;
+    oldestCursor: string | null;
+}
+
+const hydrateSceneMessageRows = async (
+    rows: SceneMessageRow[],
+    supabase: SupabaseClient
+): Promise<SceneMessageView[]> => {
+    const authorIds = Array.from(new Set(rows.map((row) => row.user_id)));
+    const characterIds = Array.from(new Set(rows.map((row) => row.character_id).filter(Boolean))) as string[];
+    const emotionIds = Array.from(new Set(rows.map((row) => row.emotion_id).filter(Boolean))) as string[];
+
+    const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', authorIds);
+    const profilesMap = new Map((profilesData ?? []).map((profile) => [profile.id, profile]));
+
+    const { data: charactersData } = await supabase
+        .from('characters')
+        .select('id, user_id, name, avatar')
+        .in('id', characterIds);
+    const charactersMap = new Map((charactersData ?? []).map((character) => [character.id, character]));
+
+    const { data: emotionsData } = await supabase
+        .from('character_emotions')
+        .select('id, character_id, name, image_url, thumbnail_url, sort_order, is_default, created_at')
+        .in('id', emotionIds);
+    const emotionsMap = new Map((emotionsData ?? []).map((emotion) => [emotion.id, emotion]));
+
+    const baseMessages = rows.map((row) => {
+        const rowProfile = profilesMap.get(row.user_id) ?? null;
+        const rowCharacter = row.character_id ? charactersMap.get(row.character_id) ?? null : null;
+        const rowEmotion = row.emotion_id ? emotionsMap.get(row.emotion_id) ?? null : null;
+        const emotionSnapshot = (row.metadata as Record<string, unknown> | null)?.emotion_snapshot as
+            | {
+                  id?: string;
+                  character_id?: string;
+                  name?: string;
+                  image_url?: string | null;
+                  thumbnail_url?: string | null;
+              }
+            | undefined;
+        return {
+            message: {
+                id: row.id,
+                scene_id: row.scene_id,
+                user_id: row.user_id,
+                character_id: row.character_id,
+                emotion_id: row.emotion_id,
+                type: row.type,
+                content: row.content,
+                reply_to_message_id: row.reply_to_message_id,
+                metadata: row.metadata,
+                edited: row.edited,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+            } as SceneMessage,
+            author: rowProfile
+                ? {
+                      id: rowProfile.id,
+                      username: rowProfile.username,
+                      avatar_url: rowProfile.avatar_url,
+                  }
+                : null,
+            character: rowCharacter
+                ? {
+                      id: rowCharacter.id,
+                      user_id: rowCharacter.user_id,
+                      name: rowCharacter.name,
+                      avatar: rowCharacter.avatar ?? null,
+                  }
+                : null,
+            emotion: rowEmotion
+                ? {
+                      id: rowEmotion.id,
+                      character_id: rowEmotion.character_id,
+                      name: rowEmotion.name,
+                      image_url: rowEmotion.image_url,
+                      thumbnail_url: rowEmotion.thumbnail_url,
+                      sort_order: rowEmotion.sort_order ?? 0,
+                      is_default: !!rowEmotion.is_default,
+                      created_at: rowEmotion.created_at,
+                  }
+                : emotionSnapshot?.id
+                    ? {
+                          id: emotionSnapshot.id,
+                          character_id: emotionSnapshot.character_id ?? row.character_id ?? '',
+                          name: emotionSnapshot.name ?? 'Эмоция',
+                          image_url: emotionSnapshot.image_url ?? null,
+                          thumbnail_url: emotionSnapshot.thumbnail_url ?? null,
+                          sort_order: 0,
+                          is_default: false,
+                          created_at: row.created_at,
+                      }
+                    : null,
+        };
+    });
+
+    const byId = new Map(baseMessages.map((item) => [item.message.id, item]));
+    return baseMessages.map((item) => ({
+        ...item,
+        replyTo: item.message.reply_to_message_id
+            ? byId.get(item.message.reply_to_message_id)?.message ?? null
+            : null,
+    })) as SceneMessageView[];
+};
+
 interface RoleplayState {
     spaces: RoleplaySpaceWithMemberMeta[];
     membersBySpace: Record<string, RoleplaySpaceMemberView[]>;
@@ -140,6 +251,12 @@ interface RoleplayState {
     getSceneParticipants: (sceneId: string, supabase: SupabaseClient) => Promise<SceneParticipantView[]>;
     addSceneParticipant: (sceneId: string, characterId: string, supabase: SupabaseClient) => Promise<boolean>;
     getSceneMessages: (sceneId: string, supabase: SupabaseClient) => Promise<SceneMessageView[]>;
+    getSceneMessagesPage: (
+        sceneId: string,
+        supabase: SupabaseClient,
+        options?: { limit?: number; before?: string | null; appendOlder?: boolean; preserveExisting?: boolean }
+    ) => Promise<SceneMessagesPageResult>;
+    searchSceneMessages: (sceneId: string, query: string, supabase: SupabaseClient) => Promise<SceneMessageView[]>;
     createSceneMessage: (input: CreateSceneMessageInput, supabase: SupabaseClient) => Promise<SceneMessage | null>;
     updateSceneMessage: (messageId: string, updates: Partial<Pick<SceneMessage, 'content' | 'edited' | 'emotion_id' | 'metadata'>>, supabase: SupabaseClient) => Promise<SceneMessage | null>;
     deleteSceneMessage: (messageId: string, supabase: SupabaseClient) => Promise<boolean>;
@@ -631,6 +748,7 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
         if (input.world_id !== null) payload.world_id = input.world_id;
         if (input.chronicle_id !== null) payload.chronicle_id = input.chronicle_id;
         if (input.background_image !== null) payload.background_image = input.background_image;
+        if (input.background_preset_id !== null) payload.background_preset_id = input.background_preset_id;
         payload.settings = input.settings ?? {};
 
         const { data, error } = await supabase.from('roleplay_scenes').insert([payload]).select('*');
@@ -661,6 +779,7 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
         if (input.world_id !== undefined) payload.world_id = input.world_id;
         if (input.chronicle_id !== undefined) payload.chronicle_id = input.chronicle_id;
         if (input.background_image !== undefined) payload.background_image = input.background_image;
+        if (input.background_preset_id !== undefined) payload.background_preset_id = input.background_preset_id;
         if (input.status !== undefined) payload.status = input.status;
         if (input.settings !== undefined) payload.settings = input.settings ?? {};
 
@@ -790,125 +909,93 @@ export const useRoleplayStore = create<RoleplayState>((set, get) => ({
     },
 
     getSceneMessages: async (sceneId, supabase) => {
-        const { data, error } = await supabase
+        const { messages } = await get().getSceneMessagesPage(sceneId, supabase, {
+            limit: 1000,
+        });
+        return messages;
+    },
+
+    getSceneMessagesPage: async (sceneId, supabase, options) => {
+        const limit = Math.max(1, Math.min(200, options?.limit ?? 60));
+        const before = options?.before ?? null;
+        const appendOlder = options?.appendOlder ?? false;
+        const preserveExisting = options?.preserveExisting ?? false;
+
+        let query = supabase
             .from('scene_messages')
             .select('id, scene_id, user_id, character_id, emotion_id, type, content, reply_to_message_id, metadata, edited, created_at, updated_at')
             .eq('scene_id', sceneId)
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            set({ error: error.message });
-            return [];
+            .order('created_at', { ascending: false })
+            .limit(limit + 1);
+        if (before) {
+            query = query.lt('created_at', before);
         }
 
-        const rows = (data ?? []) as SceneMessageRow[];
-        const authorIds = Array.from(new Set(rows.map((row) => row.user_id)));
-        const characterIds = Array.from(new Set(rows.map((row) => row.character_id).filter(Boolean))) as string[];
-        const emotionIds = Array.from(new Set(rows.map((row) => row.emotion_id).filter(Boolean))) as string[];
+        const { data, error } = await query;
+        if (error) {
+            set({ error: error.message });
+            return { messages: [], hasMore: false, oldestCursor: null };
+        }
 
-        const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .in('id', authorIds);
-        const profilesMap = new Map((profilesData ?? []).map((profile) => [profile.id, profile]));
+        const rawRows = (data ?? []) as SceneMessageRow[];
+        const hasMore = rawRows.length > limit;
+        const pageRows = rawRows.slice(0, limit).sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        const pageMessages = await hydrateSceneMessageRows(pageRows, supabase);
+        const oldestCursor = pageRows[0]?.created_at ?? null;
 
-        const { data: charactersData } = await supabase
-            .from('characters')
-            .select('id, user_id, name, avatar')
-            .in('id', characterIds);
-        const charactersMap = new Map((charactersData ?? []).map((character) => [character.id, character]));
-
-        const { data: emotionsData } = await supabase
-            .from('character_emotions')
-            .select('id, character_id, name, image_url, thumbnail_url, sort_order, is_default, created_at')
-            .in('id', emotionIds);
-        const emotionsMap = new Map((emotionsData ?? []).map((emotion) => [emotion.id, emotion]));
-
-        const baseMessages = rows.map((row) => {
-            const rowProfile = profilesMap.get(row.user_id) ?? null;
-            const rowCharacter = row.character_id ? charactersMap.get(row.character_id) ?? null : null;
-            const rowEmotion = row.emotion_id ? emotionsMap.get(row.emotion_id) ?? null : null;
-            const emotionSnapshot = (row.metadata as Record<string, unknown> | null)?.emotion_snapshot as
-                | {
-                      id?: string;
-                      character_id?: string;
-                      name?: string;
-                      image_url?: string | null;
-                      thumbnail_url?: string | null;
-                  }
-                | undefined;
+        set((s) => {
+            const existing = s.sceneMessagesByScene[sceneId] ?? [];
+            let next = pageMessages;
+            if (appendOlder) {
+                next = [...pageMessages, ...existing];
+            } else if (preserveExisting) {
+                next = [...existing, ...pageMessages];
+            }
+            const deduped = Array.from(new Map(next.map((item) => [item.message.id, item])).values()).sort(
+                (a, b) =>
+                    new Date(a.message.created_at).getTime() - new Date(b.message.created_at).getTime()
+            );
             return {
-            message: {
-                id: row.id,
-                scene_id: row.scene_id,
-                user_id: row.user_id,
-                character_id: row.character_id,
-                emotion_id: row.emotion_id,
-                type: row.type,
-                content: row.content,
-                reply_to_message_id: row.reply_to_message_id,
-                metadata: row.metadata,
-                edited: row.edited,
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-            } as SceneMessage,
-            author: rowProfile
-                ? {
-                    id: rowProfile.id,
-                    username: rowProfile.username,
-                    avatar_url: rowProfile.avatar_url,
-                }
-                : null,
-            character: rowCharacter
-                ? {
-                    id: rowCharacter.id,
-                    user_id: rowCharacter.user_id,
-                    name: rowCharacter.name,
-                    avatar: rowCharacter.avatar ?? null,
-                }
-                : null,
-            emotion: rowEmotion
-                ? {
-                    id: rowEmotion.id,
-                    character_id: rowEmotion.character_id,
-                    name: rowEmotion.name,
-                    image_url: rowEmotion.image_url,
-                    thumbnail_url: rowEmotion.thumbnail_url,
-                    sort_order: rowEmotion.sort_order ?? 0,
-                    is_default: !!rowEmotion.is_default,
-                    created_at: rowEmotion.created_at,
-                }
-                : emotionSnapshot?.id
-                    ? {
-                        id: emotionSnapshot.id,
-                        character_id: emotionSnapshot.character_id ?? row.character_id ?? '',
-                        name: emotionSnapshot.name ?? 'Эмоция',
-                        image_url: emotionSnapshot.image_url ?? null,
-                        thumbnail_url: emotionSnapshot.thumbnail_url ?? null,
-                        sort_order: 0,
-                        is_default: false,
-                        created_at: row.created_at,
-                    }
-                    : null,
-        };
+                sceneMessagesByScene: {
+                    ...s.sceneMessagesByScene,
+                    [sceneId]: deduped,
+                },
+            };
         });
 
-        const byId = new Map(baseMessages.map((item) => [item.message.id, item]));
-        const messages = baseMessages.map((item) => ({
-            ...item,
-            replyTo: item.message.reply_to_message_id
-                ? byId.get(item.message.reply_to_message_id)?.message ?? null
-                : null,
-        })) as SceneMessageView[];
+        const combined = get().sceneMessagesByScene[sceneId] ?? pageMessages;
+        return { messages: combined, hasMore, oldestCursor };
+    },
 
-        set((s) => ({
-            sceneMessagesByScene: {
-                ...s.sceneMessagesByScene,
-                [sceneId]: messages,
-            },
-        }));
+    searchSceneMessages: async (sceneId, query, supabase) => {
+        const q = query.trim();
+        if (!q) return [];
+        const batchSize = 500;
+        let from = 0;
+        const allRows: SceneMessageRow[] = [];
 
-        return messages;
+        while (true) {
+            const to = from + batchSize - 1;
+            const { data, error } = await supabase
+                .from('scene_messages')
+                .select('id, scene_id, user_id, character_id, emotion_id, type, content, reply_to_message_id, metadata, edited, created_at, updated_at')
+                .eq('scene_id', sceneId)
+                .ilike('content', `%${q}%`)
+                .order('created_at', { ascending: true })
+                .range(from, to);
+            if (error) {
+                set({ error: error.message });
+                return [];
+            }
+            const chunk = (data ?? []) as SceneMessageRow[];
+            allRows.push(...chunk);
+            if (chunk.length < batchSize) break;
+            from += batchSize;
+        }
+
+        return hydrateSceneMessageRows(allRows, supabase);
     },
 
     createSceneMessage: async (input, supabase) => {

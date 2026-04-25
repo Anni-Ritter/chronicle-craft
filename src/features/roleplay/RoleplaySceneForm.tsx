@@ -5,6 +5,7 @@ import { Select } from '../../components/Select';
 import { StorageImageUploader } from '../../components/StorageImageUploader';
 import type { World } from '../../types/world';
 import type { Chronicle } from '../../types/chronicle';
+import type { RoleplaySceneBackgroundPreset } from '../../types/roleplay';
 
 interface RoleplaySceneFormProps {
     worlds: World[];
@@ -15,9 +16,11 @@ interface RoleplaySceneFormProps {
         world_id: string | null;
         chronicle_id: string | null;
         background_image: string | null;
+        background_preset_id: string | null;
         status: string;
         settings: Record<string, unknown> | null;
     };
+    backgroundPresets?: RoleplaySceneBackgroundPreset[];
     titleText?: string;
     submitText?: string;
     onSubmit: (values: {
@@ -26,18 +29,20 @@ interface RoleplaySceneFormProps {
         world_id: string | null;
         chronicle_id: string | null;
         background_image: string | null;
+        background_preset_id: string | null;
         status: string;
         settings: Record<string, unknown> | null;
     }) => Promise<void>;
     onCancel: () => void;
 }
 
-export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText, submitText, onSubmit, onCancel }: RoleplaySceneFormProps) => {
+export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, backgroundPresets = [], titleText, submitText, onSubmit, onCancel }: RoleplaySceneFormProps) => {
     const [title, setTitle] = useState(initialValues?.title ?? '');
     const [description, setDescription] = useState(initialValues?.description ?? '');
     const [worldId, setWorldId] = useState<string | null>(initialValues?.world_id ?? null);
     const [chronicleId, setChronicleId] = useState<string | null>(initialValues?.chronicle_id ?? null);
     const [backgroundImage, setBackgroundImage] = useState(initialValues?.background_image ?? '');
+    const [backgroundPresetId, setBackgroundPresetId] = useState<string | null>(initialValues?.background_preset_id ?? null);
     const [backgroundMode, setBackgroundMode] = useState<'url' | 'upload'>('upload');
     const [status, setStatus] = useState(initialValues?.status ?? 'active');
     const [settingsJson, setSettingsJson] = useState(initialValues?.settings ? JSON.stringify(initialValues.settings) : '');
@@ -76,6 +81,7 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
             world_id: worldId,
             chronicle_id: worldId ? chronicleId : null,
             background_image: backgroundImage.trim() || null,
+            background_preset_id: backgroundPresetId,
             status,
             settings: parsedSettings,
         });
@@ -114,6 +120,25 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
                 options={availableChronicles.map((chronicle) => ({ value: chronicle.id, label: chronicle.title || 'Без названия' }))}
             />
             <div className="space-y-2">
+                <Select
+                    value={backgroundPresetId}
+                    onChange={(value) => {
+                        setBackgroundPresetId(value);
+                        const selectedPreset = backgroundPresets.find((preset) => preset.id === value);
+                        if (selectedPreset) {
+                            setBackgroundImage(selectedPreset.image_url);
+                        }
+                    }}
+                    placeholder="Пресет фона (опционально)"
+                    icon={<Image className="h-[18px] w-[18px] text-[#c2a774]" aria-hidden />}
+                    options={backgroundPresets
+                        .filter((preset) => preset.is_active)
+                        .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name))
+                        .map((preset) => ({
+                            value: preset.id,
+                            label: `${preset.name} (${preset.key})`,
+                        }))}
+                />
                 <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-sm text-[#c7bc98]">
                         <Image size={16} className="text-[#c2a774]" /> Фон сцены
@@ -152,8 +177,9 @@ export const RoleplaySceneForm = ({ worlds, chronicles, initialValues, titleText
                 onChange={(value) => setStatus(value ?? 'active')}
                 placeholder="Статус"
                 options={[
+                    { value: 'draft', label: 'draft' },
                     { value: 'active', label: 'active' },
-                    { value: 'paused', label: 'paused' },
+                    { value: 'finished', label: 'finished' },
                     { value: 'archived', label: 'archived' },
                 ]}
             />

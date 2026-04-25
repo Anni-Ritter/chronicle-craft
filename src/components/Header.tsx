@@ -1,4 +1,4 @@
-import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react'
+import { useSession, useSessionContext, useSupabaseClient } from '@supabase/auth-helpers-react'
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import Logo from "../assets/logo.png";
@@ -29,6 +29,7 @@ function IOSAddToHomeHint() {
 
 export const Header = ({ onLoginClick }: HeaderProps) => {
     const session = useSession();
+    const { isLoading } = useSessionContext();
     const supabase = useSupabaseClient();
     const navigate = useNavigate();
     const [username, setUsername] = useState<string | null>(null);
@@ -130,11 +131,11 @@ export const Header = ({ onLoginClick }: HeaderProps) => {
                                         </span>
                                     )}
                                 </motion.button>
-                            ) : (
+                            ) : !isLoading ? (
                                 <Button type="button" title="Войти" onClick={onLoginClick} className="!min-h-11 !rounded-[14px] !px-5 text-sm shadow-md">
                                     Войти
                                 </Button>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </div>

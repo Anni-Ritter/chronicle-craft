@@ -10,7 +10,13 @@ import { useSceneMessagesRealtime } from '../../hooks/useSceneMessagesRealtime';
 import { SceneMessageItem } from '../../features/roleplay/SceneMessageItem';
 import { SceneComposer } from '../../features/roleplay/SceneComposer';
 import { RoleplaySceneForm } from '../../features/roleplay/RoleplaySceneForm';
-import type { RoleplayMessageType, RoleplayScene, RoleplaySpaceCharacterView } from '../../types/roleplay';
+import type {
+    RoleplayMessageType,
+    RoleplayScene,
+    RoleplaySceneBackgroundPreset,
+    SceneMessageView,
+    RoleplaySpaceCharacterView,
+} from '../../types/roleplay';
 
 const DEFAULT_CHAT_TIME_DISPLAY = { show: true, withSeconds: true };
 /** Непрозрачность тёмного слоя поверх фоновой картинки (0–100), по умолчанию как раньше (~77%). */
@@ -26,15 +32,23 @@ export const RoleplayScenePage = () => {
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [editingInitialContent, setEditingInitialContent] = useState('');
     const [sceneBackgroundImage, setSceneBackgroundImage] = useState<string | null>(null);
+    const [timelineBackgroundImage, setTimelineBackgroundImage] = useState<string | null>(null);
+    const [sceneBaseBackgroundImage, setSceneBaseBackgroundImage] = useState<string | null>(null);
     const [sceneTitle, setSceneTitle] = useState('Сцена');
     const [sceneSettingsOpen, setSceneSettingsOpen] = useState(false);
     const [sceneForEdit, setSceneForEdit] = useState<RoleplayScene | null>(null);
     const [settingsLoading, setSettingsLoading] = useState(false);
+    const [sceneBackgroundPresets, setSceneBackgroundPresets] = useState<RoleplaySceneBackgroundPreset[]>([]);
     const [chatFontScale, setChatFontScale] = useState(1);
     const [sendError, setSendError] = useState<string | null>(null);
     const [messageSearchQuery, setMessageSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<SceneMessageView[]>([]);
+    const [searchLoading, setSearchLoading] = useState(false);
     const [sceneSearchOpen, setSceneSearchOpen] = useState(false);
     const [searchMatchIndex, setSearchMatchIndex] = useState(0);
+    const [hasMoreOlderMessages, setHasMoreOlderMessages] = useState(true);
+    const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+    const [oldestMessageCursor, setOldestMessageCursor] = useState<string | null>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const didInitialScrollRef = useRef(false);
@@ -52,8 +66,10 @@ export const RoleplayScenePage = () => {
     const {
         spaceCharactersBySpace,
         sceneMessagesByScene,
+        error: roleplayError,
         getRoleplaySpaceCharacters,
-        getSceneMessages,
+        getSceneMessagesPage,
+        searchSceneMessages,
         getCharacterEmotions,
         createSceneMessage,
         updateSceneMessage,
@@ -64,15 +80,23 @@ export const RoleplayScenePage = () => {
     const { worlds, fetchWorlds } = useWorldStore();
     const { chronicles, fetchChronicles } = useChronicleStore();
 
-    const refreshMessages = useCallback(() => {
+    const refreshMessages = useCallback(async () => {
         if (!sceneId) return;
-        getSceneMessages(sceneId, supabase);
-    }, [sceneId, supabase, getSceneMessages]);
+        await getSceneMessagesPage(sceneId, supabase, {
+            limit: 200,
+            preserveExisting: true,
+        });
+    }, [sceneId, supabase, getSceneMessagesPage]);
 
     useEffect(() => {
         if (!spaceId || !sceneId) return;
-        getSceneMessages(sceneId, supabase);
-    }, [spaceId, sceneId, supabase, getSceneMessages]);
+        setHasMoreOlderMessages(true);
+        setOldestMessageCursor(null);
+        getSceneMessagesPage(sceneId, supabase, { limit: 200 }).then((result) => {
+            setHasMoreOlderMessages(result.hasMore);
+            setOldestMessageCursor(result.oldestCursor);
+        });
+    }, [spaceId, sceneId, supabase, getSceneMessagesPage]);
 
     useEffect(() => {
         if (!sceneId || !spaceId) return;
@@ -84,9 +108,25 @@ export const RoleplayScenePage = () => {
             .then(({ data }) => {
                 setSceneTitle(data?.title || 'Сцена');
                 setSceneBackgroundImage(data?.background_image ?? null);
+                setTimelineBackgroundImage(data?.background_image ?? null);
+                setSceneBaseBackgroundImage(data?.background_image ?? null);
                 getRoleplaySpaceCharacters(spaceId, supabase, data?.world_id ?? null);
             });
     }, [sceneId, spaceId, supabase, getRoleplaySpaceCharacters]);
+
+    useEffect(() => {
+        if (!spaceId) return;
+        supabase
+            .from('roleplay_scene_background_presets')
+            .select('*')
+            .eq('space_id', spaceId)
+            .eq('is_active', true)
+            .order('sort_order', { ascending: true })
+            .order('name', { ascending: true })
+            .then(({ data }) => {
+                setSceneBackgroundPresets((data ?? []) as RoleplaySceneBackgroundPreset[]);
+            });
+    }, [spaceId, supabase]);
 
     useSceneMessagesRealtime(sceneId ?? null, refreshMessages);
 
@@ -200,6 +240,13 @@ export const RoleplayScenePage = () => {
                 getRoleplaySpaceById(spaceId, supabase),
             ]);
             setSceneForEdit((sceneRow ?? null) as RoleplayScene | null);
+            const { data: presetRows } = await supabase
+                .from('roleplay_scene_background_presets')
+                .select('*')
+                .eq('space_id', spaceId)
+                .order('sort_order', { ascending: true })
+                .order('name', { ascending: true });
+            setSceneBackgroundPresets((presetRows ?? []) as RoleplaySceneBackgroundPreset[]);
             const uid = session?.user?.id;
             if (uid) await fetchWorlds(uid, supabase);
             if (space?.world_id) {
@@ -223,22 +270,40 @@ export const RoleplayScenePage = () => {
                 : [],
         [sceneId, sceneMessagesByScene]
     );
+    const allSceneMessages = useMemo(
+        () => (sceneId ? sceneMessagesByScene[sceneId] ?? [] : []),
+        [sceneId, sceneMessagesByScene]
+    );
 
     const filteredMessages = useMemo(() => {
         if (!sceneSearchOpen) return messages;
         const q = messageSearchQuery.trim().toLowerCase();
         if (!q) return messages;
-        return messages.filter((item) => {
-            const haystack = [
-                item.message.content,
-                item.character?.name ?? '',
-                item.author?.username ?? '',
-            ]
-                .join(' ')
-                .toLowerCase();
-            return haystack.includes(q);
-        });
-    }, [messages, messageSearchQuery, sceneSearchOpen]);
+        return searchResults;
+    }, [messages, messageSearchQuery, sceneSearchOpen, searchResults]);
+
+    useEffect(() => {
+        if (!sceneId || !sceneSearchOpen) return;
+        const q = messageSearchQuery.trim();
+        if (!q) {
+            setSearchResults([]);
+            setSearchLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setSearchLoading(true);
+        const timer = window.setTimeout(async () => {
+            const results = await searchSceneMessages(sceneId, q, supabase);
+            if (!cancelled) {
+                setSearchResults(results.filter((item) => item.message.type !== 'system'));
+                setSearchLoading(false);
+            }
+        }, 220);
+        return () => {
+            cancelled = true;
+            window.clearTimeout(timer);
+        };
+    }, [sceneId, sceneSearchOpen, messageSearchQuery, searchSceneMessages, supabase]);
 
     const ownCharacterIds = useMemo(
         () =>
@@ -257,9 +322,12 @@ export const RoleplayScenePage = () => {
     useEffect(() => {
         didInitialScrollRef.current = false;
         setMessageSearchQuery('');
+        setSearchResults([]);
+        setSearchLoading(false);
         setSceneSearchOpen(false);
         setSearchMatchIndex(0);
         setIsNearChatBottom(true);
+        setTimelineBackgroundImage(null);
     }, [sceneId]);
 
     useEffect(() => {
@@ -281,6 +349,53 @@ export const RoleplayScenePage = () => {
         return filteredMessages[searchMatchIndex]?.message.id ?? null;
     }, [sceneSearchOpen, messageSearchQuery, filteredMessages, searchMatchIndex]);
 
+    const backgroundEvents = useMemo(() => {
+        return allSceneMessages
+            .map((item) => {
+                const meta = (item.message.metadata ?? {}) as Record<string, unknown>;
+                const backgroundSwitch = (meta.background_switch ?? null) as
+                    | {
+                          image_url?: string;
+                          prev_image_url?: string;
+                      }
+                    | null;
+                if (!backgroundSwitch?.image_url) return null;
+                return {
+                    messageId: item.message.id,
+                    createdAt: item.message.created_at,
+                    imageUrl: backgroundSwitch.image_url,
+                    prevImageUrl: backgroundSwitch.prev_image_url ?? null,
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => new Date(a!.createdAt).getTime() - new Date(b!.createdAt).getTime()) as Array<{
+            messageId: string;
+            createdAt: string;
+            imageUrl: string;
+            prevImageUrl: string | null;
+        }>;
+    }, [allSceneMessages]);
+
+    const resolveTimelineBackgroundByTimestamp = useCallback(
+        (referenceTime: string | null): string | null => {
+            if (backgroundEvents.length === 0) return sceneBackgroundImage;
+            if (!referenceTime) return sceneBackgroundImage;
+            const refTs = new Date(referenceTime).getTime();
+            let matched: string | null = null;
+            for (const event of backgroundEvents) {
+                if (new Date(event.createdAt).getTime() <= refTs) {
+                    matched = event.imageUrl;
+                } else {
+                    break;
+                }
+            }
+            if (matched) return matched;
+            const firstEvent = backgroundEvents[0];
+            return firstEvent?.prevImageUrl ?? sceneBaseBackgroundImage ?? sceneBackgroundImage;
+        },
+        [backgroundEvents, sceneBaseBackgroundImage, sceneBackgroundImage]
+    );
+
     useEffect(() => {
         if (!sceneSearchOpen || !messageSearchQuery.trim() || !activeSearchMessageId) return;
         const t = window.requestAnimationFrame(() => {
@@ -292,11 +407,59 @@ export const RoleplayScenePage = () => {
     }, [sceneSearchOpen, messageSearchQuery, activeSearchMessageId]);
 
     useEffect(() => {
+        if (!sceneSearchOpen || !messageSearchQuery.trim() || !activeSearchMessageId) return;
+        const activeItem = filteredMessages.find((item) => item.message.id === activeSearchMessageId) ?? null;
+        const nextBg = resolveTimelineBackgroundByTimestamp(activeItem?.message.created_at ?? null);
+        setTimelineBackgroundImage(nextBg);
+    }, [
+        sceneSearchOpen,
+        messageSearchQuery,
+        activeSearchMessageId,
+        filteredMessages,
+        resolveTimelineBackgroundByTimestamp,
+    ]);
+
+    const syncTimelineBackgroundFromViewport = useCallback(() => {
+        if (sceneSearchOpen && messageSearchQuery.trim()) return;
+        const container = messagesContainerRef.current;
+        if (!container || filteredMessages.length === 0) {
+            setTimelineBackgroundImage(sceneBackgroundImage);
+            return;
+        }
+        const containerRect = container.getBoundingClientRect();
+        let firstVisible: (typeof filteredMessages)[number] | null = null;
+        for (const item of filteredMessages) {
+            const node = document.getElementById(`scene-msg-${item.message.id}`);
+            if (!node) continue;
+            const rect = node.getBoundingClientRect();
+            if (rect.bottom >= containerRect.top + 8) {
+                firstVisible = item;
+                break;
+            }
+        }
+        const nextBg = resolveTimelineBackgroundByTimestamp(firstVisible?.message.created_at ?? null);
+        setTimelineBackgroundImage(nextBg);
+    }, [
+        sceneSearchOpen,
+        messageSearchQuery,
+        filteredMessages,
+        resolveTimelineBackgroundByTimestamp,
+        sceneBackgroundImage,
+    ]);
+
+    useEffect(() => {
         const id = window.requestAnimationFrame(() => {
             updateNearChatBottom();
+            syncTimelineBackgroundFromViewport();
         });
         return () => cancelAnimationFrame(id);
-    }, [messages.length, filteredMessages.length, chatFontScale, updateNearChatBottom]);
+    }, [
+        messages.length,
+        filteredMessages.length,
+        chatFontScale,
+        updateNearChatBottom,
+        syncTimelineBackgroundFromViewport,
+    ]);
 
     useEffect(() => {
         const el = messagesContainerRef.current;
@@ -326,7 +489,28 @@ export const RoleplayScenePage = () => {
         setSceneSearchOpen(false);
         setMessageSearchQuery('');
         setSearchMatchIndex(0);
-    }, []);
+        setTimelineBackgroundImage(sceneBackgroundImage);
+    }, [sceneBackgroundImage]);
+
+    const loadOlderMessages = useCallback(async () => {
+        if (!sceneId || !hasMoreOlderMessages || loadingOlderMessages || !oldestMessageCursor) return;
+        setLoadingOlderMessages(true);
+        const result = await getSceneMessagesPage(sceneId, supabase, {
+            limit: 200,
+            before: oldestMessageCursor,
+            appendOlder: true,
+        });
+        setHasMoreOlderMessages(result.hasMore);
+        setOldestMessageCursor(result.oldestCursor);
+        setLoadingOlderMessages(false);
+    }, [
+        sceneId,
+        hasMoreOlderMessages,
+        loadingOlderMessages,
+        oldestMessageCursor,
+        getSceneMessagesPage,
+        supabase,
+    ]);
 
     if (!spaceId || !sceneId) return null;
 
@@ -376,6 +560,18 @@ export const RoleplayScenePage = () => {
         if (/^`[^`]+`$/.test(trimmed)) return 'narration';
         return hasCharacter ? 'speech' : 'narration';
     };
+
+    const parseBackgroundCommand = (raw: string): string | null => {
+        const match = raw.trim().match(/^\/([^/\n]{1,120})\/$/);
+        return match ? match[1].trim() : null;
+    };
+
+    const normalizePresetToken = (value: string): string =>
+        value
+            .trim()
+            .toLowerCase()
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ');
 
     return (
         <div className="mx-auto mt-0 flex h-[calc(var(--app-vh,1vh)*100)] max-w-[1440px] flex-col gap-2 overflow-hidden px-2 pb-0 md:h-[100dvh] md:px-4">
@@ -455,7 +651,9 @@ export const RoleplayScenePage = () => {
                 )}
                 {sceneSearchOpen && messageSearchQuery.trim() && messages.length > 0 ? (
                     <p className="mt-1 text-center text-[11px] text-[#7f8a7b]">
-                        Найдено: {filteredMessages.length} из {messages.length}
+                        {searchLoading
+                            ? 'Поиск по всей истории...'
+                            : `Найдено: ${filteredMessages.length} по всей истории`}
                     </p>
                 ) : null}
             </header>
@@ -578,15 +776,19 @@ export const RoleplayScenePage = () => {
                                     world_id: sceneForEdit.world_id,
                                     chronicle_id: sceneForEdit.chronicle_id,
                                     background_image: sceneForEdit.background_image,
+                                    background_preset_id: sceneForEdit.background_preset_id,
                                     status: sceneForEdit.status,
                                     settings: sceneForEdit.settings,
                                 }}
+                                backgroundPresets={sceneBackgroundPresets}
                                 onCancel={() => setSceneSettingsOpen(false)}
                                 onSubmit={async (values) => {
                                     const updated = await updateRoleplayScene(sceneForEdit.id, values, supabase);
                                     if (updated) {
                                         setSceneTitle(updated.title || 'Сцена');
                                         setSceneBackgroundImage(updated.background_image ?? null);
+                                        setTimelineBackgroundImage(updated.background_image ?? null);
+                                        setSceneBaseBackgroundImage(updated.background_image ?? null);
                                         setSceneForEdit(updated);
                                         await getRoleplaySpaceCharacters(spaceId, supabase, updated.world_id ?? null);
                                         setSceneSettingsOpen(false);
@@ -603,7 +805,7 @@ export const RoleplayScenePage = () => {
                 style={
                     sceneBackgroundImage
                         ? {
-                            backgroundImage: `url(${sceneBackgroundImage})`,
+                            backgroundImage: `url(${timelineBackgroundImage ?? sceneBackgroundImage})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }
@@ -620,7 +822,15 @@ export const RoleplayScenePage = () => {
                 ) : null}
                 <div
                     ref={messagesContainerRef}
-                    onScroll={updateNearChatBottom}
+                    onScroll={() => {
+                        updateNearChatBottom();
+                        syncTimelineBackgroundFromViewport();
+                        const el = messagesContainerRef.current;
+                        if (!el) return;
+                        if (!sceneSearchOpen && el.scrollTop <= 48) {
+                            void loadOlderMessages();
+                        }
+                    }}
                     className="relative z-[1] mb-1 flex min-h-0 flex-1 flex-col overflow-y-auto"
                     style={{
                         gap: `${8 * chatFontScale}px`,
@@ -628,12 +838,17 @@ export const RoleplayScenePage = () => {
                         paddingBottom: `${8 * chatFontScale}px`,
                     }}
                 >
+                    {!sceneSearchOpen && (loadingOlderMessages || hasMoreOlderMessages) ? (
+                        <div className="p-2 text-center text-xs text-[#9fa68a]">
+                            {loadingOlderMessages ? 'Загружаем более ранние сообщения...' : 'Прокрутите вверх для загрузки истории'}
+                        </div>
+                    ) : null}
                     {messages.length === 0 && (
                         <div className="p-3 text-center text-[#c7bc98]">
                             В этой сцене пока нет сообщений.
                         </div>
                     )}
-                    {sceneSearchOpen && messageSearchQuery.trim() && messages.length > 0 && filteredMessages.length === 0 && (
+                    {sceneSearchOpen && messageSearchQuery.trim() && !searchLoading && filteredMessages.length === 0 && (
                         <div className="p-3 text-center text-[#c7bc98]">
                             По запросу «{messageSearchQuery.trim()}» ничего не найдено.
                         </div>
@@ -795,6 +1010,85 @@ export const RoleplayScenePage = () => {
                             const uid = session?.user?.id;
                             if (!uid || !sceneId) return;
                             setSendError(null);
+                            const backgroundCommand = parseBackgroundCommand(content);
+                            if (backgroundCommand) {
+                                const wanted = normalizePresetToken(backgroundCommand);
+                                const matchedPreset = sceneBackgroundPresets.find((preset) => {
+                                    const byName = normalizePresetToken(preset.name);
+                                    const byKey = normalizePresetToken(preset.key);
+                                    return wanted === byName || wanted === byKey;
+                                });
+                                if (!matchedPreset) {
+                                    setSendError(`Пресет «${backgroundCommand}» не найден. Используйте name или key пресета.`);
+                                    return;
+                                }
+                                const updated = await updateRoleplayScene(
+                                    sceneId,
+                                    {
+                                        background_image: matchedPreset.image_url,
+                                        background_preset_id: matchedPreset.id,
+                                    },
+                                    supabase
+                                );
+                                if (!updated) {
+                                    const details = roleplayError || useRoleplayStore.getState().error;
+                                    setSendError(details ? `Не удалось переключить фон сцены: ${details}` : 'Не удалось переключить фон сцены.');
+                                    return;
+                                }
+                                const previousBackgroundImage = timelineBackgroundImage ?? sceneBackgroundImage;
+                                setSceneBackgroundImage(updated.background_image ?? matchedPreset.image_url);
+                                setTimelineBackgroundImage(updated.background_image ?? matchedPreset.image_url);
+                                setSceneForEdit((prev) =>
+                                    prev
+                                        ? {
+                                              ...prev,
+                                              background_image: updated.background_image ?? matchedPreset.image_url,
+                                              background_preset_id: matchedPreset.id,
+                                          }
+                                        : prev
+                                );
+                                await createSceneMessage(
+                                    {
+                                        scene_id: sceneId,
+                                        user_id: uid,
+                                        character_id: null,
+                                        emotion_id: null,
+                                        type: 'system',
+                                        content: `/${matchedPreset.name}/`,
+                                        reply_to_message_id: null,
+                                        metadata: {
+                                            background_switch: {
+                                                preset_id: matchedPreset.id,
+                                                preset_key: matchedPreset.key,
+                                                preset_name: matchedPreset.name,
+                                                image_url: matchedPreset.image_url,
+                                                prev_image_url: previousBackgroundImage,
+                                            },
+                                        },
+                                    },
+                                    supabase
+                                );
+                                await createSceneMessage(
+                                    {
+                                        scene_id: sceneId,
+                                        user_id: uid,
+                                        character_id: null,
+                                        emotion_id: null,
+                                        type: 'narration',
+                                        content: `\`Локация: ${matchedPreset.name}\``,
+                                        reply_to_message_id: null,
+                                        metadata: {
+                                            location_marker: true,
+                                            preset_id: matchedPreset.id,
+                                            preset_key: matchedPreset.key,
+                                            preset_name: matchedPreset.name,
+                                        },
+                                    },
+                                    supabase
+                                );
+                                await refreshMessages();
+                                return;
+                            }
                             const parsed = resolveCharacterFromMention(content, spaceCharacters);
                             if (parsed.characterId && !ownCharacterIds.has(parsed.characterId)) {
                                 setSendError('Нельзя писать от лица чужого персонажа. Выберите своего через @Имя.');

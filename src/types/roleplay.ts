@@ -39,8 +39,21 @@ export interface RoleplayScene {
     title: string;
     description: string | null;
     background_image: string | null;
+    background_preset_id: string | null;
     status: string;
     settings: Record<string, unknown> | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface RoleplaySceneBackgroundPreset {
+    id: string;
+    space_id: string;
+    key: string;
+    name: string;
+    image_url: string;
+    sort_order: number;
+    is_active: boolean;
     created_at: string;
     updated_at: string;
 }
