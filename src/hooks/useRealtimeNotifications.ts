@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const NOTIFICATIONS_STORAGE_KEY = 'cc:notifications:feed';
@@ -120,7 +120,7 @@ export const useRealtimeNotifications = (
     const sceneTitleCacheRef = useRef(new Map<string, string>());
     const [activeUserId, setActiveUserId] = useState<string | null>(userId ?? null);
 
-    const getSceneTitle = async (sceneId: string): Promise<string> => {
+    const getSceneTitle = useCallback(async (sceneId: string): Promise<string> => {
         const cached = sceneTitleCacheRef.current.get(sceneId);
         if (cached) return cached;
         const { data } = await supabase
@@ -131,7 +131,7 @@ export const useRealtimeNotifications = (
         const title = data?.title?.trim() || 'Без названия';
         sceneTitleCacheRef.current.set(sceneId, title);
         return title;
-    };
+    }, [supabase]);
 
     const buildSceneMessagePreview = (content: string): string => {
         const cleaned = content.replace(/\s+/g, ' ').trim();
@@ -250,7 +250,7 @@ export const useRealtimeNotifications = (
             supabase.removeChannel(roleplayInvitesChannel);
             supabase.removeChannel(sceneMessagesChannel);
         };
-    }, [activeUserId, userId, supabase]);
+    }, [activeUserId, userId, supabase, getSceneTitle]);
 
     useEffect(() => {
         if (!activeUserId) return;
@@ -263,7 +263,7 @@ export const useRealtimeNotifications = (
         const runPoll = async () => {
             if (cancelled) return;
 
-            const [worldRes, roleplayRes, sceneRes] = await Promise.all([
+            const [worldRes, roleplayRes, sceneRes, latestSceneRes] = await Promise.all([
                 supabase
                     .from('world_members')
                     .select('*', { count: 'exact', head: true })
@@ -277,10 +277,19 @@ export const useRealtimeNotifications = (
                 supabase
                     .from('scene_messages')
                     .select('*', { count: 'exact', head: true })
-                    .neq('user_id', activeUserId),
+                    .neq('user_id', activeUserId)
+                    .neq('type', 'system'),
+                supabase
+                    .from('scene_messages')
+                    .select('id, scene_id, content, type, created_at')
+                    .neq('user_id', activeUserId)
+                    .neq('type', 'system')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(),
             ]);
 
-            if (worldRes.error || roleplayRes.error || sceneRes.error) {
+            if (worldRes.error || roleplayRes.error || sceneRes.error || latestSceneRes.error) {
                 return;
             }
 
@@ -308,15 +317,27 @@ export const useRealtimeNotifications = (
                 );
             }
             if (prevSceneMessageCount !== null && sceneCount > prevSceneMessageCount) {
-                addToNotificationFeed({
-                    type: 'scene_message',
-                    title: 'Новое сообщение в сцене',
-                    body: 'В одной из ваших сцен появилось новое сообщение.',
-                });
-                await showNotification(
-                    'Новое сообщение в сцене',
-                    'В одной из ваших сцен появилось новое сообщение.'
-                );
+                const latest = latestSceneRes.data as { scene_id?: string; content?: string } | null;
+                if (latest?.scene_id) {
+                    const sceneTitle = await getSceneTitle(latest.scene_id);
+                    const preview = buildSceneMessagePreview(latest.content ?? '');
+                    addToNotificationFeed({
+                        type: 'scene_message',
+                        title: `Сцена: ${sceneTitle}`,
+                        body: preview,
+                    });
+                    await showNotification(`Сцена: ${sceneTitle}`, preview);
+                } else {
+                    addToNotificationFeed({
+                        type: 'scene_message',
+                        title: 'Новое сообщение в сцене',
+                        body: 'В одной из ваших сцен появилось новое сообщение.',
+                    });
+                    await showNotification(
+                        'Новое сообщение в сцене',
+                        'В одной из ваших сцен появилось новое сообщение.'
+                    );
+                }
             }
 
             prevWorldInviteCount = worldCount;
@@ -333,6 +354,6 @@ export const useRealtimeNotifications = (
             cancelled = true;
             window.clearInterval(interval);
         };
-    }, [activeUserId, supabase]);
+    }, [activeUserId, supabase, getSceneTitle]);
 };
 
