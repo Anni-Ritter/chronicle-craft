@@ -568,9 +568,22 @@ export const RoleplayScenePage = () => {
         return hasCharacter ? 'speech' : 'narration';
     };
 
-    const parseBackgroundCommand = (raw: string): string | null => {
-        const match = raw.trim().match(/^\/([^/\n]{1,120})\/$/);
-        return match ? match[1].trim() : null;
+    const extractBackgroundCommands = (
+        raw: string
+    ): { commands: string[]; contentWithoutCommands: string } => {
+        const commands: string[] = [];
+        const contentWithoutCommands = raw.replace(
+            /(^|\s)\/([^/\n]{1,120})\/(?=\s|$)/g,
+            (_full, lead: string, command: string) => {
+                const normalized = command.trim();
+                if (normalized) commands.push(normalized);
+                return lead;
+            }
+        );
+        return {
+            commands,
+            contentWithoutCommands: contentWithoutCommands.trim(),
+        };
     };
 
     const normalizePresetToken = (value: string): string =>
@@ -1017,8 +1030,8 @@ export const RoleplayScenePage = () => {
                             const uid = session?.user?.id;
                             if (!uid || !sceneId) return;
                             setSendError(null);
-                            const backgroundCommand = parseBackgroundCommand(content);
-                            if (backgroundCommand) {
+                            const { commands: backgroundCommands, contentWithoutCommands } = extractBackgroundCommands(content);
+                            for (const backgroundCommand of backgroundCommands) {
                                 const wanted = normalizePresetToken(backgroundCommand);
                                 const matchedPreset = sceneBackgroundPresets.find((preset) => {
                                     const byName = normalizePresetToken(preset.name);
@@ -1093,10 +1106,14 @@ export const RoleplayScenePage = () => {
                                     },
                                     supabase
                                 );
+                            }
+                            if (backgroundCommands.length > 0) {
                                 await refreshMessages();
+                            }
+                            if (!contentWithoutCommands.trim()) {
                                 return;
                             }
-                            const parsed = resolveCharacterFromMention(content, spaceCharacters);
+                            const parsed = resolveCharacterFromMention(contentWithoutCommands, spaceCharacters);
                             if (parsed.characterId && !ownCharacterIds.has(parsed.characterId)) {
                                 setSendError('Нельзя писать от лица чужого персонажа. Выберите своего через @Имя.');
                                 return;
