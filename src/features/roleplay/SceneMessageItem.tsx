@@ -111,6 +111,74 @@ const parseFormattedSegments = (content: string): ParsedSegment[] => {
     });
 };
 
+const endsWithPunctuationLike = (value: string): boolean => /[^\p{L}\p{N}\s]$/u.test(value.trim());
+const capitalizeFirstLetter = (value: string): string =>
+    value.replace(/^(\s*)(\p{L})/u, (_full, ws: string, first: string) => `${ws}${first.toLocaleUpperCase('ru-RU')}`);
+
+/**
+ * Авто-распознавание вставленного действия между репликами:
+ * "- Речь, - действие. - Речь" => речь + action + речь
+ */
+function splitSpeechTextByInlineAction(rawText: string): ParsedSegment[] {
+    const text = rawText.trim();
+    if (!text) return [];
+
+    const parts = text
+        .split(/(?:\s+|(?<=[^\p{L}\p{N}\s]))[-—]\s+/gu)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0);
+    if (parts.length < 3) return [{ type: 'text', text }];
+
+    const out: ParsedSegment[] = [{ type: 'text', text: parts[0] }];
+    let i = 1;
+
+    while (i < parts.length) {
+        const previousText =
+            [...out]
+                .reverse()
+                .find((segment) => segment.type === 'text')
+                ?.text ?? '';
+        const hasFollowingPart = i < parts.length - 1;
+        const canTreatAsAction = hasFollowingPart && endsWithPunctuationLike(previousText);
+
+        if (canTreatAsAction) {
+            out.push({ type: 'action', text: capitalizeFirstLetter(parts[i]) });
+            out.push({ type: 'text', text: parts[i + 1] });
+            i += 2;
+            continue;
+        }
+
+        const current = parts[i];
+        const lastTextIndex = [...out].reverse().findIndex((segment) => segment.type === 'text');
+        if (lastTextIndex >= 0) {
+            const idxFromStart = out.length - 1 - lastTextIndex;
+            const prev = out[idxFromStart];
+            if (prev?.type === 'text') {
+                out[idxFromStart] = { type: 'text', text: `${prev.text} - ${current}` };
+            } else {
+                out.push({ type: 'text', text: current });
+            }
+        } else {
+            out.push({ type: 'text', text: current });
+        }
+        i += 1;
+    }
+
+    return out;
+}
+
+function expandSpeechInlineActions(segments: ParsedSegment[]): ParsedSegment[] {
+    const expanded: ParsedSegment[] = [];
+    segments.forEach((segment) => {
+        if (segment.type !== 'text') {
+            expanded.push(segment);
+            return;
+        }
+        expanded.push(...splitSpeechTextByInlineAction(segment.text));
+    });
+    return expanded;
+}
+
 type MessageUnit =
     | {
           kind: 'content';
@@ -125,7 +193,7 @@ function buildMessageUnitsWithSpeaker(segments: ParsedSegment[], chunkSpeaker: s
 
     const flush = () => {
         if (current.length === 0) return;
-        if (current.some((s) => s.text.length > 0)) {
+        if (current.some((s) => s.text.trim().length > 0)) {
             units.push({ kind: 'content', segments: current, chunkSpeaker });
         }
         current = [];
@@ -151,13 +219,14 @@ function buildUnitsFromMessageContent(
     if (parts.length === 0) return [];
 
     const allUnits: MessageUnit[] = [];
-    parts.forEach((part, i) => {
+    parts.forEach((part) => {
         let body = part.body;
-        if (i === 0 && messageType === 'speech') {
-            body = body.replace(/^\s*-\s*/, '');
+        const isSpeechLikePart = messageType === 'speech' || Boolean(part.speaker);
+        if (isSpeechLikePart) {
+            body = body.replace(/^\s*(?:-\s*)+/, '');
         }
         const segs = parseFormattedSegments(body);
-        let processed: ParsedSegment[] = segs;
+        let processed: ParsedSegment[] = isSpeechLikePart ? expandSpeechInlineActions(segs) : segs;
         if (
             messageType === 'action' &&
             parts.length === 1 &&
@@ -223,12 +292,12 @@ export const SceneMessageItem = ({
     const menuRef = useRef<HTMLDivElement | null>(null);
     const avatar = item.emotion?.image_url || item.character?.avatar || item.author?.avatar_url;
     const authorName = item.character?.name || item.author?.username || 'Система';
-    const speechPrefix = item.message.type === 'speech' ? '- ' : '';
+    const speechPrefix = '- ';
     const units = useMemo(
         () => buildUnitsFromMessageContent(item.message.content, item.message.type),
         [item.message.content, item.message.type],
     );
-    const { fallbackRun, contentChunkGlobalIndex } = useMemo(() => {
+    const fallbackRun = useMemo(() => {
         const runs = groupMessageRuns(units);
         const fr: MessageRun[] =
             runs.length === 0
@@ -251,16 +320,7 @@ export const SceneMessageItem = ({
                       },
                   ]
                 : runs;
-        const m = new Map<string, number>();
-        let g = 0;
-        fr.forEach((run, ri) => {
-            if (run.kind !== 'content') return;
-            run.chunks.forEach((_, uidx) => {
-                m.set(`${ri}-${uidx}`, g);
-                g += 1;
-            });
-        });
-        return { fallbackRun: fr, contentChunkGlobalIndex: m };
+        return fr;
     }, [units, item.message.content]);
     const s = fontScale;
     const bubblePadX = 12 * s;
@@ -452,14 +512,13 @@ export const SceneMessageItem = ({
                 ) : null}
                 {fallbackRun.map((run, ri) => {
                     if (run.kind === 'action') {
-                        const isLongAction = run.text.length > 180 || run.text.includes('\n');
                         return (
                             <div key={`a-${ri}`} className="flex w-full min-w-0 justify-center py-0.5">
                                 <div
                                     role="button"
                                     tabIndex={0}
                                     data-scene-msg-hit=""
-                                    className={`max-w-[min(92%,640px)] border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px] ${isLongAction ? 'rounded-2xl text-left' : 'rounded-full text-center'} ${bubbleInteractiveClass}`}
+                                    className={`max-w-[min(92%,640px)] border border-white/15 bg-[#4a5568]/78 px-4 py-2 text-left text-[#f4f6fa] shadow-[0_2px_12px_rgba(0,0,0,0.35)] backdrop-blur-[3px] rounded-2xl ${bubbleInteractiveClass}`}
                                     style={{ fontSize: `${14 * fontScale}px`, lineHeight: 1.35 }}
                                     onClick={openMenuFromEvent}
                                     onKeyDown={openMenuFromKeyboard}
@@ -473,8 +532,9 @@ export const SceneMessageItem = ({
                     }
 
                     const isFirstContentRun = ri === firstContentRunIndex;
-                    const useAvatarImage = isFirstContentRun && !leadWithAction;
-                    const showAuthorMetaInColumn = isFirstContentRun && !leadWithAction;
+                    const useAvatarImage = true;
+                    const showAuthorMetaInColumn = true;
+                    const showReplyPreview = isFirstContentRun;
                     const resolvedInlineSpeaker = run.inlineSpeaker
                         ? resolveSpaceCharacterByMentionName(run.inlineSpeaker, spaceCharacters)
                         : null;
@@ -487,8 +547,10 @@ export const SceneMessageItem = ({
                         runIndex: number,
                     ) =>
                         unitList.map((unit, uidx) => {
-                            const chunkIx = contentChunkGlobalIndex.get(`${runIndex}-${uidx}`) ?? 0;
-                            const prependSpeech = item.message.type === 'speech' && chunkIx === 0;
+                            const prependSpeech = item.message.type === 'speech' || Boolean(run.inlineSpeaker);
+                            const firstMeaningfulSegmentIdx = unit.segments.findIndex(
+                                (segment) => segment.text.trim().length > 0
+                            );
 
                             return (
                                 <div
@@ -518,14 +580,19 @@ export const SceneMessageItem = ({
                                                 );
                                             }
                                             const firstTextIdx = unit.segments.findIndex((x) => x.type === 'text');
-                                            const prefix =
-                                                prependSpeech && segment.type === 'text' && idx === firstTextIdx
-                                                    ? speechPrefix
-                                                    : '';
+                                            const isSpeechLeadText =
+                                                prependSpeech && segment.type === 'text' && idx === firstTextIdx;
+                                            const prefix = isSpeechLeadText ? speechPrefix : '';
+                                            const shouldTrimLeadingWhitespace = idx === firstMeaningfulSegmentIdx;
+                                            const normalizedText = isSpeechLeadText
+                                                ? segment.text.replace(/^\s*(?:-\s*)+/, '')
+                                                : shouldTrimLeadingWhitespace
+                                                  ? segment.text.replace(/^\s+/, '')
+                                                  : segment.text;
                                             return (
                                                 <span key={key}>
                                                     {prefix}
-                                                    {highlightText(segment.text, highlightQuery)}
+                                                    {highlightText(normalizedText, highlightQuery)}
                                                 </span>
                                             );
                                         })}
@@ -608,13 +675,9 @@ export const SceneMessageItem = ({
                                 className={`flex max-w-[88%] min-w-0 items-end ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}
                                 style={{ gap: `${8 * s}px` }}
                             >
-                                {useAvatarImage ? (
-                                    renderAuthorAvatar(messageAuthorUserId, avatar, { alignSelfEnd: true })
-                                ) : (
-                                    <div className="shrink-0 self-end" style={{ width: avatarSize }} aria-hidden />
-                                )}
+                                {useAvatarImage ? renderAuthorAvatar(messageAuthorUserId, avatar, { alignSelfEnd: true }) : null}
                                 <div className="flex min-w-0 flex-1 flex-col" style={{ gap: `${6 * s}px` }}>
-                                    {showAuthorMetaInColumn && item.replyTo ? (
+                                    {showReplyPreview && item.replyTo ? (
                                         <div
                                             className="border-[#5b5b5b] text-[#c7bc98]"
                                             style={{
