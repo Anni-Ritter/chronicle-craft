@@ -127,8 +127,8 @@ export const RoleplaySpacePage = () => {
         <div className="max-w-[1440px] mx-auto mt-4 px-2 md:px-4 space-y-5">
             <section className="px-1">
                 <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <div className="flex items-center gap-3">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-3">
                             <button
                                 type="button"
                                 onClick={() => navigate('/roleplay')}
@@ -141,10 +141,10 @@ export const RoleplaySpacePage = () => {
                             <button
                                 type="button"
                                 onClick={() => setMembersModalOpen(true)}
-                                className="text-left"
+                                className="min-w-0 flex-1 text-left"
                                 title="Открыть участников"
                             >
-                                <h1 className="text-3xl md:text-4xl font-garamond text-[#f4ecd0]">{spaceTitle}</h1>
+                                <h1 className="break-words text-3xl font-garamond text-[#f4ecd0] md:text-4xl">{spaceTitle}</h1>
                                 <p className="mt-1 text-xs md:text-sm text-[#b9b08f]">{membersCountLabel}</p>
                             </button>
                         </div>
@@ -232,12 +232,12 @@ export const RoleplaySpacePage = () => {
                             }}
                         >
                             <div className="flex items-start justify-between gap-2">
-                                <div>
-                                    <p className="text-[#f3e7c8] font-semibold">{scene.title}</p>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-[#f3e7c8] font-semibold">{scene.title}</p>
                                     <p className="text-sm text-[#c7bc98]">{scene.description || 'Без описания'}</p>
                                     <p className="text-xs text-[#9a9a9a]">Статус: {scene.status}</p>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="flex shrink-0 items-center gap-1">
                                     <button
                                         type="button"
                                         onClick={(e) => {

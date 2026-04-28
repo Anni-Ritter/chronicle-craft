@@ -18,6 +18,7 @@ interface SceneComposerProps {
     onSaveEdit: (messageId: string, content: string) => Promise<void>;
     /** Масштаб шрифта в поле ввода (как в сообщениях) */
     fontScale?: number;
+    draftStorageKey?: string;
 }
 
 export const SceneComposer = ({
@@ -30,12 +31,14 @@ export const SceneComposer = ({
     onCancelEdit,
     onSaveEdit,
     fontScale = 1,
+    draftStorageKey,
 }: SceneComposerProps) => {
     const [content, setContent] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isHelpOpen, setIsHelpOpen] = useState(false);
     const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
     const [cursorPos, setCursorPos] = useState(0);
+    const [isDraftHydrated, setIsDraftHydrated] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const canSubmit = content.trim().length > 0;
     const isEditMode = !!editMessageId;
@@ -49,6 +52,33 @@ export const SceneComposer = ({
             });
         }
     }, [editMessageId, editInitialContent]);
+
+    useEffect(() => {
+        if (!draftStorageKey || isEditMode) {
+            setIsDraftHydrated(true);
+            return;
+        }
+        try {
+            setContent(localStorage.getItem(draftStorageKey) ?? '');
+        } catch {
+            setContent('');
+        } finally {
+            setIsDraftHydrated(true);
+        }
+    }, [draftStorageKey, isEditMode]);
+
+    useEffect(() => {
+        if (!isDraftHydrated || !draftStorageKey || isEditMode) return;
+        try {
+            if (content.length === 0) {
+                localStorage.removeItem(draftStorageKey);
+            } else {
+                localStorage.setItem(draftStorageKey, content);
+            }
+        } catch {
+            /* ignore localStorage errors */
+        }
+    }, [content, draftStorageKey, isEditMode, isDraftHydrated]);
 
     const mentionState = useMemo(() => {
         const textarea = textareaRef.current;

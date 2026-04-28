@@ -133,6 +133,7 @@ export const RoleplayScenePage = () => {
     const sceneFontStorageKey = sceneId ? `cc:roleplay-scene-chat-font:${sceneId}` : '';
     const sceneChatTimeStorageKey = sceneId ? `cc:roleplay-scene-chat-time:${sceneId}` : '';
     const sceneBgDimStorageKey = sceneId ? `cc:roleplay-scene-bg-dim:${sceneId}` : '';
+    const sceneDraftStorageKey = sceneId ? `cc:roleplay-scene-draft:${sceneId}` : '';
 
     const [chatTimeDisplay, setChatTimeDisplay] = useState(DEFAULT_CHAT_TIME_DISPLAY);
     const [sceneBackgroundDimPercent, setSceneBackgroundDimPercent] = useState(DEFAULT_SCENE_BG_DIM_PERCENT);
@@ -965,6 +966,7 @@ export const RoleplayScenePage = () => {
                     )}
                     <SceneComposer
                         fontScale={chatFontScale}
+                        draftStorageKey={sceneDraftStorageKey}
                         availableCharacters={ownSpaceCharacters}
                         replyToMessageId={replyToMessageId}
                         onClearReply={() => setReplyToMessageId(null)}
